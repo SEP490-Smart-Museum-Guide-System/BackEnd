@@ -1,0 +1,6 @@
+@SMGS.API_HostAddress = http://localhost:5169
+
+GET {{SMGS.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
