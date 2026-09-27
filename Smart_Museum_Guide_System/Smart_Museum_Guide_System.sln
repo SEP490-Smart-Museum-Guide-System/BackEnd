@@ -1,9 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.37628.2 d17.14
+VisualStudioVersion = 17.14.37628.2
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SMGS.API", "SMGS.API\SMGS.API.csproj", "{76B58AAB-617D-440A-A341-BF911AEC47D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SMGS.Application", "SMGS.Application\SMGS.Application.csproj", "{E7CACAD5-FC8C-13D6-9EB3-5565F99A2B3F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SMGS.Domain", "SMGS.Domain\SMGS.Domain.csproj", "{09B245D7-BF74-567D-E8B2-3996D2038597}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SMGS.Infrastructure", "SMGS.Infrastructure\SMGS.Infrastructure.csproj", "{67579A1B-CE44-D45D-DDC8-2232E5F51529}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +21,18 @@ Global
 		{76B58AAB-617D-440A-A341-BF911AEC47D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{76B58AAB-617D-440A-A341-BF911AEC47D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{76B58AAB-617D-440A-A341-BF911AEC47D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E7CACAD5-FC8C-13D6-9EB3-5565F99A2B3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E7CACAD5-FC8C-13D6-9EB3-5565F99A2B3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E7CACAD5-FC8C-13D6-9EB3-5565F99A2B3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E7CACAD5-FC8C-13D6-9EB3-5565F99A2B3F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{09B245D7-BF74-567D-E8B2-3996D2038597}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{09B245D7-BF74-567D-E8B2-3996D2038597}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{09B245D7-BF74-567D-E8B2-3996D2038597}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{09B245D7-BF74-567D-E8B2-3996D2038597}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67579A1B-CE44-D45D-DDC8-2232E5F51529}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67579A1B-CE44-D45D-DDC8-2232E5F51529}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67579A1B-CE44-D45D-DDC8-2232E5F51529}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67579A1B-CE44-D45D-DDC8-2232E5F51529}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

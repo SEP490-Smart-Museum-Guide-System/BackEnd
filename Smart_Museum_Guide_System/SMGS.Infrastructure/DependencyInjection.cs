@@ -1,12 +1,51 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using SMGS.Application.Interfaces;
+using SMGS.Application.Services;
+using SMGS.Domain.Interfaces;
+using SMGS.Infrastructure.Data;
+using SMGS.Infrastructure.Identity;
+using SMGS.Infrastructure.Repositories;
+using SMGS.Infrastructure.Services;
 
-namespace SMGS.Infrastructure
+namespace SMGS.Infrastructure;
+
+public static class DependencyInjection
 {
-    internal class DependencyInjection
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new InvalidOperationException("Configure ConnectionStrings:DefaultConnection for Museum.");
+
+        services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddIdentityCore<ApplicationUser>(options =>
+        {
+            options.User.RequireUniqueEmail = true;
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireUppercase = false;
+            options.Password.RequireNonAlphanumeric = false;
+            options.Password.RequiredLength = 6;
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+        })
+        .AddRoles<IdentityRole<Guid>>()
+        .AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddSignInManager();
+
+        services.AddOptions<JwtSettings>()
+            .Bind(configuration.GetSection(JwtSettings.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(settings => Encoding.UTF8.GetByteCount(settings.Key) >= 32,
+                "JwtSettings:Key must contain at least 32 UTF-8 bytes.")
+            .ValidateOnStart();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IAuthService, AuthService>();
+        return services;
     }
 }

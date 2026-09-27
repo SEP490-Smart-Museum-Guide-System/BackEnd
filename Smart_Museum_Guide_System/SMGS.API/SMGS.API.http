@@ -1,6 +1,20 @@
 @SMGS.API_HostAddress = http://localhost:5169
 
-GET {{SMGS.API_HostAddress}}/weatherforecast/
-Accept: application/json
+### Login with the local sample account
+POST {{SMGS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
 
-###
+{
+  "email": "visitor@museum.local",
+  "password": "Museum@123"
+}
+
+### Register a new account (use a new email for each successful registration)
+POST {{SMGS.API_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "newvisitor@museum.local",
+  "fullName": "New Museum Visitor",
+  "password": "Museum@123"
+}
