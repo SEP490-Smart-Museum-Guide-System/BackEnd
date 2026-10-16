@@ -1,0 +1,762 @@
+// =====================================================
+// Smart Museum Guide System (SMGS) - DBML cho dbdiagram.io
+// Dựa trên SMGS_Project_Context v1.2 (15/10/2026)
+// Đây là đề xuất thiết kế, chưa phải ERD đã chốt.
+// =====================================================
+
+Project SMGS {
+  database_type: 'PostgreSQL'
+}
+
+// ---------- ENUMS ----------
+Enum content_status {
+  draft
+  pending_review
+  published
+  rejected
+  archived
+}
+Enum access_level {
+  free
+  premium
+}
+Enum recognition_method {
+  qr
+  image
+}
+Enum tour_type {
+  template
+  ai
+}
+Enum visit_status {
+  in_progress
+  completed
+  abandoned
+}
+Enum product_type {
+  ticket
+  digital_service
+  combo
+}
+Enum order_status {
+  pending
+  paid
+  failed
+  cancelled
+  refunded
+  partially_refunded
+}
+Enum payment_status {
+  pending
+  success
+  failed
+}
+Enum refund_status {
+  requested
+  approved
+  rejected
+  completed
+}
+Enum right_type {
+  ticket
+  digital_service
+}
+Enum right_status {
+  inactive
+  active
+  used
+  expired
+  revoked
+}
+Enum quiz_entry_status {
+  pending
+  done
+}
+Enum attempt_mode {
+  immediate
+  later
+}
+Enum feedback_target {
+  info
+  tour
+  chatbot
+  overall
+}
+Enum feedback_status {
+  visible
+  hidden
+}
+Enum complaint_status {
+  open
+  processing
+  resolved
+  rejected
+}
+Enum chat_sender {
+  user
+  assistant
+}
+Enum node_type {
+  artifact
+  entrance
+  stairs
+  elevator
+  junction
+}
+Enum length_level {
+  short
+  medium
+  long
+}
+Enum detail_level {
+  basic
+  standard
+  detailed
+}
+
+// =====================================================
+// 1. IDENTITY (chỉ dùng 3 bảng có sẵn)
+// =====================================================
+
+Table Users [note: 'AspNetUsers - Identity có sẵn. Chỉ liệt kê cột chính, giữ nguyên các cột mặc định của Identity']
+{
+  Id uuid [pk]
+  UserName varchar
+  Email varchar
+  PasswordHash varchar
+}
+
+Table Roles [note: 'AspNetRoles - Admin, SystemStaff, MuseumStaff, Curator, Visitor']
+{
+  Id uuid [pk]
+  Name varchar
+}
+
+Table UserRoles [note: 'AspNetUserRoles - Quy tắc hiện tại: 1 tài khoản 1 role (có thể thêm unique UserId)']
+{
+  UserId uuid [pk, ref: > Users.Id]
+  RoleId uuid [pk, ref: > Roles.Id]
+}
+
+// Hồ sơ mở rộng, tránh sửa bảng Identity
+Table user_profiles {
+  user_id uuid [pk, ref: - Users.Id]
+  full_name varchar
+  avatar_url varchar
+  preferred_language_id int [ref: > languages.id]
+  total_points int [not null, default: 0, note: 'Điểm tích lũy theo tài khoản']
+  created_at timestamptz
+}
+
+// =====================================================
+// 2. BẢO TÀNG - KHÔNG GIAN
+// =====================================================
+
+Table museums {
+  id int [pk, increment]
+  name varchar [not null]
+  description text
+  address varchar
+  latitude decimal(9,6) [note: 'Dùng cho chỉ đường từ nhà đến bảo tàng']
+  longitude decimal(9,6)
+  opening_hours varchar
+  cover_image_url varchar
+  is_active boolean [default: true]
+  created_at timestamptz
+}
+
+Table buildings {
+  id int [pk, increment]
+  museum_id int [not null, ref: > museums.id]
+  name varchar [not null]
+}
+
+Table floors {
+  id int [pk, increment]
+  building_id int [not null, ref: > buildings.id]
+  level_no int [not null]
+  name varchar
+  map_image_url varchar [note: 'Ảnh/bản vẽ mặt bằng tầng']
+}
+
+Table galleries {
+  id int [pk, increment]
+  floor_id int [not null, ref: > floors.id]
+  name varchar [not null]
+  description text
+}
+
+Table staff_assignments [note: 'Nhân sự (Museum Staff/Curator) thuộc bảo tàng, có thể phân công theo phòng hoặc hiện vật']
+{
+  id int [pk, increment]
+  user_id uuid [not null, ref: > Users.Id]
+  museum_id int [not null, ref: > museums.id]
+  gallery_id int [ref: > galleries.id]
+  artifact_id int [ref: > artifacts.id]
+  assigned_at timestamptz
+
+  indexes {
+    (user_id, museum_id)
+  }
+}
+
+// =====================================================
+// 3. HIỆN VẬT
+// =====================================================
+
+Table artifacts {
+  id int [pk, increment]
+  museum_id int [not null, ref: > museums.id]
+  gallery_id int [ref: > galleries.id, note: 'Không bắt buộc']
+  code varchar [note: 'Mã nội bộ']
+  name varchar [not null, note: 'Tên gốc/trung tính']
+  qr_code varchar [unique, note: 'Mã QR hiện vật (khác QR kiểm vé)']
+  map_node_id int [ref: > map_nodes.id]
+  map_x float [note: 'Vị trí trên mặt bằng tầng']
+  map_y float
+  map_icon varchar
+  access_level access_level [default: 'free']
+  is_active boolean [default: true]
+  created_at timestamptz
+}
+
+Table artifact_reference_images [note: 'Ảnh tham chiếu để AI nhận diện']
+{
+  id int [pk, increment]
+  artifact_id int [not null, ref: > artifacts.id]
+  image_url varchar [not null]
+  embedding_ref varchar [note: 'Tham chiếu vector/đặc trưng phía AI nếu có']
+}
+
+Table themes {
+  id int [pk, increment]
+  museum_id int [ref: > museums.id]
+  name varchar [not null]
+}
+
+Table artifact_themes {
+  artifact_id int [pk, ref: > artifacts.id]
+  theme_id int [pk, ref: > themes.id]
+}
+
+// =====================================================
+// 4. NỘI DUNG ĐA NGÔN NGỮ + PHIÊN BẢN + DUYỆT
+// =====================================================
+
+Table languages {
+  id int [pk, increment]
+  code varchar [unique, not null, note: 'vi, en, ...']
+  name varchar [not null]
+  is_active boolean [default: true]
+}
+
+Table artifact_contents [note: 'Thông tin hiện vật theo ngôn ngữ']
+{
+  id int [pk, increment]
+  artifact_id int [not null, ref: > artifacts.id]
+  language_id int [not null, ref: > languages.id]
+
+  indexes {
+    (artifact_id, language_id) [unique]
+  }
+}
+
+Table artifact_content_versions {
+  id int [pk, increment]
+  artifact_content_id int [not null, ref: > artifact_contents.id]
+  version_no int [not null]
+  title varchar
+  description text
+  status content_status [default: 'draft']
+  is_current boolean [default: false, note: 'Bản đang xuất bản']
+  created_by uuid [ref: > Users.Id]
+  reviewed_by uuid [ref: > Users.Id]
+  reviewed_at timestamptz
+  review_note text
+  published_at timestamptz
+  created_at timestamptz
+
+  indexes {
+    (artifact_content_id, version_no) [unique]
+  }
+}
+
+Table narrations [note: 'Bài thuyết minh theo hiện vật + ngôn ngữ + độ dài + mức chi tiết']
+{
+  id int [pk, increment]
+  artifact_id int [not null, ref: > artifacts.id]
+  language_id int [not null, ref: > languages.id]
+  length_level length_level
+  detail_level detail_level
+  access_level access_level [default: 'free']
+
+  indexes {
+    (artifact_id, language_id, length_level, detail_level) [unique]
+  }
+}
+
+Table narration_versions {
+  id int [pk, increment]
+  narration_id int [not null, ref: > narrations.id]
+  version_no int [not null]
+  script text
+  audio_url varchar [note: 'Audio tạo sẵn hoặc TTS (chưa chốt)']
+  is_ai_generated boolean [default: false]
+  status content_status [default: 'draft']
+  is_current boolean [default: false]
+  created_by uuid [ref: > Users.Id]
+  reviewed_by uuid [ref: > Users.Id]
+  reviewed_at timestamptz
+  review_note text
+  published_at timestamptz
+  created_at timestamptz
+
+  indexes {
+    (narration_id, version_no) [unique]
+  }
+}
+
+Table media [note: 'Ảnh/video/audio']
+{
+  id int [pk, increment]
+  museum_id int [not null, ref: > museums.id]
+  artifact_id int [ref: > artifacts.id]
+  narration_id int [ref: > narrations.id]
+  media_type varchar [note: 'image | video | audio']
+  url varchar [not null]
+  caption varchar
+  uploaded_by uuid [ref: > Users.Id]
+  created_at timestamptz
+}
+
+// =====================================================
+// 5. AI: NGUỒN KIẾN THỨC, CHATBOT
+// =====================================================
+
+Table source_documents [note: 'Tài liệu nguồn làm cơ sở cho chatbot']
+{
+  id int [pk, increment]
+  museum_id int [not null, ref: > museums.id]
+  artifact_id int [ref: > artifacts.id]
+  title varchar [not null]
+  file_url varchar
+  content text
+  status content_status [default: 'draft']
+  uploaded_by uuid [ref: > Users.Id]
+  approved_by uuid [ref: > Users.Id]
+  approved_at timestamptz
+  created_at timestamptz
+}
+
+Table conversations {
+  id int [pk, increment]
+  user_id uuid [not null, ref: > Users.Id]
+  museum_id int [ref: > museums.id]
+  language_id int [ref: > languages.id]
+  title varchar
+  created_at timestamptz
+}
+
+Table conversation_artifacts [note: 'Một hội thoại có thể nói về nhiều hiện vật']
+{
+  conversation_id int [pk, ref: > conversations.id]
+  artifact_id int [pk, ref: > artifacts.id]
+}
+
+Table messages {
+  id bigint [pk, increment]
+  conversation_id int [not null, ref: > conversations.id]
+  sender chat_sender [not null]
+  content text [not null]
+  created_at timestamptz
+}
+
+Table message_sources [note: 'Căn cứ trả lời của chatbot']
+{
+  message_id bigint [pk, ref: > messages.id]
+  source_document_id int [pk, ref: > source_documents.id]
+}
+
+// =====================================================
+// 6. BẢN ĐỒ NỘI BỘ (đề xuất cho chỉ đường tới hiện vật tiếp theo)
+// =====================================================
+
+Table map_nodes [note: 'Nút đồ thị: hiện vật, cửa, cầu thang, giao lộ...']
+{
+  id int [pk, increment]
+  museum_id int [not null, ref: > museums.id]
+  floor_id int [ref: > floors.id]
+  node_type node_type
+  x float
+  y float
+  label varchar
+}
+
+Table map_edges [note: 'Cạnh nối giữa 2 nút (lối đi)']
+{
+  id int [pk, increment]
+  from_node_id int [not null, ref: > map_nodes.id]
+  to_node_id int [not null, ref: > map_nodes.id]
+  distance float
+  is_accessible boolean [default: true, note: 'Có đi được bằng xe lăn']
+}
+
+// =====================================================
+// 7. TOUR VÀ LƯỢT THAM QUAN
+// =====================================================
+
+Table tours {
+  id int [pk, increment]
+  museum_id int [not null, ref: > museums.id]
+  tour_type tour_type [not null, note: 'template: nhân viên tạo; ai: AI gợi ý']
+  owner_user_id uuid [ref: > Users.Id, note: 'Chủ tour AI cá nhân']
+  created_by uuid [ref: > Users.Id]
+  title varchar
+  description text
+  estimated_minutes int
+  access_level access_level [default: 'free']
+  status content_status [default: 'draft']
+  created_at timestamptz
+}
+
+Table tour_items [note: 'Danh sách hiện vật có thứ tự']
+{
+  id int [pk, increment]
+  tour_id int [not null, ref: > tours.id]
+  artifact_id int [not null, ref: > artifacts.id]
+  order_no int [not null]
+
+  indexes {
+    (tour_id, order_no) [unique]
+  }
+}
+
+Table visits [note: 'Một lần thực hiện tour (tách khỏi tour)']
+{
+  id int [pk, increment]
+  user_id uuid [not null, ref: > Users.Id]
+  museum_id int [not null, ref: > museums.id]
+  tour_id int [ref: > tours.id, note: 'NULL nếu tự khám phá (chưa chốt)']
+  status visit_status [default: 'in_progress']
+  available_minutes int [note: 'Thời gian có sẵn của lượt này']
+  started_at timestamptz
+  ended_at timestamptz
+}
+
+Table visit_items [note: 'Tiến độ: hiện vật đã tham quan, chỉ giữ lần gần nhất']
+{
+  id int [pk, increment]
+  visit_id int [not null, ref: > visits.id]
+  artifact_id int [not null, ref: > artifacts.id]
+  tour_item_id int [ref: > tour_items.id]
+  last_visited_at timestamptz
+
+  indexes {
+    (visit_id, artifact_id) [unique]
+  }
+}
+
+Table recognition_history [note: 'Lịch sử QR/nhận diện ảnh. Vị trí khách = bản ghi thành công gần nhất']
+{
+  id bigint [pk, increment]
+  user_id uuid [not null, ref: > Users.Id]
+  visit_id int [ref: > visits.id]
+  artifact_id int [ref: > artifacts.id, note: 'NULL nếu nhận diện thất bại']
+  method recognition_method [not null]
+  is_success boolean [not null]
+  confidence float
+  image_url varchar
+  recognized_at timestamptz [not null]
+
+  indexes {
+    (user_id, recognized_at)
+    (user_id, artifact_id)
+  }
+}
+
+// =====================================================
+// 8. QUIZ
+// =====================================================
+
+Table questions [note: 'Ngân hàng câu hỏi - AI tạo, Curator duyệt']
+{
+  id int [pk, increment]
+  artifact_id int [not null, ref: > artifacts.id]
+  language_id int [ref: > languages.id]
+  content text [not null]
+  explanation text
+  is_ai_generated boolean [default: false]
+  status content_status [default: 'draft']
+  created_by uuid [ref: > Users.Id]
+  reviewed_by uuid [ref: > Users.Id]
+  reviewed_at timestamptz
+  created_at timestamptz
+}
+
+Table question_options {
+  id int [pk, increment]
+  question_id int [not null, ref: > questions.id]
+  content varchar [not null]
+  is_correct boolean [not null, default: false]
+  order_no int
+}
+
+Table quizzes [note: 'Mỗi quiz thuộc đúng 1 hiện vật']
+{
+  id int [pk, increment]
+  artifact_id int [not null, ref: > artifacts.id]
+  title varchar
+  status content_status [default: 'draft']
+  created_by uuid [ref: > Users.Id]
+  reviewed_by uuid [ref: > Users.Id]
+  created_at timestamptz
+}
+
+Table quiz_questions [note: 'Một câu hỏi dùng được trong nhiều quiz']
+{
+  quiz_id int [pk, ref: > quizzes.id]
+  question_id int [pk, ref: > questions.id]
+}
+
+Table daily_quiz_entries [note: 'Quiz tích lũy trong ngày theo hiện vật đã quét QR/nhận diện ảnh']
+{
+  id bigint [pk, increment]
+  user_id uuid [not null, ref: > Users.Id]
+  quiz_id int [not null, ref: > quizzes.id]
+  artifact_id int [not null, ref: > artifacts.id]
+  recognition_id bigint [ref: > recognition_history.id, note: 'Lần nhận diện làm phát sinh mục này']
+  visit_id int [ref: > visits.id]
+  entry_date date [not null, note: 'Ngày tích lũy (múi giờ/mốc cuối ngày chưa chốt)']
+  status quiz_entry_status [default: 'pending']
+  created_at timestamptz
+
+  indexes {
+    (user_id, entry_date)
+    (user_id, quiz_id, entry_date) [unique, note: 'Chống tạo mục trùng khi quét lặp (đề xuất)']
+  }
+}
+
+Table quiz_attempts {
+  id bigint [pk, increment]
+  user_id uuid [not null, ref: > Users.Id]
+  quiz_id int [not null, ref: > quizzes.id]
+  daily_entry_id bigint [ref: > daily_quiz_entries.id]
+  mode attempt_mode [note: 'immediate: làm ngay sau khi đọc; later: làm sau']
+  total_questions int
+  correct_count int
+  score int [default: 0]
+  started_at timestamptz
+  completed_at timestamptz
+}
+
+Table quiz_attempt_answers {
+  id bigint [pk, increment]
+  attempt_id bigint [not null, ref: > quiz_attempts.id]
+  question_id int [not null, ref: > questions.id]
+  selected_option_id int [ref: > question_options.id]
+  is_correct boolean
+  points int [default: 0]
+  answered_at timestamptz
+}
+
+// =====================================================
+// 9. ĐIỂM VÀ HUY HIỆU
+// =====================================================
+
+Table point_transactions [note: 'Sổ điểm (đề xuất) - cộng vào user_profiles.total_points']
+{
+  id bigint [pk, increment]
+  user_id uuid [not null, ref: > Users.Id]
+  points int [not null]
+  reason varchar [note: 'scan_artifact | quiz_correct | badge ...']
+  ref_type varchar
+  ref_id bigint
+  created_at timestamptz
+}
+
+Table badges {
+  id int [pk, increment]
+  museum_id int [ref: > museums.id, note: 'NULL = toàn hệ thống (chưa chốt)']
+  code varchar [unique]
+  name varchar [not null]
+  description text
+  icon_url varchar
+  rule_json jsonb [note: 'Ví dụ: quét đủ 10 hiện vật']
+}
+
+Table user_badges [note: 'Mỗi huy hiệu chỉ nhận 1 lần']
+{
+  user_id uuid [pk, ref: > Users.Id]
+  badge_id int [pk, ref: > badges.id]
+  awarded_at timestamptz
+}
+
+// =====================================================
+// 10. THƯƠNG MẠI: VÉ / DỊCH VỤ SỐ / COMBO / THANH TOÁN
+// =====================================================
+
+Table products [note: 'Vé bảo tàng, dịch vụ số, combo']
+{
+  id int [pk, increment]
+  museum_id int [ref: > museums.id, note: 'Phạm vi sản phẩm chưa chốt, có thể NULL']
+  product_type product_type [not null]
+  name varchar [not null]
+  description text
+  price decimal(12,2) [not null]
+  currency varchar [default: 'VND']
+  valid_days int [note: 'Hiệu lực (ngày) - chưa chốt']
+  is_active boolean [default: true]
+  created_at timestamptz
+}
+
+Table combo_items [note: 'Thành phần của combo']
+{
+  combo_product_id int [pk, ref: > products.id]
+  component_product_id int [pk, ref: > products.id]
+  quantity int [default: 1]
+}
+
+Table orders {
+  id bigint [pk, increment]
+  user_id uuid [not null, ref: > Users.Id]
+  total_amount decimal(12,2)
+  currency varchar [default: 'VND']
+  status order_status [default: 'pending']
+  created_at timestamptz
+}
+
+Table order_items {
+  id bigint [pk, increment]
+  order_id bigint [not null, ref: > orders.id]
+  product_id int [not null, ref: > products.id]
+  quantity int [default: 1]
+  unit_price decimal(12,2)
+  visit_date date [note: 'Ngày dùng vé/dịch vụ nếu có']
+}
+
+Table payment_transactions [note: 'Lưu mọi lần thanh toán, kể cả thất bại']
+{
+  id bigint [pk, increment]
+  order_id bigint [not null, ref: > orders.id]
+  provider varchar [note: 'VNPay, MoMo, ... (chưa chốt)']
+  provider_txn_id varchar
+  amount decimal(12,2)
+  status payment_status [default: 'pending']
+  raw_response jsonb [note: 'Không lưu dữ liệu thẻ/ngân hàng thô']
+  created_at timestamptz
+}
+
+Table access_rights [note: 'Quyền vào cửa / quyền dùng dịch vụ số, tách khỏi đơn hàng']
+{
+  id bigint [pk, increment]
+  user_id uuid [not null, ref: > Users.Id]
+  order_item_id bigint [ref: > order_items.id]
+  product_id int [not null, ref: > products.id]
+  museum_id int [ref: > museums.id]
+  right_type right_type [not null]
+  status right_status [default: 'inactive']
+  ticket_code varchar [unique, note: 'Mã kiểm vé (khác QR hiện vật)']
+  valid_from timestamptz
+  valid_to timestamptz
+  used_at timestamptz
+}
+
+Table refunds [note: 'Hoàn tiền theo tỷ lệ %']
+{
+  id bigint [pk, increment]
+  order_id bigint [not null, ref: > orders.id]
+  order_item_id bigint [ref: > order_items.id, note: 'Hoàn từng phần của combo (chưa chốt)']
+  percent decimal(5,2)
+  amount decimal(12,2)
+  status refund_status [default: 'requested']
+  reason text
+  processed_by uuid [ref: > Users.Id]
+  requested_at timestamptz
+  processed_at timestamptz
+}
+
+Table invoices {
+  id bigint [pk, increment]
+  order_id bigint [unique, not null, ref: - orders.id]
+  invoice_no varchar [unique]
+  buyer_name varchar
+  buyer_email varchar
+  buyer_tax_code varchar
+  buyer_address varchar
+  total_amount decimal(12,2)
+  issued_at timestamptz
+}
+
+// =====================================================
+// 11. ĐÁNH GIÁ - PHẢN HỒI - KHIẾU NẠI
+// =====================================================
+
+Table feedbacks [note: 'Chỉ đánh giá sau khi hoàn thành tour']
+{
+  id bigint [pk, increment]
+  user_id uuid [not null, ref: > Users.Id]
+  visit_id int [not null, ref: > visits.id]
+  museum_id int [not null, ref: > museums.id]
+  target feedback_target [not null]
+  rating int
+  comment text
+  status feedback_status [default: 'visible']
+  moderated_by uuid [ref: > Users.Id, note: 'System Staff kiểm duyệt']
+  created_at timestamptz
+}
+
+Table feedback_responses [note: 'Phản hồi của nhân viên']
+{
+  id bigint [pk, increment]
+  feedback_id bigint [not null, ref: > feedbacks.id]
+  staff_user_id uuid [not null, ref: > Users.Id]
+  content text [not null]
+  created_at timestamptz
+}
+
+Table complaints [note: 'Khiếu nại/hỗ trợ - System Staff xử lý']
+{
+  id bigint [pk, increment]
+  user_id uuid [not null, ref: > Users.Id]
+  order_id bigint [ref: > orders.id]
+  content text [not null]
+  status complaint_status [default: 'open']
+  handled_by uuid [ref: > Users.Id]
+  resolution text
+  created_at timestamptz
+  resolved_at timestamptz
+}
+
+// =====================================================
+// 12. VẬN HÀNH
+// =====================================================
+
+Table audit_logs [note: 'Audit các thao tác quan trọng']
+{
+  id bigint [pk, increment]
+  user_id uuid [ref: > Users.Id]
+  museum_id int [ref: > museums.id]
+  action varchar [not null]
+  entity_type varchar
+  entity_id varchar
+  old_data jsonb
+  new_data jsonb
+  ip_address varchar
+  created_at timestamptz
+
+  indexes {
+    (entity_type, entity_id)
+    created_at
+  }
+}
+
+Table ai_quality_logs [note: 'Theo dõi lỗi và chất lượng AI (đề xuất)']
+{
+  id bigint [pk, increment]
+  ai_type varchar [note: 'chatbot | recognition | narration | quiz']
+  ref_id bigint
+  is_error boolean
+  score float
+  detail text
+  created_at timestamptz
+}
