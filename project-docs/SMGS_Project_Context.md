@@ -391,35 +391,6 @@ Biểu mẫu gốc có số điện thoại và email. Bản bàn giao bối c�
 
 Mỗi gói có thể có nhiều thành viên tham gia nhưng cần một người chịu trách nhiệm chính. Tài liệu chưa phân công tên cụ thể. Phạm vi hiện tại cần bao gồm chỉ đường từ nhà đến bảo tàng, định vị theo QR/ảnh, chỉ đường trong bảo tàng và quiz tích lũy trong ngày [U2].
 
-## 13. Những quyết định cần xác nhận tiếp
-
-### 13.1 Các câu hỏi ảnh hưởng trực tiếp tới phạm vi và thiết kế
-
-1. **Phạm vi dịch vụ:** đã chốt bán vé/dịch vụ/combo, nhưng dịch vụ số mở một tour, toàn bộ một bảo tàng hay toàn hệ thống? “Full dịch vụ” gồm những gì?
-2. **Thời hạn:** một ngày là ngày lịch hay 24 giờ; bắt đầu khi thanh toán, kích hoạt hay ngày chọn? Vé và dịch vụ trong combo có thời hạn riêng không?
-3. **Vé vào cửa:** hệ thống tự phát hành hay tích hợp hệ thống bảo tàng? Ai kiểm vé? Có ngày/khung giờ, loại khách, giới hạn số vé, mua hộ/nhóm hoặc lượt vào lại không?
-4. **Vai trò:** bản hiện tại có đủ 5 role không? Có giữ một tài khoản/một role không? Curator, Museum Staff thuộc một hay nhiều bảo tàng? Nếu bỏ System Staff thì ai nhận công việc?
-5. **Quiz trong ngày:** cách xác định khách đã đọc xong, mốc kết thúc ngày và cách xử lý quiz chưa làm sang ngày tiếp theo là gì?
-6. **Triển khai chỉ đường:** dùng dữ liệu lối đi nào cho đường trong bảo tàng? Chỉ đường từ nhà dùng nhà cung cấp nào, lấy điểm xuất phát thế nào và hiển thị trong app hay mở bản đồ ngoài? Định vị theo QR/ảnh và không theo dõi liên tục trong bảo tàng đã chốt.
-7. **Lựa chọn còn lại và dữ liệu demo:** framework Python, mô hình AI, cổng thanh toán, ngôn ngữ, số bảo tàng và số hiện vật là gì? Stack chính đã chốt, không cần chọn lại.
-
-### 13.2 Các câu hỏi để hoàn thiện nghiệp vụ
-
-8. Điều kiện hoàn thành tour là nhận diện toàn bộ hiện vật, đạt tỷ lệ nhất định hay thao tác kết thúc? Nhận diện ảnh có tính hoàn thành điểm dừng như QR không? Khách tự khám phá có lượt riêng không?
-9. Lần quét gần nhất được lưu theo tài khoản–hiện vật hay theo lượt–hiện vật? Lịch sử nhận diện giữ mọi sự kiện QR/ảnh hay chỉ một số loại?
-10. Một hiện vật có đúng một QR và một ảnh tham chiếu không? Có cần nhiều ảnh để nhận diện không?
-11. Các mức độ dài/chi tiết thuyết minh, ngôn ngữ chính thức và cách gắn media là gì?
-12. Ai duyệt từng loại nội dung? Có yêu cầu người tạo khác người duyệt, quy trình từ chối hoặc thu hồi nội dung không?
-13. Chatbot có hiển thị trích dẫn nguồn không? Nếu không có thông tin đã duyệt để trả lời thì xử lý thế nào?
-14. Quiz được làm lại bao nhiêu lần, reset có cộng điểm tiếp không, xử lý ra sao khi thiếu câu mới? Quét lặp có tạo mục quiz trùng không và quiz đã làm ngay hiển thị thế nào trong danh sách cuối ngày?
-15. Điểm mỗi hoạt động bao nhiêu? Nhận diện ảnh có điểm riêng như quét QR không? Quét lặp có cộng điểm không? Huy hiệu theo từng bảo tàng hay toàn hệ thống?
-16. Free/premium áp dụng ở mức hiện vật, bài thuyết minh, chức năng hay tour? Người dùng miễn phí có thể hoàn thành và đánh giá tour không?
-17. Công thức hoàn tiền, thời hạn, phí và cấp phê duyệt là gì? Combo có hoàn từng thành phần khi một phần đã sử dụng không? Những trường nào cần trên hóa đơn?
-18. Có cho nhiều gói trong một đơn, nhiều gói đồng thời cho cùng tài khoản hoặc mua trước cho ngày khác không?
-19. Đánh giá gắn với đối tượng/lượt nào, bao nhiêu lần và thang điểm nào? Có sửa/xóa hoặc trạng thái xử lý không?
-20. Danh sách báo cáo, audit event, thời hạn lưu và cách xử lý dữ liệu khi khóa/xóa tài khoản hoặc nội dung là gì?
-21. Quy mô tải, độ trễ, chất lượng AI/nhận diện và phạm vi offline nào được dùng làm tiêu chí nghiệm thu?
-
 ## 14. Lưu ý khi dùng tài liệu này với AI hoặc người tiếp nhận
 
 Người tiếp nhận có thể dùng tài liệu để phân tích nghiệp vụ, viết SRS, thiết kế ERD/API, lập backlog hoặc thảo luận kiến trúc. Khi tạo tài liệu tiếp theo, cần giữ các quyết định và điểm chưa chốt rõ ràng:
