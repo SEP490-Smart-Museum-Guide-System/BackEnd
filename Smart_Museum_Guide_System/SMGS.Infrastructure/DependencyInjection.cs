@@ -44,8 +44,10 @@ public static class DependencyInjection
                 "JwtSettings:Key must contain at least 32 UTF-8 bytes.")
             .ValidateOnStart();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IMuseumRepository, MuseumRepository>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IMuseumService, MuseumService>();
         return services;
     }
 }
