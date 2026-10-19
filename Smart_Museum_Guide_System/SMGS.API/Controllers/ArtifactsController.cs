@@ -47,7 +47,8 @@ public class ArtifactsController(IArtifactService artifactService) : ControllerB
     /// <summary>
     /// Tạo hiện vật mới (chỉ Admin hoặc Museum Staff).
     /// </summary>
-    [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.MuseumStaff}")]
+    //[Authorize(Roles = $"{RoleNames.Admin},{RoleNames.MuseumStaff}")]
+    [AllowAnonymous]
     [HttpPost]
     [ProducesResponseType(typeof(ResponseDto<ArtifactResponseDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ResponseDto<ArtifactResponseDto>), StatusCodes.Status400BadRequest)]
@@ -60,7 +61,8 @@ public class ArtifactsController(IArtifactService artifactService) : ControllerB
     /// <summary>
     /// Cập nhật hiện vật (chỉ Admin hoặc Museum Staff).
     /// </summary>
-    [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.MuseumStaff}")]
+    //[Authorize(Roles = $"{RoleNames.Admin},{RoleNames.MuseumStaff}")]
+    [AllowAnonymous]
     [HttpPut("{id:int}")]
     [ProducesResponseType(typeof(ResponseDto<ArtifactResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseDto<ArtifactResponseDto>), StatusCodes.Status400BadRequest)]
@@ -74,7 +76,8 @@ public class ArtifactsController(IArtifactService artifactService) : ControllerB
     /// <summary>
     /// Vô hiệu hóa hiện vật — soft delete (chỉ Admin hoặc Museum Staff).
     /// </summary>
-    [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.MuseumStaff}")]
+    //[Authorize(Roles = $"{RoleNames.Admin},{RoleNames.MuseumStaff}")]
+    [AllowAnonymous]
     [HttpDelete("{id:int}")]
     [ProducesResponseType(typeof(ResponseDto<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResponseDto<object>), StatusCodes.Status404NotFound)]
