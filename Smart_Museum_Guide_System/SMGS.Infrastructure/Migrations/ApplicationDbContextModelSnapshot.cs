@@ -245,7 +245,7 @@ namespace SMGS.Infrastructure.Migrations
 
                     b.HasIndex("QrCode")
                         .IsUnique()
-                        .HasFilter("qr_code IS NOT NULL");
+                        .HasFilter("\"qr_code\" IS NOT NULL");
 
                     b.ToTable("artifacts", (string)null);
                 });

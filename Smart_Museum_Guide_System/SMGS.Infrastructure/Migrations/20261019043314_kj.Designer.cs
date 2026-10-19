@@ -12,8 +12,8 @@ using SMGS.Infrastructure.Data;
 namespace SMGS.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261019031107_AddArtifactGalleryFloor")]
-    partial class AddArtifactGalleryFloor
+    [Migration("20261019043314_kj")]
+    partial class kj
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -248,7 +248,7 @@ namespace SMGS.Infrastructure.Migrations
 
                     b.HasIndex("QrCode")
                         .IsUnique()
-                        .HasFilter("qr_code IS NOT NULL");
+                        .HasFilter("\"qr_code\" IS NOT NULL");
 
                     b.ToTable("artifacts", (string)null);
                 });

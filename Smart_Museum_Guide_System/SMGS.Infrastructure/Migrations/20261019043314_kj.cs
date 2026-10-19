@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace SMGS.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddArtifactGalleryFloor : Migration
+    public partial class kj : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -281,7 +281,7 @@ namespace SMGS.Infrastructure.Migrations
                 table: "artifacts",
                 column: "QrCode",
                 unique: true,
-                filter: "qr_code IS NOT NULL");
+                filter: "\"qr_code\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_galleries_FloorId",
