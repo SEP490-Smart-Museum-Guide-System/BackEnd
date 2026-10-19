@@ -11,6 +11,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<Museum> Museums => Set<Museum>();
+    public DbSet<Artifact> Artifacts => Set<Artifact>();
+    public DbSet<Gallery> Galleries => Set<Gallery>();
+    public DbSet<Floor> Floors => Set<Floor>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -45,6 +48,55 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.CoverImageUrl).HasMaxLength(1000);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).HasColumnType("timestamptz");
+        });
+
+        // Floor
+        builder.Entity<Floor>(entity =>
+        {
+            entity.ToTable("floors");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.LevelNo).IsRequired();
+            entity.Property(e => e.Name).HasMaxLength(200);
+            entity.Property(e => e.MapImageUrl).HasMaxLength(1000);
+        });
+
+        // Gallery
+        builder.Entity<Gallery>(entity =>
+        {
+            entity.ToTable("galleries");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.Description).HasColumnType("text");
+            entity.HasOne(e => e.Floor)
+                .WithMany(f => f.Galleries)
+                .HasForeignKey(e => e.FloorId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Artifact
+        builder.Entity<Artifact>(entity =>
+        {
+            entity.ToTable("artifacts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.Code).HasMaxLength(100);
+            entity.Property(e => e.QrCode).HasMaxLength(200);
+            entity.HasIndex(e => e.QrCode).IsUnique().HasFilter("qr_code IS NOT NULL");
+            entity.Property(e => e.MapIcon).HasMaxLength(500);
+            entity.Property(e => e.AccessLevel).HasMaxLength(20).HasDefaultValue("free");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasColumnType("timestamptz");
+            entity.HasOne(e => e.Museum)
+                .WithMany()
+                .HasForeignKey(e => e.MuseumId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Gallery)
+                .WithMany(g => g.Artifacts)
+                .HasForeignKey(e => e.GalleryId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

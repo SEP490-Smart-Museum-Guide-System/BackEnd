@@ -45,9 +45,11 @@ public static class DependencyInjection
             .ValidateOnStart();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IMuseumRepository, MuseumRepository>();
+        services.AddScoped<IArtifactRepository, ArtifactRepository>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IMuseumService, MuseumService>();
+        services.AddScoped<IArtifactService, ArtifactService>();
         return services;
     }
 }
