@@ -51,6 +51,13 @@ namespace SMGS.Infrastructure.Migrations
                     b.HasData(
                         new
                         {
+                            Id = new Guid("c1e5f237-c782-4910-9235-5d73ecdd3005"),
+                            ConcurrencyStamp = "seed-curator-v1",
+                            Name = "Curator",
+                            NormalizedName = "CURATOR"
+                        },
+                        new
+                        {
                             Id = new Guid("c1e5f237-c782-4910-9235-5d73ecdd3001"),
                             ConcurrencyStamp = "seed-visitor-v1",
                             Name = "Visitor",
@@ -248,6 +255,104 @@ namespace SMGS.Infrastructure.Migrations
                         .HasFilter("\"qr_code\" IS NOT NULL");
 
                     b.ToTable("artifacts", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactContent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ArtifactId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(35)
+                        .HasColumnType("character varying(35)");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtifactId", "LanguageCode")
+                        .IsUnique();
+
+                    b.ToTable("artifact_contents", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactContentVersion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ArtifactContentId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsAiGenerated")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsCurrent")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("VersionNo")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtifactContentId")
+                        .IsUnique()
+                        .HasFilter("\"IsCurrent\" = TRUE");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("ReviewedBy");
+
+                    b.HasIndex("ArtifactContentId", "VersionNo")
+                        .IsUnique();
+
+                    b.ToTable("artifact_content_versions", (string)null);
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.Floor", b =>
@@ -493,6 +598,39 @@ namespace SMGS.Infrastructure.Migrations
                     b.Navigation("Museum");
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactContent", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Artifact", "Artifact")
+                        .WithMany()
+                        .HasForeignKey("ArtifactId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Artifact");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactContentVersion", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.ArtifactContent", "Content")
+                        .WithMany("Versions")
+                        .HasForeignKey("ArtifactContentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Content");
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.Gallery", b =>
                 {
                     b.HasOne("SMGS.Domain.Entities.Floor", "Floor")
@@ -502,6 +640,11 @@ namespace SMGS.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Floor");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactContent", b =>
+                {
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.Floor", b =>

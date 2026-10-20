@@ -138,7 +138,8 @@ Check(identityUser.AccessFailedCount == 0, "Successful login must reset failed a
 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 Check(db.Database.GetMigrations().Any(), "Identity migration missing.");
 var identityTables = db.Model.GetEntityTypes().Select(entity => entity.GetTableName()).ToHashSet();
-Check(identityTables.SetEquals(new[] { "Users", "Roles", "UserRoles", "UserClaims", "UserLogins", "UserTokens", "RoleClaims" }),
+Check(new[] { "Users", "Roles", "UserRoles", "UserClaims", "UserLogins", "UserTokens", "RoleClaims" }.All(identityTables.Contains)
+    && !identityTables.Any(name => name?.StartsWith("AspNet", StringComparison.Ordinal) == true),
     "Identity tables must use names without the AspNet prefix.");
 _ = scope.ServiceProvider.GetRequiredService<IAuthService>();
 Check(provider.GetRequiredService<IOptions<JwtSettings>>().Value.Key == settings.Key, "JWT options did not bind.");

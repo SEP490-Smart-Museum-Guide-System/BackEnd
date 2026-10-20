@@ -50,6 +50,8 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IMuseumService, MuseumService>();
         services.AddScoped<IArtifactService, ArtifactService>();
+        services.AddScoped<IArtifactContentRepository, ArtifactContentRepository>();
+        services.AddScoped<IArtifactContentService, ArtifactContentService>();
         return services;
     }
 }
