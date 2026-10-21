@@ -7,4 +7,9 @@ public interface IArtifactContentRepository
     Task<ArtifactContentVersion?> GetPublishedAsync(int artifactId, string languageCode);
     Task<bool> CreateAsync(int artifactId, string languageCode, ArtifactContentVersion version);
     Task<bool> ReviewAsync(ArtifactContentVersion version, Guid reviewerId, bool approve, string? note);
+
+    /// <summary>
+    /// Lấy tất cả nội dung đã xuất bản cho một hiện vật (tất cả ngôn ngữ).
+    /// </summary>
+    Task<List<ArtifactContentVersion>> GetAllPublishedByArtifactIdAsync(int artifactId);
 }

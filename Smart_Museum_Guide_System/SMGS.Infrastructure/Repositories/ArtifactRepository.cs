@@ -71,6 +71,14 @@ public class ArtifactRepository(ApplicationDbContext db) : IArtifactRepository
         return await query.AnyAsync();
     }
 
+    public async Task<Artifact?> GetByQrCodeAsync(string qrCode)
+    {
+        var normalized = qrCode.Trim();
+        return await db.Artifacts
+            .Include(a => a.Museum)
+            .FirstOrDefaultAsync(a => a.QrCode == normalized && a.IsActive);
+    }
+
     public async Task<Artifact> CreateAsync(Artifact artifact)
     {
         db.Artifacts.Add(artifact);

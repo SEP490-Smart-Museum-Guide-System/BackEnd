@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<IArtifactService, ArtifactService>();
         services.AddScoped<IArtifactContentRepository, ArtifactContentRepository>();
         services.AddScoped<IArtifactContentService, ArtifactContentService>();
+        services.AddSingleton<IQrCodeService, QrCodeService>();
         return services;
     }
 }

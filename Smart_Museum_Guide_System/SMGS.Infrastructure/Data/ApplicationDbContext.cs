@@ -111,7 +111,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.Name).IsRequired().HasMaxLength(300);
             entity.Property(e => e.Code).HasMaxLength(100);
             entity.Property(e => e.QrCode).HasMaxLength(200);
-            entity.HasIndex(e => e.QrCode).IsUnique().HasFilter("\"qr_code\" IS NOT NULL");
+            entity.HasIndex(e => e.QrCode).IsUnique().HasFilter("\"QrCode\" IS NOT NULL");
             entity.Property(e => e.MapIcon).HasMaxLength(500);
             entity.Property(e => e.AccessLevel).HasMaxLength(20).HasDefaultValue("free");
             entity.Property(e => e.IsActive).HasDefaultValue(true);

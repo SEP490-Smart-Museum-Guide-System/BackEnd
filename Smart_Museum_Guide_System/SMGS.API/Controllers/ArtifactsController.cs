@@ -46,6 +46,7 @@ public class ArtifactsController(IArtifactService artifactService) : ControllerB
 
     /// <summary>
     /// Tạo hiện vật mới (chỉ Admin hoặc Museum Staff).
+    /// QR code sẽ được tự động sinh nếu không truyền.
     /// </summary>
     //[Authorize(Roles = $"{RoleNames.Admin},{RoleNames.MuseumStaff}")]
     [AllowAnonymous]
@@ -86,4 +87,56 @@ public class ArtifactsController(IArtifactService artifactService) : ControllerB
         var response = await artifactService.DeleteAsync(id);
         return StatusCode(response.StatusCode, response);
     }
+
+    // ────────────────────────────────────────────────────────────
+    //  QR CODE ENDPOINTS
+    // ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Quét QR code → trả về thông tin chi tiết hiện vật kèm nội dung đã xuất bản (đa ngôn ngữ).
+    /// Đây là endpoint mà QR code sẽ trỏ tới khi được quét.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("scan/{qrCode}")]
+    [ProducesResponseType(typeof(ResponseDto<ArtifactScanResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseDto<ArtifactScanResponseDto>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Scan(string qrCode)
+    {
+        var response = await artifactService.ScanAsync(qrCode);
+        return StatusCode(response.StatusCode, response);
+    }
+
+    /// <summary>
+    /// Tải ảnh QR code (PNG) của hiện vật — dùng để in và dán lên hiện vật.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("{id:int}/qr-image")]
+    [Produces("image/png")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseDto<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetQrImage(int id)
+    {
+        var baseUrl = $"{Request.Scheme}://{Request.Host}";
+        var response = await artifactService.GetQrCodeImageAsync(id, baseUrl);
+
+        if (response.StatusCode != 200)
+            return StatusCode(response.StatusCode, ResponseDto<object>.Fail(response.Message, response.StatusCode));
+
+        return File(response.Data!, "image/png", $"artifact-{id}-qr.png");
+    }
+
+    /// <summary>
+    /// Tạo lại mã QR mới cho hiện vật (khi mã cũ bị lộ hoặc hỏng).
+    /// </summary>
+    //[Authorize(Roles = $"{RoleNames.Admin},{RoleNames.MuseumStaff}")]
+    [AllowAnonymous]
+    [HttpPost("{id:int}/regenerate-qr")]
+    [ProducesResponseType(typeof(ResponseDto<ArtifactResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResponseDto<ArtifactResponseDto>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RegenerateQr(int id)
+    {
+        var response = await artifactService.RegenerateQrCodeAsync(id);
+        return StatusCode(response.StatusCode, response);
+    }
 }
+

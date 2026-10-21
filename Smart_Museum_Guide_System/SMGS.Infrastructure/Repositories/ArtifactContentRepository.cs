@@ -67,6 +67,17 @@ public class ArtifactContentRepository(ApplicationDbContext db) : IArtifactConte
         catch (DbUpdateException e) when (e.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         { db.ChangeTracker.Clear(); return false; }
     }
+    public async Task<List<ArtifactContentVersion>> GetAllPublishedByArtifactIdAsync(int artifactId)
+    {
+        return await Query.AsNoTracking()
+            .Where(v => v.Content.ArtifactId == artifactId
+                && v.IsCurrent
+                && v.Status == ContentStatuses.Published
+                && v.Content.Artifact.IsActive)
+            .OrderBy(v => v.Content.LanguageCode)
+            .ToListAsync();
+    }
+
     private async Task<bool> SaveAsync()
     {
         try { await db.SaveChangesAsync(); return true; }
