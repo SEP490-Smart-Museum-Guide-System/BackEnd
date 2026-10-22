@@ -49,6 +49,25 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IMuseumService, MuseumService>();
+        services.AddScoped<OutdoorNavigationService>();
+        services.AddHttpClient<PlaceSearchService>(client =>
+        {
+            client.BaseAddress = new Uri((configuration["Photon:BaseUrl"] ?? "https://photon.komoot.io/").TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.MaxResponseContentBufferSize = 1024 * 1024;
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("SMGS/1.0");
+        }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+        services.AddHttpClient<IOutdoorRoutingService, OsrmRoutingService>(client =>
+        {
+            var baseUrl = configuration["Osrm:BaseUrl"] ?? throw new InvalidOperationException("Configure Osrm:BaseUrl.");
+            if (!Uri.TryCreate(baseUrl.TrimEnd('/') + "/", UriKind.Absolute, out var uri)
+                || (uri.Scheme != "https" && uri.Scheme != "http"))
+                throw new InvalidOperationException("Osrm:BaseUrl must be an HTTP(S) URL.");
+            client.BaseAddress = uri;
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.MaxResponseContentBufferSize = 8 * 1024 * 1024;
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("SMGS/1.0");
+        }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddScoped<IArtifactService, ArtifactService>();
         services.AddScoped<IArtifactContentRepository, ArtifactContentRepository>();
         services.AddScoped<IArtifactContentService, ArtifactContentService>();

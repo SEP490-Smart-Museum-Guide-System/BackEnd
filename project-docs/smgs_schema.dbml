@@ -152,11 +152,17 @@ Table user_profiles {
 // 2. BẢO TÀNG - KHÔNG GIAN
 // =====================================================
 
+Table cities {
+  Code varchar(2) [pk, note: 'Mã tỉnh/thành theo QĐ 19/2025/QĐ-TTg']
+  Name varchar(100) [not null]
+}
+
 Table museums {
   id int [pk, increment]
   name varchar [not null]
   description text
   address varchar
+  CityCode varchar(2) [ref: > cities.Code, note: 'Nullable cho dữ liệu cũ; EF giữ tên cột PascalCase']
   latitude decimal(9,6) [note: 'Dùng cho chỉ đường từ nhà đến bảo tàng']
   longitude decimal(9,6)
   opening_hours varchar

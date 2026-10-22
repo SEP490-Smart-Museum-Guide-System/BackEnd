@@ -55,6 +55,7 @@ Check(principal.FindFirstValue(ClaimTypes.NameIdentifier) == repo.User.Id.ToStri
 Check(principal.FindFirstValue(ClaimTypes.Email) == repo.User.Email, "Email claim missing.");
 Check(principal.IsInRole("Visitor"), "Role claim missing.");
 Check(data.Email == repo.User.Email && data.FullName == repo.User.FullName, "Login profile mismatch.");
+Check(data.Roles.SequenceEqual(new[] { "Visitor" }), "Response must carry actual roles.");
 Check(data.AccessTokenExpiration > DateTime.UtcNow, "Token must have a future expiry.");
 var second = await service.LoginAsync(request);
 Check(second.Data!.AccessToken != data.AccessToken, "Each login needs a unique JWT ID.");
@@ -157,6 +158,7 @@ catch (OptionsValidationException) { }
 Console.WriteLine("PASS: registration validation/creation/duplicate handling, login validation, failures, Identity password hashing/lockout, JWT claims/signature/issuer/audience/expiry, DI and migration metadata.");
 
 if (args.Contains("--database")) await RoleChecks.RunAsync();
+if (args.Contains("--http")) await HttpChecks.RunAsync(args.Contains("--hold"));
 
 sealed class TestUserRepository : IUserRepository
 {

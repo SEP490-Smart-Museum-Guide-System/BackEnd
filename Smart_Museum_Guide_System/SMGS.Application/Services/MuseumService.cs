@@ -4,11 +4,38 @@ using SMGS.Application.DTOs.Museum.Response;
 using SMGS.Application.Interfaces;
 using SMGS.Domain.Entities;
 using SMGS.Domain.Interfaces;
+using SMGS.Domain.Constants;
 
 namespace SMGS.Application.Services;
 
 public class MuseumService(IMuseumRepository museumRepo) : IMuseumService
 {
+    public async Task<ResponseDto<PaginatedResponseDto<MuseumResponseDto>>> DiscoverAsync(
+        DiscoverMuseumsRequestDto request, bool canViewInactive, CancellationToken cancellationToken = default)
+    {
+        if (!CityCatalog.IsValid(request.CityCode)
+            || request.Latitude.HasValue != request.Longitude.HasValue
+            || (request.Latitude.HasValue && (!double.IsFinite(request.Latitude.Value) || Math.Abs(request.Latitude.Value) > 90))
+            || (request.Longitude.HasValue && (!double.IsFinite(request.Longitude.Value) || Math.Abs(request.Longitude.Value) > 180))
+            || request.SortBy is not (null or "newest" or "distance")
+            || (request.SortBy == "distance" && !request.Latitude.HasValue)
+            || request.Page < 1 || request.Page > 1000000 || request.PageSize < 1 || request.PageSize > 50)
+            return ResponseDto<PaginatedResponseDto<MuseumResponseDto>>.Fail("Bộ lọc hoặc tọa độ không hợp lệ.");
+
+        var (items, total) = await museumRepo.DiscoverAsync(new MuseumDiscoveryQuery
+        {
+            Keyword = request.Keyword ?? request.Search, CityCode = request.CityCode,
+            IsActive = canViewInactive ? request.IsActive : true,
+            Latitude = request.Latitude, Longitude = request.Longitude, SortBy = request.SortBy,
+            Page = request.Page, PageSize = request.PageSize
+        }, cancellationToken);
+        return ResponseDto<PaginatedResponseDto<MuseumResponseDto>>.Success(new()
+        {
+            Items = items.Select(item => { var dto = MapToDto(item.Museum); dto.DistanceKm = item.DistanceKm; return dto; }).ToList(),
+            Page = request.Page, PageSize = request.PageSize, TotalCount = total
+        });
+    }
+
     public async Task<ResponseDto<PaginatedResponseDto<MuseumResponseDto>>> GetAllAsync(
         string? keyword, bool? isActive, int page, int pageSize)
     {
@@ -40,6 +67,8 @@ public class MuseumService(IMuseumRepository museumRepo) : IMuseumService
 
     public async Task<ResponseDto<MuseumResponseDto>> CreateAsync(CreateMuseumRequestDto dto)
     {
+        if (!CityCatalog.IsValid(dto.CityCode) || dto.Latitude.HasValue != dto.Longitude.HasValue)
+            return ResponseDto<MuseumResponseDto>.Fail("Mã tỉnh/thành hoặc cặp tọa độ không hợp lệ.");
         var name = dto.Name.Trim();
 
         if (await museumRepo.ExistsByNameAsync(name))
@@ -50,6 +79,7 @@ public class MuseumService(IMuseumRepository museumRepo) : IMuseumService
             Name = name,
             Description = dto.Description?.Trim(),
             Address = dto.Address?.Trim(),
+            CityCode = dto.CityCode,
             Latitude = dto.Latitude,
             Longitude = dto.Longitude,
             OpeningHours = dto.OpeningHours?.Trim(),
@@ -64,6 +94,8 @@ public class MuseumService(IMuseumRepository museumRepo) : IMuseumService
 
     public async Task<ResponseDto<MuseumResponseDto>> UpdateAsync(int id, UpdateMuseumRequestDto dto)
     {
+        if (!CityCatalog.IsValid(dto.CityCode) || dto.Latitude.HasValue != dto.Longitude.HasValue)
+            return ResponseDto<MuseumResponseDto>.Fail("Mã tỉnh/thành hoặc cặp tọa độ không hợp lệ.");
         var museum = await museumRepo.GetByIdAsync(id);
         if (museum is null)
             return ResponseDto<MuseumResponseDto>.Fail("Không tìm thấy bảo tàng.", 404);
@@ -76,6 +108,7 @@ public class MuseumService(IMuseumRepository museumRepo) : IMuseumService
         museum.Name = name;
         museum.Description = dto.Description?.Trim();
         museum.Address = dto.Address?.Trim();
+        museum.CityCode = dto.CityCode ?? museum.CityCode;
         museum.Latitude = dto.Latitude;
         museum.Longitude = dto.Longitude;
         museum.OpeningHours = dto.OpeningHours?.Trim();
@@ -102,6 +135,7 @@ public class MuseumService(IMuseumRepository museumRepo) : IMuseumService
         Name = museum.Name,
         Description = museum.Description,
         Address = museum.Address,
+        CityCode = museum.CityCode,
         Latitude = museum.Latitude,
         Longitude = museum.Longitude,
         OpeningHours = museum.OpeningHours,
