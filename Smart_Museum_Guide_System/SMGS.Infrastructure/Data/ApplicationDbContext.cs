@@ -11,6 +11,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<Museum> Museums => Set<Museum>();
+    public DbSet<City> Cities => Set<City>();
     public DbSet<ArtifactContent> ArtifactContents => Set<ArtifactContent>();
     public DbSet<ArtifactContentVersion> ArtifactContentVersions => Set<ArtifactContentVersion>();
     public DbSet<Artifact> Artifacts => Set<Artifact>();
@@ -22,12 +23,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         base.OnModelCreating(builder);
         builder.Entity<ApplicationUser>().ToTable("Users");
         builder.Entity<IdentityRole<Guid>>().ToTable("Roles");
-        builder.Entity<IdentityRole<Guid>>().HasData(
-            new { Id = new Guid("c1e5f237-c782-4910-9235-5d73ecdd3005"), Name = RoleNames.Curator, NormalizedName = "CURATOR", ConcurrencyStamp = "seed-curator-v1" },
-            new { Id = new Guid("c1e5f237-c782-4910-9235-5d73ecdd3001"), Name = RoleNames.Visitor, NormalizedName = "VISITOR", ConcurrencyStamp = "seed-visitor-v1" },
-            new { Id = new Guid("c1e5f237-c782-4910-9235-5d73ecdd3002"), Name = RoleNames.Admin, NormalizedName = "ADMIN", ConcurrencyStamp = "seed-admin-v1" },
-            new { Id = new Guid("c1e5f237-c782-4910-9235-5d73ecdd3003"), Name = RoleNames.Staff, NormalizedName = "STAFF", ConcurrencyStamp = "seed-staff-v1" },
-            new { Id = new Guid("c1e5f237-c782-4910-9235-5d73ecdd3004"), Name = RoleNames.MuseumStaff, NormalizedName = "MUSEUM STAFF", ConcurrencyStamp = "seed-museum-staff-v1" });
+        builder.Entity<IdentityRole<Guid>>().HasData(DataSeeder.CreateRoleSeeds());
         builder.Entity<IdentityUserRole<Guid>>().ToTable("UserRoles");
         builder.Entity<IdentityUserClaim<Guid>>().ToTable("UserClaims");
         builder.Entity<IdentityUserLogin<Guid>>().ToTable("UserLogins");
@@ -37,6 +33,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<ApplicationUser>().HasIndex(user => user.NormalizedEmail).IsUnique();
 
         // Museum
+        builder.Entity<City>(entity =>
+        {
+            entity.ToTable("cities");
+            entity.HasKey(e => e.Code);
+            entity.Property(e => e.Code).HasMaxLength(2);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.HasData(CityCatalog.Items);
+        });
         builder.Entity<Museum>(entity =>
         {
             entity.ToTable("museums");
@@ -45,6 +49,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Description).HasColumnType("text");
             entity.Property(e => e.Address).HasMaxLength(500);
+            entity.Property(e => e.CityCode).HasMaxLength(2);
+            entity.HasOne<City>().WithMany().HasForeignKey(e => e.CityCode).OnDelete(DeleteBehavior.Restrict);
             entity.Property(e => e.Latitude).HasColumnType("decimal(9,6)");
             entity.Property(e => e.Longitude).HasColumnType("decimal(9,6)");
             entity.Property(e => e.OpeningHours).HasMaxLength(500);

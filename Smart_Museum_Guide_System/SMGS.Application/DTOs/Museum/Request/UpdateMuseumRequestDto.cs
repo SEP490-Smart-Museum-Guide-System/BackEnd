@@ -14,6 +14,9 @@ public class UpdateMuseumRequestDto
     [StringLength(500)]
     public string? Address { get; set; }
 
+    [StringLength(2)]
+    public string? CityCode { get; set; }
+
     [Range(-90, 90, ErrorMessage = "Latitude phải từ -90 đến 90.")]
     public decimal? Latitude { get; set; }
 

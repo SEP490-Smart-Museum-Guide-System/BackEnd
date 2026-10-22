@@ -6,6 +6,7 @@ namespace SMGS.Application.Interfaces;
 
 public interface IMuseumService
 {
+    Task<ResponseDto<PaginatedResponseDto<MuseumResponseDto>>> DiscoverAsync(DiscoverMuseumsRequestDto request, bool canViewInactive, CancellationToken cancellationToken = default);
     Task<ResponseDto<PaginatedResponseDto<MuseumResponseDto>>> GetAllAsync(string? keyword, bool? isActive, int page, int pageSize);
     Task<ResponseDto<MuseumResponseDto>> GetByIdAsync(int id);
     Task<ResponseDto<MuseumResponseDto>> CreateAsync(CreateMuseumRequestDto dto);

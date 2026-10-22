@@ -20,14 +20,15 @@ public class MuseumsController(IMuseumService museumService) : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(ResponseDto<PaginatedResponseDto<MuseumResponseDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
-        [FromQuery] string? keyword,
-        [FromQuery] bool? isActive,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10)
+        [FromQuery] DiscoverMuseumsRequestDto request, CancellationToken cancellationToken)
     {
-        var response = await museumService.GetAllAsync(keyword, isActive, page, pageSize);
+        var response = await museumService.DiscoverAsync(request, User.IsInRole(RoleNames.Admin), cancellationToken);
         return StatusCode(response.StatusCode, response);
     }
+
+    [AllowAnonymous]
+    [HttpGet("cities")]
+    public IActionResult GetCities() => Ok(ResponseDto<object>.Success(CityCatalog.Items));
 
     /// <summary>
     /// Lấy chi tiết một bảo tàng.
@@ -39,6 +40,8 @@ public class MuseumsController(IMuseumService museumService) : ControllerBase
     public async Task<IActionResult> GetById(int id)
     {
         var response = await museumService.GetByIdAsync(id);
+        if (response.Data is { IsActive: false } && !User.IsInRole(RoleNames.Admin))
+            return NotFound(ResponseDto<MuseumResponseDto>.Fail("Không tìm thấy bảo tàng.", 404));
         return StatusCode(response.StatusCode, response);
     }
 

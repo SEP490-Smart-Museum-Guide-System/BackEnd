@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using Microsoft.OpenApi.Models;
 using SMGS.Application.DTOs.Common;
 using SMGS.Infrastructure;
@@ -40,8 +42,37 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
     .Configure<IOptions<JwtSettings>>((options, settings) =>
         options.TokenValidationParameters = settings.Value.CreateValidationParameters());
 builder.Services.AddAuthorization();
+builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
+{
+    var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+    if (origins.Length > 0) policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod();
+}));
+builder.Services.AddRateLimiter(options =>
+{
+    // shortcut: instance-wide demo quota; use a shared limiter when running multiple instances.
+    options.AddFixedWindowLimiter("place-search", limiter =>
+    {
+        limiter.PermitLimit = 2;
+        limiter.Window = TimeSpan.FromSeconds(1);
+        limiter.QueueLimit = 0;
+    });
+    options.AddFixedWindowLimiter("outdoor-routing", limiter =>
+    {
+        // shortcut: one API instance/demo server, use a shared limiter when scaling out.
+        limiter.PermitLimit = 1;
+        limiter.Window = TimeSpan.FromSeconds(1);
+        limiter.QueueLimit = 0;
+    });
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = 429;
+        context.HttpContext.Response.Headers.RetryAfter = "1";
+        await context.HttpContext.Response.WriteAsJsonAsync(ResponseDto<object>.Fail("Vui lòng thử lại sau.", 429), token);
+    };
+});
 
 var app = builder.Build();
+if (app.Environment.IsDevelopment()) await DataSeeder.EnsureRolesAsync(app.Services);
 if (args.Contains("--create-user"))
 {
     if (!app.Environment.IsDevelopment())
@@ -57,7 +88,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment()) app.UseHttpsRedirection();
+app.UseRouting();
+app.UseCors("Frontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
