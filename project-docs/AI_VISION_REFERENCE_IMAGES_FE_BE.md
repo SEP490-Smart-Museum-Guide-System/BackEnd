@@ -6,6 +6,14 @@
 
 ## 1. Mục tiêu và luồng nghiệp vụ
 
+### Quy tắc database: BE là nguồn dữ liệu chính
+
+Metadata và trạng thái ảnh tham chiếu phải dùng **database chung do Backend quản lý** (DBML hiện mô tả PostgreSQL): `artifact_reference_images` nằm trong DB đó cùng `artifacts`. FE chỉ gọi API BE; FE và AI Vision không tự kết nối trực tiếp vào DB của BE. Không tạo một database metadata riêng cho FE hoặc AI service.
+
+AI Vision hiện có SQLite riêng trong Docker volume để lưu **embedding dẫn xuất** phục vụ tìm kiếm ảnh. SQLite này là index/cache nội bộ của microservice, không thay thế bảng `artifact_reference_images`, không phải DB nghiệp vụ chung và có thể tái tạo từ ảnh gốc + records trong DB BE. Ảnh gốc và `image_url`, quyền, owner, audit, trạng thái upload/index phải do BE quản lý. Nếu index service mất dữ liệu, BE cần có khả năng index lại từ các ảnh và record trong DB chung.
+
+Trong repo hiện tại, DBML đã có `artifact_reference_images`; chưa tìm thấy API upload/list/delete tương ứng trong source BE. FE mới dừng ở preview local, nên chưa có kết nối DB/API nào.
+
 Curator hoặc nhân viên bảo tàng được phân quyền thêm ảnh đã xác nhận vào bộ ảnh tham chiếu của một hiện vật cụ thể. FE không yêu cầu nhập tag hiện vật cho từng ảnh: người dùng đang ở hồ sơ hiện vật, và BE gắn ảnh với `artifactId` từ route. Nhãn tùy chọn như “mặt trước” chỉ phục vụ quản trị, không phải đầu vào bắt buộc của CLIP hiện tại.
 
 ```text
