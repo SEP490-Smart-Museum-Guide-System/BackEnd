@@ -17,6 +17,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Artifact> Artifacts => Set<Artifact>();
     public DbSet<Gallery> Galleries => Set<Gallery>();
     public DbSet<Floor> Floors => Set<Floor>();
+    public DbSet<Visit> Visits => Set<Visit>();
+    public DbSet<VisitFeedback> VisitFeedbacks => Set<VisitFeedback>();
+    public DbSet<StaffResponse> StaffResponses => Set<StaffResponse>();
+    public DbSet<Complaint> Complaints => Set<Complaint>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -130,6 +134,74 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .WithMany(g => g.Artifacts)
                 .HasForeignKey(e => e.GalleryId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Visit
+        builder.Entity<Visit>(entity =>
+        {
+            entity.ToTable("visits");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.StartedAt).HasColumnType("timestamptz");
+            entity.Property(e => e.CompletedAt).HasColumnType("timestamptz");
+            entity.HasIndex(e => new { e.VisitorId, e.MuseumId, e.Status });
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(e => e.VisitorId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Museum).WithMany().HasForeignKey(e => e.MuseumId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // VisitFeedback
+        builder.Entity<VisitFeedback>(entity =>
+        {
+            entity.ToTable("visit_feedbacks", t =>
+            {
+                t.HasCheckConstraint("CK_visit_feedbacks_overall", "\"OverallRating\" BETWEEN 1 AND 5");
+                t.HasCheckConstraint("CK_visit_feedbacks_content", "\"ContentRating\" IS NULL OR \"ContentRating\" BETWEEN 1 AND 5");
+                t.HasCheckConstraint("CK_visit_feedbacks_tour", "\"TourRating\" IS NULL OR \"TourRating\" BETWEEN 1 AND 5");
+                t.HasCheckConstraint("CK_visit_feedbacks_chatbot", "\"ChatbotRating\" IS NULL OR \"ChatbotRating\" BETWEEN 1 AND 5");
+            });
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.Comment).HasMaxLength(2000);
+            entity.Property(e => e.ModerationStatus).IsRequired().HasMaxLength(20).HasDefaultValue(FeedbackModerationStatus.Visible);
+            entity.Property(e => e.ModerationNote).HasMaxLength(1000);
+            entity.Property(e => e.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(e => e.UpdatedAt).HasColumnType("timestamptz");
+            // Mỗi lượt tham quan chỉ có một đánh giá
+            entity.HasIndex(e => e.VisitId).IsUnique();
+            entity.HasOne(e => e.Visit).WithOne(v => v.Feedback).HasForeignKey<VisitFeedback>(e => e.VisitId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // StaffResponse
+        builder.Entity<StaffResponse>(entity =>
+        {
+            entity.ToTable("staff_responses");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.Content).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(e => e.UpdatedAt).HasColumnType("timestamptz");
+            entity.HasIndex(e => e.FeedbackId).IsUnique();
+            entity.HasOne(e => e.Feedback).WithOne(f => f.StaffResponse).HasForeignKey<StaffResponse>(e => e.FeedbackId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(e => e.RespondedBy).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Complaint
+        builder.Entity<Complaint>(entity =>
+        {
+            entity.ToTable("complaints");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.Subject).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.Body).IsRequired().HasMaxLength(5000);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20).HasDefaultValue(ComplaintStatus.New);
+            entity.Property(e => e.ResolutionNote).HasMaxLength(2000);
+            entity.Property(e => e.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(e => e.UpdatedAt).HasColumnType("timestamptz");
+            entity.Property(e => e.ResolvedAt).HasColumnType("timestamptz");
+            entity.HasIndex(e => e.Status);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(e => e.VisitorId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(e => e.AssignedTo).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
