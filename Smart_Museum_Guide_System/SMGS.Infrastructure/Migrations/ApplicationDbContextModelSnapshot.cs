@@ -355,6 +355,249 @@ namespace SMGS.Infrastructure.Migrations
                     b.ToTable("artifact_content_versions", (string)null);
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.City", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Code");
+
+                    b.ToTable("cities", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Code = "01",
+                            Name = "Hà Nội"
+                        },
+                        new
+                        {
+                            Code = "04",
+                            Name = "Cao Bằng"
+                        },
+                        new
+                        {
+                            Code = "08",
+                            Name = "Tuyên Quang"
+                        },
+                        new
+                        {
+                            Code = "11",
+                            Name = "Điện Biên"
+                        },
+                        new
+                        {
+                            Code = "12",
+                            Name = "Lai Châu"
+                        },
+                        new
+                        {
+                            Code = "14",
+                            Name = "Sơn La"
+                        },
+                        new
+                        {
+                            Code = "15",
+                            Name = "Lào Cai"
+                        },
+                        new
+                        {
+                            Code = "19",
+                            Name = "Thái Nguyên"
+                        },
+                        new
+                        {
+                            Code = "20",
+                            Name = "Lạng Sơn"
+                        },
+                        new
+                        {
+                            Code = "22",
+                            Name = "Quảng Ninh"
+                        },
+                        new
+                        {
+                            Code = "24",
+                            Name = "Bắc Ninh"
+                        },
+                        new
+                        {
+                            Code = "25",
+                            Name = "Phú Thọ"
+                        },
+                        new
+                        {
+                            Code = "31",
+                            Name = "Hải Phòng"
+                        },
+                        new
+                        {
+                            Code = "33",
+                            Name = "Hưng Yên"
+                        },
+                        new
+                        {
+                            Code = "37",
+                            Name = "Ninh Bình"
+                        },
+                        new
+                        {
+                            Code = "38",
+                            Name = "Thanh Hóa"
+                        },
+                        new
+                        {
+                            Code = "40",
+                            Name = "Nghệ An"
+                        },
+                        new
+                        {
+                            Code = "42",
+                            Name = "Hà Tĩnh"
+                        },
+                        new
+                        {
+                            Code = "44",
+                            Name = "Quảng Trị"
+                        },
+                        new
+                        {
+                            Code = "46",
+                            Name = "Huế"
+                        },
+                        new
+                        {
+                            Code = "48",
+                            Name = "Đà Nẵng"
+                        },
+                        new
+                        {
+                            Code = "51",
+                            Name = "Quảng Ngãi"
+                        },
+                        new
+                        {
+                            Code = "52",
+                            Name = "Gia Lai"
+                        },
+                        new
+                        {
+                            Code = "56",
+                            Name = "Khánh Hòa"
+                        },
+                        new
+                        {
+                            Code = "66",
+                            Name = "Đắk Lắk"
+                        },
+                        new
+                        {
+                            Code = "68",
+                            Name = "Lâm Đồng"
+                        },
+                        new
+                        {
+                            Code = "75",
+                            Name = "Đồng Nai"
+                        },
+                        new
+                        {
+                            Code = "79",
+                            Name = "Hồ Chí Minh"
+                        },
+                        new
+                        {
+                            Code = "80",
+                            Name = "Tây Ninh"
+                        },
+                        new
+                        {
+                            Code = "82",
+                            Name = "Đồng Tháp"
+                        },
+                        new
+                        {
+                            Code = "86",
+                            Name = "Vĩnh Long"
+                        },
+                        new
+                        {
+                            Code = "91",
+                            Name = "An Giang"
+                        },
+                        new
+                        {
+                            Code = "92",
+                            Name = "Cần Thơ"
+                        },
+                        new
+                        {
+                            Code = "96",
+                            Name = "Cà Mau"
+                        });
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.Complaint", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid?>("AssignedTo")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("ResolutionNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("New");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid>("VisitorId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedTo");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("VisitorId");
+
+                    b.ToTable("complaints", (string)null);
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.Floor", b =>
                 {
                     b.Property<int>("Id")
@@ -420,6 +663,10 @@ namespace SMGS.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("CityCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
                     b.Property<string>("CoverImageUrl")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
@@ -452,7 +699,142 @@ namespace SMGS.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CityCode");
+
                     b.ToTable("museums", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.StaffResponse", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<int>("FeedbackId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RespondedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeedbackId")
+                        .IsUnique();
+
+                    b.HasIndex("RespondedBy");
+
+                    b.ToTable("staff_responses", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.Visit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<int>("MuseumId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("TourId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("VisitorId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MuseumId");
+
+                    b.HasIndex("VisitorId", "MuseumId", "Status");
+
+                    b.ToTable("visits", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.VisitFeedback", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ChatbotRating")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int?>("ContentRating")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("ModerationNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ModerationStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Visible");
+
+                    b.Property<int>("OverallRating")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("TourRating")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<int>("VisitId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VisitId")
+                        .IsUnique();
+
+                    b.ToTable("visit_feedbacks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_visit_feedbacks_chatbot", "\"ChatbotRating\" IS NULL OR \"ChatbotRating\" BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_visit_feedbacks_content", "\"ContentRating\" IS NULL OR \"ContentRating\" BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_visit_feedbacks_overall", "\"OverallRating\" BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_visit_feedbacks_tour", "\"TourRating\" IS NULL OR \"TourRating\" BETWEEN 1 AND 5");
+                        });
                 });
 
             modelBuilder.Entity("SMGS.Infrastructure.Identity.ApplicationUser", b =>
@@ -631,6 +1013,20 @@ namespace SMGS.Infrastructure.Migrations
                     b.Navigation("Content");
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.Complaint", b =>
+                {
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("AssignedTo")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("VisitorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.Gallery", b =>
                 {
                     b.HasOne("SMGS.Domain.Entities.Floor", "Floor")
@@ -640,6 +1036,59 @@ namespace SMGS.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Floor");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.Museum", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.City", null)
+                        .WithMany()
+                        .HasForeignKey("CityCode")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.StaffResponse", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.VisitFeedback", "Feedback")
+                        .WithOne("StaffResponse")
+                        .HasForeignKey("SMGS.Domain.Entities.StaffResponse", "FeedbackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("RespondedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Feedback");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.Visit", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Museum", "Museum")
+                        .WithMany()
+                        .HasForeignKey("MuseumId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("VisitorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Museum");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.VisitFeedback", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Visit", "Visit")
+                        .WithOne("Feedback")
+                        .HasForeignKey("SMGS.Domain.Entities.VisitFeedback", "VisitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Visit");
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.ArtifactContent", b =>
@@ -655,6 +1104,16 @@ namespace SMGS.Infrastructure.Migrations
             modelBuilder.Entity("SMGS.Domain.Entities.Gallery", b =>
                 {
                     b.Navigation("Artifacts");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.Visit", b =>
+                {
+                    b.Navigation("Feedback");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.VisitFeedback", b =>
+                {
+                    b.Navigation("StaffResponse");
                 });
 #pragma warning restore 612, 618
         }
