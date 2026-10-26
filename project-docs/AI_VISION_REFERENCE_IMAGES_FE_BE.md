@@ -8,9 +8,9 @@
 
 ### Quy tắc database: BE là nguồn dữ liệu chính
 
-Metadata và trạng thái ảnh tham chiếu phải dùng **database chung do Backend quản lý** (DBML hiện mô tả PostgreSQL): `artifact_reference_images` nằm trong DB đó cùng `artifacts`. FE chỉ gọi API BE; FE và AI Vision không tự kết nối trực tiếp vào DB của BE. Không tạo một database metadata riêng cho FE hoặc AI service.
+Metadata ảnh tham chiếu nằm trong **database PostgreSQL chung do Backend quản lý**: `artifact_reference_images` cùng `artifacts`. FE chỉ gọi API BE. AI Vision và 3D Scan dùng cùng DB host/database nhưng mỗi service ghi schema riêng cho dữ liệu dẫn xuất/job; không tạo database/container database mới.
 
-AI Vision hiện có SQLite riêng trong Docker volume để lưu **embedding dẫn xuất** phục vụ tìm kiếm ảnh. SQLite này là index/cache nội bộ của microservice, không thay thế bảng `artifact_reference_images`, không phải DB nghiệp vụ chung và có thể tái tạo từ ảnh gốc + records trong DB BE. Ảnh gốc và `image_url`, quyền, owner, audit, trạng thái upload/index phải do BE quản lý. Nếu index service mất dữ liệu, BE cần có khả năng index lại từ các ảnh và record trong DB chung.
+AI Vision lưu **embedding dẫn xuất** trong schema `ai_vision` của cùng PostgreSQL database, không thay thế bảng `artifact_reference_images`. Ảnh gốc và `image_url`, quyền, owner, audit, trạng thái upload/index phải do BE quản lý. Nếu index mất dữ liệu, BE cần có khả năng index lại từ các ảnh và record trong DB chung.
 
 Trong repo hiện tại, DBML đã có `artifact_reference_images`; chưa tìm thấy API upload/list/delete tương ứng trong source BE. FE mới dừng ở preview local, nên chưa có kết nối DB/API nào.
 
@@ -51,7 +51,7 @@ Table artifact_reference_images {
 }
 ```
 
-BE nên quản lý record này và nơi lưu file (object storage hoặc media service). AI Vision không lưu ảnh gốc; service hiện chỉ lưu embedding SQLite cùng artifact ID. Nên bổ sung migration (không chỉ sửa DBML) cho metadata cần thiết như `status`, `created_by`, `created_at`, `updated_at`, `error_message`/`indexed_at` và ràng buộc số ảnh. Có thể lưu model/version trong index service; tránh dùng `embedding_ref` như URL ảnh.
+BE nên quản lý record này và nơi lưu file (object storage hoặc media service). AI Vision không lưu ảnh gốc; service lưu embedding trong schema `ai_vision` cùng artifact ID. Nên bổ sung migration (không chỉ sửa DBML) cho metadata cần thiết như `status`, `created_by`, `created_at`, `updated_at`, `error_message`/`indexed_at` và ràng buộc số ảnh. Có thể lưu model/version trong index service; tránh dùng `embedding_ref` như URL ảnh.
 
 ## 4. API BE đề xuất cho portal
 
@@ -123,7 +123,7 @@ BE xác thực quyền, xác nhận ảnh thuộc đúng artifact, xóa/đánh d
 
 Service hiện có trong `AI-System/AI Vision/app/main.py`:
 
-- `POST /api/v1/references?artifact_id={id}` multipart `image`, header nội bộ `X-Service-Key`; thêm embedding và trả `{id, artifactId, status: "indexed"}`.
+- `POST /api/v1/references?artifact_id={id}` multipart `image`, header nội bộ `X-Service-Key`; thêm embedding vào schema PostgreSQL `ai_vision` và trả `{id, artifactId, status: "indexed"}`.
 - `DELETE /api/v1/references/{artifact_id}` xóa **toàn bộ** reference embeddings của artifact, chưa có endpoint xóa một reference riêng.
 - `POST /api/v1/recognitions` nhận ảnh truy vấn, trả artifact ID/candidates, similarity và `requiresConfirmation`.
 
@@ -132,7 +132,7 @@ BE giữ `AI_SERVICE_API_KEY` ở secret store/private network; tuyệt đối k
 1. Nâng AI Vision để hỗ trợ xóa theo `referenceId` (khuyến nghị); lưu `embedding_ref` trong DB.
 2. Hoặc xóa toàn bộ embedding của artifact rồi đọc/tái index tất cả ảnh tham chiếu còn lại.
 
-Upload nên tránh trạng thái DB/file/index lệch nhau. Khuyến nghị lưu record `pending`, enqueue index job/outbox, cập nhật `indexed` khi Vision thành công; retry có kiểm soát và đánh dấu `failed` kèm lỗi an toàn để FE hiển thị. Khi xóa artifact hoặc ảnh, đồng bộ media và embedding theo cùng quy trình bù trừ.
+Upload nên tránh trạng thái DB/file/index lệch nhau. Khuyến nghị lưu record `pending`, enqueue index job/outbox, cập nhật `indexed` khi Vision thành công; retry có kiểm soát và đánh dấu `failed` kèm lỗi an toàn để FE hiển thị. AI Vision dùng chung PostgreSQL database nhưng chỉ ghi schema `ai_vision`; BE vẫn sở hữu record `artifact_reference_images`. Khi xóa artifact hoặc ảnh, đồng bộ media và embedding theo cùng quy trình bù trừ.
 
 ## 6. Authorization và ranh giới trách nhiệm
 
