@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -281,7 +281,7 @@ namespace SMGS.Infrastructure.Migrations
                 table: "artifacts",
                 column: "QrCode",
                 unique: true,
-                filter: "\"qr_code\" IS NOT NULL");
+                filter: "\"QrCode\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_galleries_FloorId",
