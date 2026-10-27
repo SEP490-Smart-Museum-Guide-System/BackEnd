@@ -17,10 +17,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Artifact> Artifacts => Set<Artifact>();
     public DbSet<Gallery> Galleries => Set<Gallery>();
     public DbSet<Floor> Floors => Set<Floor>();
+    public DbSet<Building> Buildings => Set<Building>();
+    public DbSet<StaffAssignment> StaffAssignments => Set<StaffAssignment>();
+    public DbSet<IndoorMap> IndoorMaps => Set<IndoorMap>();
+    public DbSet<MapNode> MapNodes => Set<MapNode>();
+    public DbSet<MapMarker> MapMarkers => Set<MapMarker>();
+    public DbSet<MapEdge> MapEdges => Set<MapEdge>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        IndoorMapConfiguration.Configure(builder);
         builder.Entity<ApplicationUser>().ToTable("Users");
         builder.Entity<IdentityRole<Guid>>().ToTable("Roles");
         builder.Entity<IdentityRole<Guid>>().HasData(DataSeeder.CreateRoleSeeds());

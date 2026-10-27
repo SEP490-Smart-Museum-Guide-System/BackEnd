@@ -69,6 +69,8 @@ public static class DependencyInjection
             client.DefaultRequestHeaders.UserAgent.ParseAdd("SMGS/1.0");
         }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddScoped<IArtifactService, ArtifactService>();
+        services.AddScoped<IIndoorMapService, IndoorMapService>();
+        services.AddSingleton<IndoorImageStore>();
         services.AddScoped<IArtifactContentRepository, ArtifactContentRepository>();
         services.AddScoped<IArtifactContentService, ArtifactContentService>();
         services.AddSingleton<IQrCodeService, QrCodeService>();

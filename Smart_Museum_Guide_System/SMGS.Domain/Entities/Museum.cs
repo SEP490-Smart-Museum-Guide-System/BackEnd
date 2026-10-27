@@ -3,6 +3,7 @@ namespace SMGS.Domain.Entities;
 public class Museum
 {
     public int Id { get; set; }
+    public string IndoorLayout { get; set; } = "unknown";
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Address { get; set; }
