@@ -158,6 +158,7 @@ Table cities {
 }
 
 Table museums {
+  indoor_layout varchar [not null, default: 'unknown', note: 'unknown | single | floors; không tự tạo tầng']
   id int [pk, increment]
   name varchar [not null]
   description text
@@ -217,7 +218,7 @@ Table artifacts {
   code varchar [note: 'Mã nội bộ']
   name varchar [not null, note: 'Tên gốc/trung tính']
   qr_code varchar [unique, note: 'Mã QR hiện vật (khác QR kiểm vé)']
-  map_node_id int [ref: > map_nodes.id]
+  map_node_id int [note: 'Legacy, không liên kết map_nodes UUID mới; vị trí indoor đọc từ snapshot xuất bản']
   map_x float [note: 'Vị trí trên mặt bằng tầng']
   map_y float
   map_icon varchar
@@ -387,25 +388,57 @@ Table message_sources [note: 'Căn cứ trả lời của chatbot']
 // 6. BẢN ĐỒ NỘI BỘ (đề xuất cho chỉ đường tới hiện vật tiếp theo)
 // =====================================================
 
-Table map_nodes [note: 'Nút đồ thị: hiện vật, cửa, cầu thang, giao lộ...']
-{
+Table indoor_maps {
   id int [pk, increment]
   museum_id int [not null, ref: > museums.id]
-  floor_id int [ref: > floors.id]
-  node_type node_type
-  x float
-  y float
-  label varchar
+  floor_id int [ref: > floors.id, note: 'NULL chỉ khi museum dùng mặt bằng chung; tầng phải thuộc museum']
+  name varchar(200) [not null]
+  revision int [not null, default: 1]
+  image_key varchar [note: 'Tên file PNG riêng tư; không lưu bytes trong DB']
+  image_width int [not null]
+  image_height int [not null]
+  published_json jsonb [note: 'Snapshot bất biến của ảnh và đồ thị khi xuất bản']
+  published_at timestamptz
+  Note: 'Unique từng floor_id khác NULL; unique museum_id khi floor_id NULL. Chỉnh bản nháp tăng revision.'
 }
 
-Table map_edges [note: 'Cạnh nối giữa 2 nút (lối đi)']
-{
-  id int [pk, increment]
-  from_node_id int [not null, ref: > map_nodes.id]
-  to_node_id int [not null, ref: > map_nodes.id]
-  distance float
-  is_accessible boolean [default: true, note: 'Có đi được bằng xe lăn']
+Table map_nodes {
+  id uuid [pk]
+  indoor_map_id int [not null, ref: > indoor_maps.id]
+  type varchar(30) [not null, note: 'corridor | intersection | door | entrance | stair | elevator | qr']
+  x double [not null, note: '0..1']
+  y double [not null, note: '0..1']
+  label varchar(200) [not null]
+  indexes { (indoor_map_id, id) [unique] }
 }
+
+Table map_markers {
+  id uuid [pk, note: 'QR chỉ lấy từ hiện vật được liên kết; không sinh QR riêng theo marker']
+  indoor_map_id int [not null, ref: > indoor_maps.id]
+  label varchar(200) [not null]
+  type varchar(30) [not null]
+  x double [not null, note: '0..1']
+  y double [not null, note: '0..1']
+  artifact_id int [ref: > artifacts.id]
+  gallery_id int [ref: > galleries.id]
+  node_id uuid
+  is_destination bool [not null]
+  is_active bool [not null, default: true]
+}
+Ref: map_markers.(indoor_map_id, node_id) > map_nodes.(indoor_map_id, id)
+
+Table map_edges {
+  id uuid [pk]
+  indoor_map_id int [not null, ref: > indoor_maps.id]
+  from_node_id uuid [not null]
+  to_node_id uuid [not null]
+  bidirectional bool [not null, default: true]
+  is_accessible bool [not null, default: true]
+  indexes { (indoor_map_id, from_node_id, to_node_id) [unique] }
+  Note: 'Hai đầu khác nhau, cùng sơ đồ. Trọng số tính theo tỷ lệ ảnh, không phải mét. Chưa nối xuyên tầng.'
+}
+Ref: map_edges.(indoor_map_id, from_node_id) > map_nodes.(indoor_map_id, id)
+Ref: map_edges.(indoor_map_id, to_node_id) > map_nodes.(indoor_map_id, id)
 
 // =====================================================
 // 7. TOUR VÀ LƯỢT THAM QUAN

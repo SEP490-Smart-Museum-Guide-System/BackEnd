@@ -419,3 +419,4 @@ FodyWeavers.xsd
 
 # Local tooling, diagnostic logs and temporary APKs
 /.local-tools/
+**/App_Data/indoor-maps/

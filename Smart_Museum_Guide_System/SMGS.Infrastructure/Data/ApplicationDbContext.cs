@@ -21,10 +21,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<VisitFeedback> VisitFeedbacks => Set<VisitFeedback>();
     public DbSet<StaffResponse> StaffResponses => Set<StaffResponse>();
     public DbSet<Complaint> Complaints => Set<Complaint>();
+    public DbSet<Building> Buildings => Set<Building>();
+    public DbSet<StaffAssignment> StaffAssignments => Set<StaffAssignment>();
+    public DbSet<IndoorMap> IndoorMaps => Set<IndoorMap>();
+    public DbSet<MapNode> MapNodes => Set<MapNode>();
+    public DbSet<MapMarker> MapMarkers => Set<MapMarker>();
+    public DbSet<MapEdge> MapEdges => Set<MapEdge>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        IndoorMapConfiguration.Configure(builder);
         builder.Entity<ApplicationUser>().ToTable("Users");
         builder.Entity<IdentityRole<Guid>>().ToTable("Roles");
         builder.Entity<IdentityRole<Guid>>().HasData(DataSeeder.CreateRoleSeeds());
