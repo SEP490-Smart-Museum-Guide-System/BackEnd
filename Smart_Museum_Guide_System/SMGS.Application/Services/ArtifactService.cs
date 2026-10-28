@@ -10,7 +10,7 @@ namespace SMGS.Application.Services;
 public class ArtifactService(
     IArtifactRepository artifactRepo,
     IArtifactContentRepository contentRepo,
-    IQrCodeService qrCodeService) : IArtifactService
+    IQrCodeService qrCodeService, ICommerceService? commerce = null) : IArtifactService
 {
     public async Task<ResponseDto<PaginatedResponseDto<ArtifactResponseDto>>> GetAllAsync(
         int? museumId, int? galleryId, string? keyword, bool? isActive, int page, int pageSize)
@@ -149,7 +149,7 @@ public class ArtifactService(
     }
 
     /// <inheritdoc/>
-    public async Task<ResponseDto<ArtifactScanResponseDto>> ScanAsync(string qrCode)
+    public async Task<ResponseDto<ArtifactScanResponseDto>> ScanAsync(string qrCode, Guid? userId = null)
     {
         if (string.IsNullOrWhiteSpace(qrCode))
             return ResponseDto<ArtifactScanResponseDto>.Fail("Mã QR không hợp lệ.", 400);
@@ -159,7 +159,8 @@ public class ArtifactService(
             return ResponseDto<ArtifactScanResponseDto>.Fail("Không tìm thấy hiện vật với mã QR này.", 404);
 
         // Lấy tất cả nội dung đã xuất bản (tất cả ngôn ngữ)
-        var publishedVersions = await contentRepo.GetAllPublishedByArtifactIdAsync(artifact.Id);
+        var allowed = commerce != null ? await commerce.CanReadArtifact(artifact.Id, userId) : artifact.AccessLevel == "free";
+        var publishedVersions = allowed ? await contentRepo.GetAllPublishedByArtifactIdAsync(artifact.Id) : [];
 
         var scanDto = new ArtifactScanResponseDto
         {

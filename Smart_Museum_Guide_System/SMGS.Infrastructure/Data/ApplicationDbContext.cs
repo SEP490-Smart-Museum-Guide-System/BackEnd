@@ -12,6 +12,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<Museum> Museums => Set<Museum>();
     public DbSet<City> Cities => Set<City>();
+    public DbSet<CommerceResource> CommerceResources => Set<CommerceResource>();
+    public DbSet<CommerceProduct> CommerceProducts => Set<CommerceProduct>();
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
+    public DbSet<MuseumPass> MuseumPasses => Set<MuseumPass>();
+    public DbSet<PurchaseInvoice> PurchaseInvoices => Set<PurchaseInvoice>();
     public DbSet<ArtifactContent> ArtifactContents => Set<ArtifactContent>();
     public DbSet<ArtifactContentVersion> ArtifactContentVersions => Set<ArtifactContentVersion>();
     public DbSet<Artifact> Artifacts => Set<Artifact>();
@@ -32,6 +38,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
         IndoorMapConfiguration.Configure(builder);
+        CommerceConfiguration.Configure(builder);
         builder.Entity<ApplicationUser>().ToTable("Users");
         builder.Entity<IdentityRole<Guid>>().ToTable("Roles");
         builder.Entity<IdentityRole<Guid>>().HasData(DataSeeder.CreateRoleSeeds());

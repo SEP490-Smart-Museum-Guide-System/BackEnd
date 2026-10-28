@@ -22,7 +22,7 @@ public interface IArtifactService
     /// <summary>
     /// Quét QR code → trả về thông tin chi tiết hiện vật + nội dung đã xuất bản.
     /// </summary>
-    Task<ResponseDto<ArtifactScanResponseDto>> ScanAsync(string qrCode);
+    Task<ResponseDto<ArtifactScanResponseDto>> ScanAsync(string qrCode, Guid? userId = null);
 
     /// <summary>
     /// Sinh/tái sinh QR code cho hiện vật (dành cho admin/staff khi cần regenerate).

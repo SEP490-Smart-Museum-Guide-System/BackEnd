@@ -355,6 +355,29 @@ namespace SMGS.Infrastructure.Migrations
                     b.ToTable("artifact_content_versions", (string)null);
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.Building", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MuseumId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MuseumId");
+
+                    b.ToTable("buildings", (string)null);
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.City", b =>
                 {
                     b.Property<string>("Code")
@@ -543,6 +566,102 @@ namespace SMGS.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.CommerceProduct", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("MuseumId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("ResourceIdsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Seats")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ValidityHours")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ValidityStartsAt")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MuseumId");
+
+                    b.ToTable("commerce_products", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.CommerceResource", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccessLevel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("ArtifactId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("MuseumId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ScopeReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtifactId")
+                        .IsUnique();
+
+                    b.HasIndex("MuseumId");
+
+                    b.ToTable("commerce_resources", (string)null);
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.Complaint", b =>
                 {
                     b.Property<int>("Id")
@@ -622,6 +741,9 @@ namespace SMGS.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BuildingId", "LevelNo")
+                        .IsUnique();
+
                     b.ToTable("floors", (string)null);
                 });
 
@@ -651,6 +773,175 @@ namespace SMGS.Infrastructure.Migrations
                     b.ToTable("galleries", (string)null);
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.IndoorMap", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("FloorId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ImageHeight")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ImageKey")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ImageWidth")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MuseumId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PublishedJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FloorId")
+                        .IsUnique()
+                        .HasFilter("\"FloorId\" IS NOT NULL");
+
+                    b.HasIndex("MuseumId")
+                        .IsUnique()
+                        .HasFilter("\"FloorId\" IS NULL");
+
+                    b.ToTable("indoor_maps", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.MapEdge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Bidirectional")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("FromNodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("IndoorMapId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsAccessible")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ToNodeId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IndoorMapId", "ToNodeId");
+
+                    b.HasIndex("IndoorMapId", "FromNodeId", "ToNodeId")
+                        .IsUnique();
+
+                    b.ToTable("map_edges", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_map_edges_distinct", "\"FromNodeId\" <> \"ToNodeId\"");
+                        });
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.MapMarker", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("ArtifactId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("GalleryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("IndoorMapId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDestination")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("NodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<double>("X")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("Y")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtifactId");
+
+                    b.HasIndex("GalleryId");
+
+                    b.HasIndex("IndoorMapId", "NodeId");
+
+                    b.ToTable("map_markers", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_map_markers_xy", "\"X\" BETWEEN 0 AND 1 AND \"Y\" BETWEEN 0 AND 1");
+                        });
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.MapNode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("IndoorMapId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<double>("X")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("Y")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("map_nodes", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_map_nodes_xy", "\"X\" BETWEEN 0 AND 1 AND \"Y\" BETWEEN 0 AND 1");
+                        });
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.Museum", b =>
                 {
                     b.Property<int>("Id")
@@ -677,6 +968,13 @@ namespace SMGS.Infrastructure.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<string>("IndoorLayout")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("unknown");
+
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -702,6 +1000,258 @@ namespace SMGS.Infrastructure.Migrations
                     b.HasIndex("CityCode");
 
                     b.ToTable("museums", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.MuseumPass", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ClaimedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("OrderId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("museum_passes", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.PaymentAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ConfirmedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FailureReason")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reference")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConfirmedBy");
+
+                    b.HasIndex("Reference")
+                        .IsUnique()
+                        .HasFilter("\"Reference\" IS NOT NULL");
+
+                    b.HasIndex(new[] { "OrderId" }, "IX_payment_attempts_pending")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 'pending'");
+
+                    b.HasIndex(new[] { "OrderId" }, "IX_payment_attempts_success")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 'succeeded'");
+
+                    b.ToTable("payment_attempts", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.PurchaseInvoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("BuyerDetailsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BuyerName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("IssuedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProductKind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Seats")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("purchase_invoices", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("BuyerDetailsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("BuyerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BuyerName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GroupKeyHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("MuseumId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProductKind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ResourceIdsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Seats")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("ValidityHours")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ValidityStartsAt")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupKeyHash")
+                        .IsUnique();
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("BuyerId", "CreatedAt");
+
+                    b.HasIndex("MuseumId", "PaidAt");
+
+                    b.ToTable("purchase_orders", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.StaffAssignment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ArtifactId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("GalleryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MuseumId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtifactId");
+
+                    b.HasIndex("GalleryId");
+
+                    b.HasIndex("MuseumId");
+
+                    b.HasIndex("UserId", "MuseumId")
+                        .IsUnique()
+                        .HasFilter("\"GalleryId\" IS NULL AND \"ArtifactId\" IS NULL");
+
+                    b.ToTable("staff_assignments", (string)null);
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.StaffResponse", b =>
@@ -1013,6 +1563,38 @@ namespace SMGS.Infrastructure.Migrations
                     b.Navigation("Content");
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.Building", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Museum", null)
+                        .WithMany()
+                        .HasForeignKey("MuseumId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.CommerceProduct", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Museum", null)
+                        .WithMany()
+                        .HasForeignKey("MuseumId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.CommerceResource", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Artifact", null)
+                        .WithMany()
+                        .HasForeignKey("ArtifactId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SMGS.Domain.Entities.Museum", null)
+                        .WithMany()
+                        .HasForeignKey("MuseumId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.Complaint", b =>
                 {
                     b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
@@ -1023,6 +1605,15 @@ namespace SMGS.Infrastructure.Migrations
                     b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("VisitorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.Floor", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Building", null)
+                        .WithMany()
+                        .HasForeignKey("BuildingId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -1038,12 +1629,167 @@ namespace SMGS.Infrastructure.Migrations
                     b.Navigation("Floor");
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.IndoorMap", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Floor", null)
+                        .WithMany()
+                        .HasForeignKey("FloorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SMGS.Domain.Entities.Museum", null)
+                        .WithMany()
+                        .HasForeignKey("MuseumId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.MapEdge", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.IndoorMap", null)
+                        .WithMany("Edges")
+                        .HasForeignKey("IndoorMapId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Domain.Entities.MapNode", null)
+                        .WithMany()
+                        .HasForeignKey("IndoorMapId", "FromNodeId")
+                        .HasPrincipalKey("IndoorMapId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Domain.Entities.MapNode", null)
+                        .WithMany()
+                        .HasForeignKey("IndoorMapId", "ToNodeId")
+                        .HasPrincipalKey("IndoorMapId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.MapMarker", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Artifact", null)
+                        .WithMany()
+                        .HasForeignKey("ArtifactId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SMGS.Domain.Entities.Gallery", null)
+                        .WithMany()
+                        .HasForeignKey("GalleryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SMGS.Domain.Entities.IndoorMap", null)
+                        .WithMany("Markers")
+                        .HasForeignKey("IndoorMapId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Domain.Entities.MapNode", null)
+                        .WithMany()
+                        .HasForeignKey("IndoorMapId", "NodeId")
+                        .HasPrincipalKey("IndoorMapId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.MapNode", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.IndoorMap", null)
+                        .WithMany("Nodes")
+                        .HasForeignKey("IndoorMapId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.Museum", b =>
                 {
                     b.HasOne("SMGS.Domain.Entities.City", null)
                         .WithMany()
                         .HasForeignKey("CityCode")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.MuseumPass", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.PurchaseOrder", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.PaymentAttempt", b =>
+                {
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ConfirmedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SMGS.Domain.Entities.PurchaseOrder", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.PurchaseInvoice", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.PurchaseOrder", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("BuyerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Domain.Entities.Museum", null)
+                        .WithMany()
+                        .HasForeignKey("MuseumId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Domain.Entities.CommerceProduct", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.StaffAssignment", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Artifact", null)
+                        .WithMany()
+                        .HasForeignKey("ArtifactId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SMGS.Domain.Entities.Gallery", null)
+                        .WithMany()
+                        .HasForeignKey("GalleryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SMGS.Domain.Entities.Museum", null)
+                        .WithMany()
+                        .HasForeignKey("MuseumId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.StaffResponse", b =>
@@ -1104,6 +1850,15 @@ namespace SMGS.Infrastructure.Migrations
             modelBuilder.Entity("SMGS.Domain.Entities.Gallery", b =>
                 {
                     b.Navigation("Artifacts");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.IndoorMap", b =>
+                {
+                    b.Navigation("Edges");
+
+                    b.Navigation("Markers");
+
+                    b.Navigation("Nodes");
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.Visit", b =>

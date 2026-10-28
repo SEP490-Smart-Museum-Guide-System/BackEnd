@@ -17,7 +17,7 @@ Check(curator?.Roles == RoleNames.Curator, "Review endpoints must require Curato
 Check(!typeof(ArtifactContentsController).GetMethods().Any(m => m.IsDefined(typeof(AllowAnonymousAttribute))), "Review actions must not bypass authorization.");
 var submit = typeof(ArtifactContentSubmissionsController).GetMethod("Submit")!;
 Check(submit.GetCustomAttribute<AuthorizeAttribute>()?.Roles == $"{RoleNames.Admin},{RoleNames.MuseumStaff}", "Only staff/admin submit AI output.");
-Check(typeof(ArtifactContentSubmissionsController).GetMethod("GetPublished")!.IsDefined(typeof(AuthorizeAttribute)), "Visitor content requires login.");
+Check(typeof(ArtifactContentSubmissionsController).GetMethod("GetPublished")!.IsDefined(typeof(AllowAnonymousAttribute)), "Free published content is available anonymously; service enforces premium access.");
 var repository = new ContentRepository();
 var artifacts = new Artifacts();
 var service = new ArtifactContentService(repository, artifacts);
@@ -42,6 +42,10 @@ Check((await service.ReviewAsync(1, new(), user, true)).StatusCode == 409, "Conc
 repository.Conflict = false;
 var approved = await service.ReviewAsync(1, new() { Note = " Checked " }, user, true);
 Check(approved.Data is { Status: ContentStatuses.Published, IsCurrent: true, ReviewNote: "Checked" } && approved.Data.ReviewedBy == user, "Approval records reviewer and publication.");
+Check((await service.GetPublishedAsync(1, "vi")).StatusCode == 200, "Free content remains available.");
+artifacts.Item.AccessLevel = "premium";
+Check((await service.GetPublishedAsync(1, "vi")).StatusCode == 403, "Premium content must fail closed without an entitlement provider.");
+artifacts.Item.AccessLevel = "free";
 Check((await service.ReviewAsync(1, new(), user, true)).StatusCode == 409, "Already reviewed versions cannot be approved again.");
 await service.SubmitAsync(1, dto, user);
 var rejected = await service.ReviewAsync(2, new() { Note = " Incorrect date " }, user, false);

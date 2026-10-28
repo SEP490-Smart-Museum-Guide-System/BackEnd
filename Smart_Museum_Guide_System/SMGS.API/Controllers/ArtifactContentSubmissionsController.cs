@@ -21,11 +21,12 @@ public class ArtifactContentSubmissionsController(IArtifactContentService servic
         return StatusCode(response.StatusCode, response);
     }
     /// <summary>Chỉ trả về phiên bản đang xuất bản của ngôn ngữ được chọn.</summary>
-    [Authorize]
+    [AllowAnonymous]
     [HttpGet("published")]
     public async Task<IActionResult> GetPublished(int artifactId, [FromQuery] string languageCode = "vi")
     {
-        var response = await service.GetPublishedAsync(artifactId, languageCode);
+        var response = await service.GetPublishedAsync(artifactId, languageCode,
+            Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null);
         return StatusCode(response.StatusCode, response);
     }
 }

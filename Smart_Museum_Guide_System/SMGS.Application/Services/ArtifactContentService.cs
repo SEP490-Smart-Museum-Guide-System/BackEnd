@@ -7,7 +7,7 @@ using SMGS.Domain.Entities;
 using SMGS.Domain.Interfaces;
 namespace SMGS.Application.Services;
 
-public class ArtifactContentService(IArtifactContentRepository repository, IArtifactRepository artifacts) : IArtifactContentService
+public class ArtifactContentService(IArtifactContentRepository repository, IArtifactRepository artifacts, ICommerceService? commerce = null) : IArtifactContentService
 {
     public async Task<ResponseDto<PaginatedResponseDto<ArtifactContentResponseDto>>> GetAllAsync(
         int? museumId, int? artifactId, string? status, int page, int pageSize)
@@ -27,9 +27,13 @@ public class ArtifactContentService(IArtifactContentRepository repository, IArti
         var version = await repository.GetByIdAsync(id);
         return version is null ? Missing() : ResponseDto<ArtifactContentResponseDto>.Success(Map(version));
     }
-    public async Task<ResponseDto<ArtifactContentResponseDto>> GetPublishedAsync(int artifactId, string languageCode)
+    public async Task<ResponseDto<ArtifactContentResponseDto>> GetPublishedAsync(int artifactId, string languageCode, Guid? userId = null)
     {
         if (string.IsNullOrWhiteSpace(languageCode)) return ResponseDto<ArtifactContentResponseDto>.Fail("Mã ngôn ngữ không hợp lệ.");
+        var artifact = await artifacts.GetByIdAsync(artifactId);
+        if (artifact == null || !artifact.IsActive) return Missing();
+        var allowed = commerce != null ? await commerce.CanReadArtifact(artifactId, userId) : artifact.AccessLevel == "free";
+        if (!allowed) return ResponseDto<ArtifactContentResponseDto>.Fail("Cần pass còn hiệu lực cho nội dung premium này.", 403);
         var version = await repository.GetPublishedAsync(artifactId, languageCode.Trim().ToLowerInvariant());
         return version is null ? Missing() : ResponseDto<ArtifactContentResponseDto>.Success(Map(version));
     }
