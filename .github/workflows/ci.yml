@@ -1,0 +1,45 @@
+name: Backend CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build solution
+        run: dotnet build Smart_Museum_Guide_System/Smart_Museum_Guide_System.sln --configuration Release
+
+      - name: Run backend checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          tests_dir="Smart_Museum_Guide_System/tests"
+          for project in \
+            SMGS.AuthChecks \
+            SMGS.CommerceChecks \
+            SMGS.ContentChecks \
+            SMGS.DiscoveryChecks \
+            SMGS.FeedbackChecks \
+            SMGS.IndoorMapChecks; do
+            echo "Running ${project}"
+            dotnet run --no-build --configuration Release --project "${tests_dir}/${project}/${project}.csproj"
+          done
