@@ -38,8 +38,46 @@ public class IndoorMapsController(IIndoorMapService service, IndoorImageStore im
     [HttpPost("museums/{museumId:int}/buildings")]
     public async Task<object> Building(int museumId, BuildingRequest request) => OkData(await service.AddBuilding(museumId, request, UserId, Admin));
 
+    [HttpPut("museums/{museumId:int}/buildings/{buildingId:int}")]
+    public async Task<object> UpdateBuilding(int museumId, int buildingId, BuildingRequest request)
+        => OkData(await service.UpdateBuilding(museumId, buildingId, request, UserId, Admin));
+
+    [HttpDelete("museums/{museumId:int}/buildings/{buildingId:int}")]
+    public async Task<object> DeleteBuilding(int museumId, int buildingId)
+    {
+        await service.DeleteBuilding(museumId, buildingId, UserId, Admin); return OkData(true);
+    }
+
     [HttpPost("museums/{museumId:int}/floors")]
     public async Task<object> Floor(int museumId, FloorRequest request) => OkData(await service.AddFloor(museumId, request, UserId, Admin));
+
+    [HttpPut("museums/{museumId:int}/floors/{floorId:int}")]
+    public async Task<object> UpdateFloor(int museumId, int floorId, FloorRequest request)
+        => OkData(await service.UpdateFloor(museumId, floorId, request, UserId, Admin));
+
+    [HttpDelete("museums/{museumId:int}/floors/{floorId:int}")]
+    public async Task<object> DeleteFloor(int museumId, int floorId)
+    {
+        await service.DeleteFloor(museumId, floorId, UserId, Admin); return OkData(true);
+    }
+
+    [HttpGet("museums/{museumId:int}/galleries")]
+    public async Task<object> Galleries(int museumId, [FromQuery] int? floorId)
+        => OkData(await service.Galleries(museumId, floorId, UserId, Admin));
+
+    [HttpPost("museums/{museumId:int}/galleries")]
+    public async Task<object> AddGallery(int museumId, GalleryRequest request)
+        => OkData(await service.AddGallery(museumId, request, UserId, Admin));
+
+    [HttpPut("museums/{museumId:int}/galleries/{galleryId:int}")]
+    public async Task<object> UpdateGallery(int museumId, int galleryId, GalleryRequest request)
+        => OkData(await service.UpdateGallery(museumId, galleryId, request, UserId, Admin));
+
+    [HttpDelete("museums/{museumId:int}/galleries/{galleryId:int}")]
+    public async Task<object> DeleteGallery(int museumId, int galleryId)
+    {
+        await service.DeleteGallery(museumId, galleryId, UserId, Admin); return OkData(true);
+    }
 
     [Authorize(Roles = RoleNames.Admin)]
     [HttpPost("museums/{museumId:int}/indoor-staff")]

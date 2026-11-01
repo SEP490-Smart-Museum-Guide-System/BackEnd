@@ -7,6 +7,8 @@ public class ArtifactContentVersion
     public int VersionNo { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string? NarrationText { get; set; }
+    public string? AudioUrl { get; set; }
     public bool IsAiGenerated { get; set; } = true;
     public string Status { get; set; } = ContentStatuses.PendingReview;
     public bool IsCurrent { get; set; }

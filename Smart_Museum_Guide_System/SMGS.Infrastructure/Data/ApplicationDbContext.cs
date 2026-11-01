@@ -21,6 +21,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<ArtifactContent> ArtifactContents => Set<ArtifactContent>();
     public DbSet<ArtifactContentVersion> ArtifactContentVersions => Set<ArtifactContentVersion>();
     public DbSet<Artifact> Artifacts => Set<Artifact>();
+    public DbSet<Topic> Topics => Set<Topic>();
+    public DbSet<ArtifactTopic> ArtifactTopics => Set<ArtifactTopic>();
+    public DbSet<ArtifactMedia> ArtifactMedias => Set<ArtifactMedia>();
+    public DbSet<Artifact3DModel> Artifact3DModels => Set<Artifact3DModel>();
     public DbSet<Gallery> Galleries => Set<Gallery>();
     public DbSet<Floor> Floors => Set<Floor>();
     public DbSet<Visit> Visits => Set<Visit>();
@@ -48,6 +52,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<IdentityUserToken<Guid>>().ToTable("UserTokens");
         builder.Entity<IdentityRoleClaim<Guid>>().ToTable("RoleClaims");
         builder.Entity<ApplicationUser>().Property(user => user.FullName).HasMaxLength(200);
+        builder.Entity<ApplicationUser>().Property(user => user.IsActive).HasDefaultValue(true);
         builder.Entity<ApplicationUser>().HasIndex(user => user.NormalizedEmail).IsUnique();
 
         // Museum
@@ -117,6 +122,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.Id).UseIdentityAlwaysColumn();
             entity.Property(e => e.Title).IsRequired().HasMaxLength(300);
             entity.Property(e => e.Description).IsRequired().HasColumnType("text");
+            entity.Property(e => e.NarrationText).HasColumnType("text");
+            entity.Property(e => e.AudioUrl).HasMaxLength(1000);
             entity.Property(e => e.Status).IsRequired().HasMaxLength(30).IsConcurrencyToken();
             entity.Property(e => e.ReviewNote).HasMaxLength(2000);
             entity.HasIndex(e => new { e.ArtifactContentId, e.VersionNo }).IsUnique();
@@ -148,6 +155,81 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .WithMany(g => g.Artifacts)
                 .HasForeignKey(e => e.GalleryId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Topic (CD-03)
+        builder.Entity<Topic>(entity =>
+        {
+            entity.ToTable("topics");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(2000);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasColumnType("timestamptz");
+            entity.HasIndex(e => new { e.MuseumId, e.Name }).IsUnique();
+            entity.HasOne(e => e.Museum)
+                .WithMany()
+                .HasForeignKey(e => e.MuseumId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ArtifactTopic>(entity =>
+        {
+            entity.ToTable("artifact_topics");
+            entity.HasKey(e => new { e.ArtifactId, e.TopicId });
+            entity.Property(e => e.AssignedAt).HasColumnType("timestamptz");
+            entity.HasOne(e => e.Artifact)
+                .WithMany(a => a.ArtifactTopics)
+                .HasForeignKey(e => e.ArtifactId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Topic)
+                .WithMany(t => t.ArtifactTopics)
+                .HasForeignKey(e => e.TopicId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ArtifactMedia (CD-06B)
+        builder.Entity<ArtifactMedia>(entity =>
+        {
+            entity.ToTable("artifact_medias");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.MediaType).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.LanguageCode).HasMaxLength(35);
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.StorageKey).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.CreatedAt).HasColumnType("timestamptz");
+            entity.HasIndex(e => e.ArtifactId);
+            entity.HasOne(e => e.Artifact)
+                .WithMany(a => a.MediaItems)
+                .HasForeignKey(e => e.ArtifactId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Artifact3DModel (CD-07)
+        builder.Entity<Artifact3DModel>(entity =>
+        {
+            entity.ToTable("artifact_3d_models");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.StorageKey).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.FileFormat).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.PosterUrl).HasMaxLength(1000);
+            entity.Property(e => e.CameraOrbit).HasMaxLength(100);
+            entity.Property(e => e.FieldOfView).HasMaxLength(50);
+            entity.Property(e => e.Scale).HasColumnType("decimal(10,4)").HasDefaultValue(1.0m);
+            entity.Property(e => e.UpdatedAt).HasColumnType("timestamptz");
+            entity.HasIndex(e => e.ArtifactId).IsUnique();
+            entity.HasOne(e => e.Artifact)
+                .WithOne(a => a.Model3D)
+                .HasForeignKey<Artifact3DModel>(e => e.ArtifactId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Visit

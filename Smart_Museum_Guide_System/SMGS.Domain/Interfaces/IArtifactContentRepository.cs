@@ -11,5 +11,5 @@ public interface IArtifactContentRepository
     /// <summary>
     /// Lấy tất cả nội dung đã xuất bản cho một hiện vật (tất cả ngôn ngữ).
     /// </summary>
-    Task<List<ArtifactContentVersion>> GetAllPublishedByArtifactIdAsync(int artifactId);
+    Task<List<ArtifactContentVersion>> GetAllPublishedByArtifactIdAsync(int artifactId) => Task.FromResult(new List<ArtifactContentVersion>());
 }

@@ -37,6 +37,35 @@ public class ArtifactContentService(IArtifactContentRepository repository, IArti
         var version = await repository.GetPublishedAsync(artifactId, languageCode.Trim().ToLowerInvariant());
         return version is null ? Missing() : ResponseDto<ArtifactContentResponseDto>.Success(Map(version));
     }
+    public async Task<ResponseDto<List<ArtifactContentResponseDto>>> GetAllPublishedByArtifactAsync(int artifactId, Guid? userId = null)
+    {
+        var artifact = await artifacts.GetByIdAsync(artifactId);
+        if (artifact == null || !artifact.IsActive)
+            return ResponseDto<List<ArtifactContentResponseDto>>.Fail("Không tìm thấy hiện vật.", 404);
+        var allowed = commerce != null ? await commerce.CanReadArtifact(artifactId, userId) : artifact.AccessLevel == "free";
+        if (!allowed)
+            return ResponseDto<List<ArtifactContentResponseDto>>.Fail("Cần pass còn hiệu lực cho nội dung premium này.", 403);
+        var versions = await repository.GetAllPublishedByArtifactIdAsync(artifactId);
+        return ResponseDto<List<ArtifactContentResponseDto>>.Success(versions.Select(Map).ToList());
+    }
+    public async Task<ResponseDto<List<ArtifactContentResponseDto>>> GetVersionHistoryAsync(int artifactId, string? languageCode = null)
+    {
+        var artifact = await artifacts.GetByIdAsync(artifactId);
+        if (artifact == null)
+            return ResponseDto<List<ArtifactContentResponseDto>>.Fail("Không tìm thấy hiện vật.", 404);
+        var (items, _) = await repository.GetPagedAsync(null, artifactId, null, 1, 100);
+        if (!string.IsNullOrWhiteSpace(languageCode))
+        {
+            var lang = languageCode.Trim().ToLowerInvariant();
+            items = items.Where(v => v.Content.LanguageCode == lang).ToList();
+        }
+        var ordered = items
+            .OrderBy(v => v.Content.LanguageCode)
+            .ThenByDescending(v => v.VersionNo)
+            .Select(Map)
+            .ToList();
+        return ResponseDto<List<ArtifactContentResponseDto>>.Success(ordered);
+    }
     public async Task<ResponseDto<ArtifactContentResponseDto>> SubmitAsync(int artifactId, SubmitArtifactContentRequestDto dto, Guid userId)
     {
         if (userId == Guid.Empty) return ResponseDto<ArtifactContentResponseDto>.Fail("Tài khoản không hợp lệ.", 401);
@@ -45,9 +74,20 @@ public class ArtifactContentService(IArtifactContentRepository repository, IArti
         var artifact = await artifacts.GetByIdAsync(artifactId);
         if (artifact is null) return ResponseDto<ArtifactContentResponseDto>.Fail("Không tìm thấy hiện vật.", 404);
         if (!artifact.IsActive) return ResponseDto<ArtifactContentResponseDto>.Fail("Hiện vật đã bị vô hiệu hóa.", 409);
-        var version = new ArtifactContentVersion { Title = dto.Title.Trim(), Description = dto.Description.Trim(), CreatedBy = userId };
+        var version = new ArtifactContentVersion
+        {
+            Title = dto.Title.Trim(),
+            Description = dto.Description.Trim(),
+            NarrationText = string.IsNullOrWhiteSpace(dto.NarrationText) ? null : dto.NarrationText.Trim(),
+            AudioUrl = string.IsNullOrWhiteSpace(dto.AudioUrl) ? null : dto.AudioUrl.Trim(),
+            IsAiGenerated = dto.IsAiGenerated,
+            CreatedBy = userId
+        };
         if (!await repository.CreateAsync(artifactId, dto.LanguageCode.Trim().ToLowerInvariant(), version)) return Conflict();
-        return ResponseDto<ArtifactContentResponseDto>.Success(Map(version), "Đã gửi nội dung AI chờ Curator duyệt.", 201);
+        var message = dto.IsAiGenerated
+            ? "Đã gửi nội dung AI chờ Curator duyệt."
+            : "Đã lưu phiên bản nội dung & narration thủ công chờ Curator duyệt.";
+        return ResponseDto<ArtifactContentResponseDto>.Success(Map(version), message, 201);
     }
     public async Task<ResponseDto<ArtifactContentResponseDto>> ReviewAsync(int id, ReviewArtifactContentRequestDto dto, Guid userId, bool approve)
     {
@@ -67,6 +107,7 @@ public class ArtifactContentService(IArtifactContentRepository repository, IArti
         Id = v.Id, ArtifactId = v.Content.ArtifactId, MuseumId = v.Content.Artifact.MuseumId,
         ArtifactName = v.Content.Artifact.Name, LanguageCode = v.Content.LanguageCode,
         VersionNo = v.VersionNo, Title = v.Title, Description = v.Description,
+        NarrationText = v.NarrationText, AudioUrl = v.AudioUrl,
         IsAiGenerated = v.IsAiGenerated, Status = v.Status, IsCurrent = v.IsCurrent,
         CreatedBy = v.CreatedBy, ReviewedBy = v.ReviewedBy, ReviewedAt = v.ReviewedAt,
         ReviewNote = v.ReviewNote, PublishedAt = v.PublishedAt, CreatedAt = v.CreatedAt

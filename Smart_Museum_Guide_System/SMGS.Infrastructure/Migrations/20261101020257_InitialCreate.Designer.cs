@@ -12,8 +12,8 @@ using SMGS.Infrastructure.Data;
 namespace SMGS.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261028085957_AddCommerceAndPendingIndoorSchema")]
-    partial class AddCommerceAndPendingIndoorSchema
+    [Migration("20261101020257_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -260,6 +260,79 @@ namespace SMGS.Infrastructure.Migrations
                     b.ToTable("artifacts", (string)null);
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.Artifact3DModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ArtifactId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("AutoRotate")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CameraOrbit")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FieldOfView")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("FileFormat")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("PosterUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<decimal>("Scale")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(10,4)")
+                        .HasDefaultValue(1.0m);
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtifactId")
+                        .IsUnique();
+
+                    b.ToTable("artifact_3d_models", (string)null);
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.ArtifactContent", b =>
                 {
                     b.Property<int>("Id")
@@ -299,6 +372,10 @@ namespace SMGS.Infrastructure.Migrations
                     b.Property<int>("ArtifactContentId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("AudioUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -314,6 +391,9 @@ namespace SMGS.Infrastructure.Migrations
 
                     b.Property<bool>("IsCurrent")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("NarrationText")
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("PublishedAt")
                         .HasColumnType("timestamp with time zone");
@@ -356,6 +436,83 @@ namespace SMGS.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("artifact_content_versions", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactMedia", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ArtifactId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("LanguageCode")
+                        .HasMaxLength(35)
+                        .HasColumnType("character varying(35)");
+
+                    b.Property<string>("MediaType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtifactId");
+
+                    b.ToTable("artifact_medias", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactTopic", b =>
+                {
+                    b.Property<int>("ArtifactId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TopicId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.HasKey("ArtifactId", "TopicId");
+
+                    b.HasIndex("TopicId");
+
+                    b.ToTable("artifact_topics", (string)null);
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.Building", b =>
@@ -611,6 +768,9 @@ namespace SMGS.Infrastructure.Migrations
 
                     b.Property<int?>("ValidityHours")
                         .HasColumnType("integer");
+
+                    b.Property<string>("ValidityStartsAt")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -1198,6 +1358,10 @@ namespace SMGS.Infrastructure.Migrations
                     b.Property<int>("ValidityHours")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ValidityStartsAt")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
                     b.HasIndex("GroupKeyHash")
@@ -1283,6 +1447,42 @@ namespace SMGS.Infrastructure.Migrations
                     b.HasIndex("RespondedBy");
 
                     b.ToTable("staff_responses", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.Topic", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("MuseumId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MuseumId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("topics", (string)null);
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.Visit", b =>
@@ -1411,6 +1611,11 @@ namespace SMGS.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 
@@ -1526,6 +1731,17 @@ namespace SMGS.Infrastructure.Migrations
                     b.Navigation("Museum");
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.Artifact3DModel", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Artifact", "Artifact")
+                        .WithOne("Model3D")
+                        .HasForeignKey("SMGS.Domain.Entities.Artifact3DModel", "ArtifactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Artifact");
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.ArtifactContent", b =>
                 {
                     b.HasOne("SMGS.Domain.Entities.Artifact", "Artifact")
@@ -1557,6 +1773,36 @@ namespace SMGS.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Content");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactMedia", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Artifact", "Artifact")
+                        .WithMany("MediaItems")
+                        .HasForeignKey("ArtifactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Artifact");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactTopic", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Artifact", "Artifact")
+                        .WithMany("ArtifactTopics")
+                        .HasForeignKey("ArtifactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Domain.Entities.Topic", "Topic")
+                        .WithMany("ArtifactTopics")
+                        .HasForeignKey("TopicId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Artifact");
+
+                    b.Navigation("Topic");
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.Building", b =>
@@ -1805,6 +2051,17 @@ namespace SMGS.Infrastructure.Migrations
                     b.Navigation("Feedback");
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.Topic", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Museum", "Museum")
+                        .WithMany()
+                        .HasForeignKey("MuseumId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Museum");
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.Visit", b =>
                 {
                     b.HasOne("SMGS.Domain.Entities.Museum", "Museum")
@@ -1833,6 +2090,15 @@ namespace SMGS.Infrastructure.Migrations
                     b.Navigation("Visit");
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.Artifact", b =>
+                {
+                    b.Navigation("ArtifactTopics");
+
+                    b.Navigation("MediaItems");
+
+                    b.Navigation("Model3D");
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.ArtifactContent", b =>
                 {
                     b.Navigation("Versions");
@@ -1855,6 +2121,11 @@ namespace SMGS.Infrastructure.Migrations
                     b.Navigation("Markers");
 
                     b.Navigation("Nodes");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.Topic", b =>
+                {
+                    b.Navigation("ArtifactTopics");
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.Visit", b =>

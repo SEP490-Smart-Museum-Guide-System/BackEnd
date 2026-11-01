@@ -13,18 +13,34 @@ namespace SMGS.API.Controllers;
 [Route("api/[controller]")]
 [Produces("application/json")]
 [TypeFilter(typeof(CommerceExceptionFilter))]
-public class ArtifactsController(IArtifactService artifactService, ICommerceService commerce) : ControllerBase
+public class ArtifactsController(
+    IArtifactService artifactService,
+    ICommerceService commerce,
+    IAccountAdminService? accountAdmin = null) : ControllerBase
 {
     private Guid UserId => Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
         ? id : throw new SMGS.Application.DTOs.Commerce.CommerceException("Vui lòng đăng nhập.", 401);
+
+    private bool IsAdmin => User.IsInRole(RoleNames.Admin);
+
     private async Task EnsureManagement(int artifactId)
     {
         var artifact = await artifactService.GetByIdAsync(artifactId);
-        if (artifact.Data == null) throw new SMGS.Application.DTOs.Commerce.CommerceException("Không tìm thấy hiện vật.", 404);
-        await commerce.EnsureMuseumManagement(artifact.Data.MuseumId, UserId, User.IsInRole(RoleNames.Admin));
+        if (artifact.Data == null)
+            throw new SMGS.Application.DTOs.Commerce.CommerceException("Không tìm thấy hiện vật.", 404);
+
+        if (accountAdmin is not null)
+        {
+            if (!await accountAdmin.CanManageArtifactAsync(UserId, IsAdmin, artifactId))
+                throw new SMGS.Application.DTOs.Commerce.CommerceException("Bạn không được phân công quản lý hiện vật này.", 403);
+            return;
+        }
+
+        await commerce.EnsureMuseumManagement(artifact.Data.MuseumId, UserId, IsAdmin);
     }
+
     /// <summary>
-    /// Lấy danh sách hiện vật (phân trang, tìm kiếm, lọc theo bảo tàng / phòng).
+    /// Lấy danh sách hiện vật (phân trang, tìm kiếm, lọc theo bảo tàng / phòng / chủ đề).
     /// </summary>
     [AllowAnonymous]
     [HttpGet]
@@ -32,12 +48,13 @@ public class ArtifactsController(IArtifactService artifactService, ICommerceServ
     public async Task<IActionResult> GetAll(
         [FromQuery] int? museumId,
         [FromQuery] int? galleryId,
+        [FromQuery] int? topicId,
         [FromQuery] string? keyword,
         [FromQuery] bool? isActive,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
     {
-        var response = await artifactService.GetAllAsync(museumId, galleryId, keyword, isActive, page, pageSize);
+        var response = await artifactService.GetAllAsync(museumId, galleryId, keyword, isActive, page, pageSize, topicId);
         return StatusCode(response.StatusCode, response);
     }
 
@@ -64,7 +81,16 @@ public class ArtifactsController(IArtifactService artifactService, ICommerceServ
     [ProducesResponseType(typeof(ResponseDto<ArtifactResponseDto>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateArtifactRequestDto dto)
     {
-        await commerce.EnsureMuseumManagement(dto.MuseumId, UserId, User.IsInRole(RoleNames.Admin));
+        if (accountAdmin is not null && dto.GalleryId.HasValue)
+        {
+            if (!await accountAdmin.CanManageGalleryAsync(UserId, IsAdmin, dto.GalleryId.Value))
+                throw new SMGS.Application.DTOs.Commerce.CommerceException("Bạn không được phân công quản lý phòng trưng bày này.", 403);
+        }
+        else
+        {
+            await commerce.EnsureMuseumManagement(dto.MuseumId, UserId, IsAdmin);
+        }
+
         var response = await artifactService.CreateAsync(dto);
         return StatusCode(response.StatusCode, response);
     }
@@ -150,4 +176,3 @@ public class ArtifactsController(IArtifactService artifactService, ICommerceServ
         return StatusCode(response.StatusCode, response);
     }
 }
-

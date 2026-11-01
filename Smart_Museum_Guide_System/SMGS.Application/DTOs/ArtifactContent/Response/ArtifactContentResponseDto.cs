@@ -9,6 +9,8 @@ public class ArtifactContentResponseDto
     public int VersionNo { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string? NarrationText { get; set; }
+    public string? AudioUrl { get; set; }
     public bool IsAiGenerated { get; set; }
     public string Status { get; set; } = string.Empty;
     public bool IsCurrent { get; set; }

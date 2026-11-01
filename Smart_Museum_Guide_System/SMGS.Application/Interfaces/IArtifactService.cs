@@ -7,7 +7,7 @@ namespace SMGS.Application.Interfaces;
 public interface IArtifactService
 {
     Task<ResponseDto<PaginatedResponseDto<ArtifactResponseDto>>> GetAllAsync(
-        int? museumId, int? galleryId, string? keyword, bool? isActive, int page, int pageSize);
+        int? museumId, int? galleryId, string? keyword, bool? isActive, int page, int pageSize, int? topicId = null);
 
     Task<ResponseDto<ArtifactResponseDto>> GetByIdAsync(int id);
     Task<ResponseDto<ArtifactResponseDto>> CreateAsync(CreateArtifactRequestDto dto);

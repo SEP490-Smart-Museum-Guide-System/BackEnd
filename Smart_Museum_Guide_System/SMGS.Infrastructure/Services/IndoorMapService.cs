@@ -21,6 +21,17 @@ public class IndoorMapService(ApplicationDbContext db) : IIndoorMapService
         if (!await db.Museums.AnyAsync(m => m.Id == museumId)) throw new IndoorMapException("Không tìm thấy bảo tàng.", 404);
     }
 
+    private async Task GalleryAccess(int museumId, int galleryId, Guid user, bool admin)
+    {
+        if (!await db.Museums.AnyAsync(m => m.Id == museumId)) throw new IndoorMapException("Không tìm thấy bảo tàng.", 404);
+        if (admin) return;
+        var allowed = await db.StaffAssignments.AnyAsync(a =>
+            a.UserId == user && a.MuseumId == museumId && a.ArtifactId == null &&
+            (a.GalleryId == null || a.GalleryId == galleryId));
+        if (!allowed)
+            throw new IndoorMapException("Bạn không được phân công quản lý phòng trưng bày này.", 403);
+    }
+
     private async Task<IndoorMap> Load(int id, Guid user, bool admin, bool graph = true)
     {
         var query = db.IndoorMaps.AsQueryable();
@@ -53,7 +64,13 @@ public class IndoorMapService(ApplicationDbContext db) : IIndoorMapService
         var floors = await (from f in db.Floors join b in db.Buildings on f.BuildingId equals b.Id
             where b.MuseumId == museumId orderby b.Name, f.LevelNo
             select new FloorOption(f.Id, b.Id, b.Name, f.LevelNo, f.Name)).ToListAsync();
-        return new(layout, buildings, floors);
+        var galleries = await (from g in db.Galleries
+            join f in db.Floors on g.FloorId equals f.Id
+            join b in db.Buildings on f.BuildingId equals b.Id
+            where b.MuseumId == museumId
+            orderby b.Name, f.LevelNo, g.Name
+            select new GalleryOption(g.Id, f.Id, f.LevelNo, b.Id, b.Name, g.Name, g.Description)).ToListAsync();
+        return new(layout, buildings, floors) { Galleries = galleries };
     }
 
     public async Task SetLayout(int museumId, string layout, Guid user, bool admin)
@@ -72,22 +89,211 @@ public class IndoorMapService(ApplicationDbContext db) : IIndoorMapService
     public async Task<int> AddBuilding(int museumId, BuildingRequest request, Guid user, bool admin)
     {
         await Access(museumId, user, admin);
+        if (string.IsNullOrWhiteSpace(request.Name))
+            throw new IndoorMapException("Tên tòa nhà không được để trống.");
         await using var tx = await db.Database.BeginTransactionAsync();
         var museum = await db.Museums.FromSqlInterpolated($"SELECT * FROM museums WHERE \"Id\" = {museumId} FOR UPDATE").SingleAsync();
         if (museum.IndoorLayout != "floors") throw new IndoorMapException("Chỉ thêm tòa nhà khi bảo tàng được cấu hình theo tầng.");
-        var building = new Building { MuseumId = museumId, Name = request.Name.Trim() };
+        var trimmed = request.Name.Trim();
+        if (await db.Buildings.AnyAsync(b => b.MuseumId == museumId && b.Name.ToLower() == trimmed.ToLower()))
+            throw new IndoorMapException("Tên tòa nhà đã tồn tại trong bảo tàng.", 409);
+        var building = new Building { MuseumId = museumId, Name = trimmed };
         db.Buildings.Add(building); await db.SaveChangesAsync(); await tx.CommitAsync(); return building.Id;
+    }
+
+    public async Task<Building> UpdateBuilding(int museumId, int buildingId, BuildingRequest request, Guid user, bool admin)
+    {
+        await Access(museumId, user, admin);
+        if (string.IsNullOrWhiteSpace(request.Name))
+            throw new IndoorMapException("Tên tòa nhà không được để trống.");
+        var building = await db.Buildings.SingleOrDefaultAsync(b => b.Id == buildingId && b.MuseumId == museumId)
+            ?? throw new IndoorMapException("Không tìm thấy tòa nhà.", 404);
+        var trimmed = request.Name.Trim();
+        if (await db.Buildings.AnyAsync(b => b.MuseumId == museumId && b.Id != buildingId && b.Name.ToLower() == trimmed.ToLower()))
+            throw new IndoorMapException("Tên tòa nhà đã tồn tại trong bảo tàng.", 409);
+        building.Name = trimmed;
+        await db.SaveChangesAsync();
+        return building;
+    }
+
+    public async Task DeleteBuilding(int museumId, int buildingId, Guid user, bool admin)
+    {
+        await Access(museumId, user, admin);
+        var building = await db.Buildings.SingleOrDefaultAsync(b => b.Id == buildingId && b.MuseumId == museumId)
+            ?? throw new IndoorMapException("Không tìm thấy tòa nhà.", 404);
+        if (await db.Floors.AnyAsync(f => f.BuildingId == buildingId))
+            throw new IndoorMapException("Tòa nhà đang chứa tầng, không thể xóa.", 409);
+        db.Buildings.Remove(building);
+        await db.SaveChangesAsync();
     }
 
     public async Task<int> AddFloor(int museumId, FloorRequest request, Guid user, bool admin)
     {
         await Access(museumId, user, admin);
+        if (string.IsNullOrWhiteSpace(request.Name))
+            throw new IndoorMapException("Tên tầng không được để trống.");
         if (!await db.Buildings.AnyAsync(b => b.Id == request.BuildingId && b.MuseumId == museumId))
             throw new IndoorMapException("Tòa nhà không thuộc bảo tàng.");
         if (await db.Floors.AnyAsync(f => f.BuildingId == request.BuildingId && f.LevelNo == request.LevelNo))
             throw new IndoorMapException("Số tầng đã tồn tại trong tòa nhà.", 409);
         var floor = new Floor { BuildingId = request.BuildingId, LevelNo = request.LevelNo, Name = request.Name.Trim() };
         db.Floors.Add(floor); await db.SaveChangesAsync(); return floor.Id;
+    }
+
+    public async Task<FloorOption> UpdateFloor(int museumId, int floorId, FloorRequest request, Guid user, bool admin)
+    {
+        await Access(museumId, user, admin);
+        if (string.IsNullOrWhiteSpace(request.Name))
+            throw new IndoorMapException("Tên tầng không được để trống.");
+        var floor = await (from f in db.Floors
+                           join b in db.Buildings on f.BuildingId equals b.Id
+                           where f.Id == floorId && b.MuseumId == museumId
+                           select f).SingleOrDefaultAsync()
+            ?? throw new IndoorMapException("Không tìm thấy tầng.", 404);
+
+        var targetBuilding = await db.Buildings.AsNoTracking()
+            .SingleOrDefaultAsync(b => b.Id == request.BuildingId && b.MuseumId == museumId)
+            ?? throw new IndoorMapException("Tòa nhà không thuộc bảo tàng.");
+
+        if (await db.Floors.AnyAsync(f => f.BuildingId == request.BuildingId && f.LevelNo == request.LevelNo && f.Id != floorId))
+            throw new IndoorMapException("Số tầng đã tồn tại trong tòa nhà.", 409);
+
+        floor.BuildingId = request.BuildingId;
+        floor.LevelNo = request.LevelNo;
+        floor.Name = request.Name.Trim();
+        await db.SaveChangesAsync();
+        return new FloorOption(floor.Id, targetBuilding.Id, targetBuilding.Name, floor.LevelNo, floor.Name);
+    }
+
+    public async Task DeleteFloor(int museumId, int floorId, Guid user, bool admin)
+    {
+        await Access(museumId, user, admin);
+        var floor = await (from f in db.Floors
+                           join b in db.Buildings on f.BuildingId equals b.Id
+                           where f.Id == floorId && b.MuseumId == museumId
+                           select f).SingleOrDefaultAsync()
+            ?? throw new IndoorMapException("Không tìm thấy tầng.", 404);
+
+        if (await db.Galleries.AnyAsync(g => g.FloorId == floorId))
+            throw new IndoorMapException("Tầng đang chứa phòng trưng bày, không thể xóa.", 409);
+
+        if (await db.IndoorMaps.AnyAsync(m => m.FloorId == floorId))
+            throw new IndoorMapException("Tầng đang có sơ đồ mặt bằng, không thể xóa.", 409);
+
+        db.Floors.Remove(floor);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task<IReadOnlyList<GalleryOption>> Galleries(int museumId, int? floorId, Guid user, bool admin)
+    {
+        if (!await db.Museums.AnyAsync(m => m.Id == museumId))
+            throw new IndoorMapException("Không tìm thấy bảo tàng.", 404);
+        if (!admin && !await db.StaffAssignments.AnyAsync(a => a.UserId == user && a.MuseumId == museumId))
+            throw new IndoorMapException("Bạn không được phân công quản lý bảo tàng này.", 403);
+
+        var query = from g in db.Galleries.AsNoTracking()
+                    join f in db.Floors.AsNoTracking() on g.FloorId equals f.Id
+                    join b in db.Buildings.AsNoTracking() on f.BuildingId equals b.Id
+                    where b.MuseumId == museumId
+                    select new { g, f, b };
+
+        if (floorId.HasValue)
+            query = query.Where(x => x.f.Id == floorId.Value);
+
+        return await query
+            .OrderBy(x => x.b.Name).ThenBy(x => x.f.LevelNo).ThenBy(x => x.g.Name)
+            .Select(x => new GalleryOption(x.g.Id, x.f.Id, x.f.LevelNo, x.b.Id, x.b.Name, x.g.Name, x.g.Description))
+            .ToListAsync();
+    }
+
+    public async Task<int> AddGallery(int museumId, GalleryRequest request, Guid user, bool admin)
+    {
+        await Access(museumId, user, admin);
+        if (string.IsNullOrWhiteSpace(request.Name))
+            throw new IndoorMapException("Tên phòng trưng bày không được để trống.");
+
+        var floorExists = await (from f in db.Floors
+                                 join b in db.Buildings on f.BuildingId equals b.Id
+                                 where f.Id == request.FloorId && b.MuseumId == museumId
+                                 select f.Id).AnyAsync();
+        if (!floorExists)
+            throw new IndoorMapException("Tầng không thuộc bảo tàng.");
+
+        var trimmed = request.Name.Trim();
+        if (await db.Galleries.AnyAsync(g => g.FloorId == request.FloorId && g.Name.ToLower() == trimmed.ToLower()))
+            throw new IndoorMapException("Tên phòng trưng bày đã tồn tại trên tầng này.", 409);
+
+        var gallery = new Gallery
+        {
+            FloorId = request.FloorId,
+            Name = trimmed,
+            Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim()
+        };
+        db.Galleries.Add(gallery);
+        await db.SaveChangesAsync();
+        return gallery.Id;
+    }
+
+    public async Task<GalleryOption> UpdateGallery(int museumId, int galleryId, GalleryRequest request, Guid user, bool admin)
+    {
+        await GalleryAccess(museumId, galleryId, user, admin);
+        if (string.IsNullOrWhiteSpace(request.Name))
+            throw new IndoorMapException("Tên phòng trưng bày không được để trống.");
+
+        var gallery = await (from g in db.Galleries
+                             join f in db.Floors on g.FloorId equals f.Id
+                             join b in db.Buildings on f.BuildingId equals b.Id
+                             where g.Id == galleryId && b.MuseumId == museumId
+                             select g).SingleOrDefaultAsync()
+            ?? throw new IndoorMapException("Không tìm thấy phòng trưng bày.", 404);
+
+        if (gallery.FloorId != request.FloorId)
+        {
+            // Moving gallery to another floor requires museum-level permission and no active floor map marker conflict.
+            await Access(museumId, user, admin);
+            if (await db.MapMarkers.AnyAsync(m => m.GalleryId == galleryId))
+                throw new IndoorMapException("Phòng trưng bày đang được gắn trên sơ đồ mặt bằng, không thể chuyển sang tầng khác.", 409);
+        }
+
+        var targetFloor = await (from f in db.Floors.AsNoTracking()
+                                 join b in db.Buildings.AsNoTracking() on f.BuildingId equals b.Id
+                                 where f.Id == request.FloorId && b.MuseumId == museumId
+                                 select new { FloorId = f.Id, f.LevelNo, BuildingId = b.Id, BuildingName = b.Name }).SingleOrDefaultAsync()
+            ?? throw new IndoorMapException("Tầng không thuộc bảo tàng.");
+
+        var trimmed = request.Name.Trim();
+        if (await db.Galleries.AnyAsync(g => g.FloorId == request.FloorId && g.Id != galleryId && g.Name.ToLower() == trimmed.ToLower()))
+            throw new IndoorMapException("Tên phòng trưng bày đã tồn tại trên tầng này.", 409);
+
+        gallery.FloorId = request.FloorId;
+        gallery.Name = trimmed;
+        gallery.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+        await db.SaveChangesAsync();
+
+        return new GalleryOption(gallery.Id, targetFloor.FloorId, targetFloor.LevelNo, targetFloor.BuildingId, targetFloor.BuildingName, gallery.Name, gallery.Description);
+    }
+
+    public async Task DeleteGallery(int museumId, int galleryId, Guid user, bool admin)
+    {
+        await Access(museumId, user, admin);
+        var gallery = await (from g in db.Galleries
+                             join f in db.Floors on g.FloorId equals f.Id
+                             join b in db.Buildings on f.BuildingId equals b.Id
+                             where g.Id == galleryId && b.MuseumId == museumId
+                             select g).SingleOrDefaultAsync()
+            ?? throw new IndoorMapException("Không tìm thấy phòng trưng bày.", 404);
+
+        if (await db.Artifacts.AnyAsync(a => a.GalleryId == galleryId))
+            throw new IndoorMapException("Phòng trưng bày đang chứa hiện vật, không thể xóa.", 409);
+
+        if (await db.MapMarkers.AnyAsync(m => m.GalleryId == galleryId))
+            throw new IndoorMapException("Phòng trưng bày đang được liên kết trên sơ đồ mặt bằng, không thể xóa.", 409);
+
+        if (await db.StaffAssignments.AnyAsync(a => a.GalleryId == galleryId))
+            throw new IndoorMapException("Phòng trưng bày đang có nhân viên được phân công, không thể xóa.", 409);
+
+        db.Galleries.Remove(gallery);
+        await db.SaveChangesAsync();
     }
 
     public async Task Assign(int museumId, Guid staffUserId)

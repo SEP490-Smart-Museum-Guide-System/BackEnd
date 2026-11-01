@@ -1,3 +1,5 @@
+using SMGS.Application.DTOs.Topic;
+
 namespace SMGS.Application.DTOs.Artifact.Response;
 
 public class ArtifactResponseDto
@@ -15,4 +17,7 @@ public class ArtifactResponseDto
     public string AccessLevel { get; set; } = "free";
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
+    public List<ArtifactTopicTagDto> Topics { get; set; } = [];
+    public Artifact3DModelResponseDto? Model3D { get; set; }
+    public List<ArtifactMediaResponseDto> Media { get; set; } = [];
 }

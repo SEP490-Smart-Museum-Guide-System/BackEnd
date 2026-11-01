@@ -7,14 +7,19 @@ public record RevisionRequest([Range(1, int.MaxValue)] int Revision);
 public record LayoutRequest([Required] string Layout);
 public record BuildingRequest([Required, StringLength(200)] string Name);
 public record FloorRequest(int BuildingId, int LevelNo, [Required, StringLength(200)] string Name);
+public record GalleryRequest(int FloorId, [Required, StringLength(300)] string Name, [StringLength(2000)] string? Description = null);
 public record CreateMapRequest(int? FloorId, [Required, StringLength(200)] string Name);
 public record AssignmentRequest(Guid UserId);
 public record RouteRequest(int Revision, Guid FromNodeId, Guid ToNodeId, bool AccessibleOnly = false);
 public record RouteResult(IReadOnlyList<Guid> NodeIds, double Cost);
 public record MuseumOption(int Id, string Name);
 public record FloorOption(int Id, int BuildingId, string BuildingName, int LevelNo, string? Name);
+public record GalleryOption(int Id, int FloorId, int LevelNo, int BuildingId, string BuildingName, string Name, string? Description);
 public record LinkOption(int Id, string Name);
-public record StructureResult(string Layout, IReadOnlyList<Building> Buildings, IReadOnlyList<FloorOption> Floors);
+public record StructureResult(string Layout, IReadOnlyList<Building> Buildings, IReadOnlyList<FloorOption> Floors)
+{
+    public IReadOnlyList<GalleryOption> Galleries { get; init; } = [];
+}
 public record MapSummary(int Id, int? FloorId, string Name, int Revision, DateTime? PublishedAt);
 public class MapDraft
 {
