@@ -8,4 +8,9 @@ public class SubmitArtifactContentRequestDto
     public string Title { get; set; } = string.Empty;
     [Required, MaxLength(100000)]
     public string Description { get; set; } = string.Empty;
+    [MaxLength(100000)]
+    public string? NarrationText { get; set; }
+    [MaxLength(1000)]
+    public string? AudioUrl { get; set; }
+    public bool IsAiGenerated { get; set; } = true;
 }

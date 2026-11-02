@@ -1,7 +1,9 @@
+using SMGS.Application.DTOs.Topic;
+
 namespace SMGS.Application.DTOs.Artifact.Response;
 
 /// <summary>
-/// DTO trả về khi quét QR code — bao gồm thông tin hiện vật + nội dung đã xuất bản.
+/// DTO trả về khi quét QR code — bao gồm thông tin hiện vật + nội dung đã xuất bản + media + 3D.
 /// </summary>
 public class ArtifactScanResponseDto
 {
@@ -16,6 +18,10 @@ public class ArtifactScanResponseDto
     public float? MapX { get; set; }
     public float? MapY { get; set; }
 
+    public List<ArtifactTopicTagDto> Topics { get; set; } = [];
+    public Artifact3DModelResponseDto? Model3D { get; set; }
+    public List<ArtifactMediaResponseDto> Media { get; set; } = [];
+
     /// <summary>Danh sách nội dung đã xuất bản theo các ngôn ngữ.</summary>
     public List<ArtifactScanContentDto> Contents { get; set; } = [];
 }
@@ -28,4 +34,6 @@ public class ArtifactScanContentDto
     public string LanguageCode { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string? NarrationText { get; set; }
+    public string? AudioUrl { get; set; }
 }

@@ -40,4 +40,7 @@ public class Artifact
     // Navigation properties
     public Museum? Museum { get; set; }
     public Gallery? Gallery { get; set; }
+    public ICollection<ArtifactTopic> ArtifactTopics { get; set; } = new List<ArtifactTopic>();
+    public ICollection<ArtifactMedia> MediaItems { get; set; } = new List<ArtifactMedia>();
+    public Artifact3DModel? Model3D { get; set; }
 }

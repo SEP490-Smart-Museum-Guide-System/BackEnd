@@ -7,21 +7,36 @@ namespace SMGS.Infrastructure.Repositories;
 
 public class ArtifactRepository(ApplicationDbContext db) : IArtifactRepository
 {
+    private IQueryable<Artifact> DetailedQuery => db.Artifacts
+        .Include(a => a.Museum)
+        .Include(a => a.Gallery)
+        .Include(a => a.Model3D)
+        .Include(a => a.MediaItems)
+        .Include(a => a.ArtifactTopics)
+            .ThenInclude(at => at.Topic);
+
     public async Task<Artifact?> GetByIdAsync(int id)
     {
-        return await db.Artifacts.FindAsync(id);
+        return await DetailedQuery.FirstOrDefaultAsync(a => a.Id == id);
     }
 
-    public async Task<(IList<Artifact> Items, int TotalCount)> GetPagedAsync(
+    public Task<(IList<Artifact> Items, int TotalCount)> GetPagedAsync(
         int? museumId, int? galleryId, string? keyword, bool? isActive, int page, int pageSize)
+        => GetPagedAsync(museumId, galleryId, null, keyword, isActive, page, pageSize);
+
+    public async Task<(IList<Artifact> Items, int TotalCount)> GetPagedAsync(
+        int? museumId, int? galleryId, int? topicId, string? keyword, bool? isActive, int page, int pageSize)
     {
-        var query = db.Artifacts.AsQueryable();
+        var query = DetailedQuery.AsNoTracking().AsQueryable();
 
         if (museumId.HasValue)
             query = query.Where(a => a.MuseumId == museumId.Value);
 
         if (galleryId.HasValue)
             query = query.Where(a => a.GalleryId == galleryId.Value);
+
+        if (topicId.HasValue)
+            query = query.Where(a => a.ArtifactTopics.Any(at => at.TopicId == topicId.Value));
 
         if (isActive.HasValue)
             query = query.Where(a => a.IsActive == isActive.Value);
@@ -74,8 +89,7 @@ public class ArtifactRepository(ApplicationDbContext db) : IArtifactRepository
     public async Task<Artifact?> GetByQrCodeAsync(string qrCode)
     {
         var normalized = qrCode.Trim();
-        return await db.Artifacts
-            .Include(a => a.Museum)
+        return await DetailedQuery
             .FirstOrDefaultAsync(a => a.QrCode == normalized && a.IsActive);
     }
 

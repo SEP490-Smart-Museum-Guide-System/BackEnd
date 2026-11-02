@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IArtifactRepository, ArtifactRepository>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IAccountAdminService, AccountAdminService>();
         services.AddScoped<IMuseumService, MuseumService>();
         services.AddScoped<OutdoorNavigationService>();
         services.AddHttpClient<PlaceSearchService>(client =>
@@ -69,6 +70,10 @@ public static class DependencyInjection
             client.DefaultRequestHeaders.UserAgent.ParseAdd("SMGS/1.0");
         }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddScoped<IArtifactService, ArtifactService>();
+        services.AddScoped<ITopicService, TopicService>();
+        services.AddSingleton<ArtifactAssetStore>();
+        services.AddScoped<IArtifactAssetService, ArtifactAssetService>();
+        services.AddScoped<ICommerceService, CommerceService>();
         services.AddScoped<IIndoorMapService, IndoorMapService>();
         services.AddSingleton<IndoorImageStore>();
         services.AddScoped<IArtifactContentRepository, ArtifactContentRepository>();
