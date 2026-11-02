@@ -8,7 +8,7 @@ using SMGS.Domain.Constants;
 namespace SMGS.API.Controllers;
 
 /// <summary>
-/// Lượt tham quan (tối thiểu) — phục vụ điều kiện "đánh giá sau khi hoàn thành tour".
+/// Lượt tham quan tự do hoặc theo tour; tour chỉ hoàn thành sau khi quét đủ điểm dừng.
 /// </summary>
 [ApiController]
 [Route("api/visits")]

@@ -78,6 +78,19 @@ public static class DependencyInjection
         services.AddScoped<IFeedbackRepository, FeedbackRepository>();
         services.AddScoped<IComplaintRepository, ComplaintRepository>();
         services.AddScoped<IVisitService, VisitService>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddOptions<SMGS.Application.DTOs.Experience.ExperienceOptions>().Bind(configuration.GetSection("VisitorExperience"))
+            .ValidateDataAnnotations().Validate(o => {
+                try { TimeZoneInfo.FindSystemTimeZoneById(o.TimeZoneId); return true; } catch { return false; }
+            }, "VisitorExperience:TimeZoneId is invalid.").ValidateOnStart();
+        services.AddScoped<ITourService, TourService>();
+        services.AddScoped<IVisitProgressService, VisitProgressService>();
+        services.AddScoped<IRecognitionService, RecognitionService>();
+        services.AddScoped<IVisitorNavigationService, VisitorNavigationService>();
+        services.AddScoped<IQuestionBankService, QuestionBankService>();
+        services.AddScoped<IDailyQuizService, DailyQuizService>();
+        services.AddScoped<IQuizAttemptService, QuizAttemptService>();
+        services.AddScoped<IGamificationService, GamificationService>();
         services.AddScoped<IFeedbackService, FeedbackService>();
         services.AddScoped<IComplaintService, ComplaintService>();
         return services;

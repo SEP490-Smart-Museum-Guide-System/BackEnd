@@ -1,7 +1,7 @@
 namespace SMGS.Domain.Entities;
 
 /// <summary>
-/// Một lần thực hiện tour của khách tại bảo tàng.
+/// Một lượt tham quan tự do hoặc theo tour của khách tại bảo tàng.
 /// Feedback chỉ được gửi sau khi Visit ở trạng thái Completed.
 /// </summary>
 public class Visit
@@ -12,8 +12,7 @@ public class Visit
     public Guid VisitorId { get; set; }
 
     /// <summary>
-    /// Tour được thực hiện trong lượt này.
-    /// TODO: gắn FK khi module Tour hoàn thành (hiện chưa có entity Tour).
+    /// FK tới Tour; null nếu khách tham quan tự do.
     /// </summary>
     public int? TourId { get; set; }
 

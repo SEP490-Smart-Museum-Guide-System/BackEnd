@@ -32,6 +32,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
         IndoorMapConfiguration.Configure(builder);
+<<<<<<< Updated upstream
+=======
+        CommerceConfiguration.Configure(builder);
+        VisitorExperienceConfiguration.Configure(builder);
+>>>>>>> Stashed changes
         builder.Entity<ApplicationUser>().ToTable("Users");
         builder.Entity<IdentityRole<Guid>>().ToTable("Roles");
         builder.Entity<IdentityRole<Guid>>().HasData(DataSeeder.CreateRoleSeeds());

@@ -1,5 +1,6 @@
 using SMGS.Application.DTOs.Common;
 using SMGS.Application.DTOs.Visit;
+using SMGS.Application.DTOs.Experience;
 using SMGS.Application.Interfaces;
 using SMGS.Domain.Entities;
 using SMGS.Domain.Interfaces;
@@ -7,13 +8,19 @@ using SMGS.Domain.Interfaces;
 namespace SMGS.Application.Services;
 
 /// <summary>
-/// Quản lý lượt tham quan ở mức tối thiểu (bắt đầu / hoàn thành) để phục vụ luồng đánh giá.
-/// Logic tiến độ tour chi tiết sẽ được bổ sung khi module Tour hoàn thành.
+/// Giữ hợp đồng visit hiện có; luồng ghi qua progress service kiểm tra tour và khóa đồng thời.
+/// Lượt tự do không cần hoàn thành các điểm dừng.
 /// </summary>
-public class VisitService(IVisitRepository visitRepo, IMuseumRepository museumRepo) : IVisitService
+public class VisitService(IVisitRepository visitRepo, IMuseumRepository museumRepo, IVisitProgressService? progress = null) : IVisitService
 {
     public async Task<ResponseDto<VisitResponseDto>> StartAsync(Guid visitorId, StartVisitRequestDto dto)
     {
+        if (progress is not null) {
+            try { return ResponseDto<VisitResponseDto>.Success(await progress.StartVisitAsync(visitorId, dto), "Bắt đầu lượt tham quan.", 201); }
+            catch (ExperienceException e) { return ResponseDto<VisitResponseDto>.Fail(e.Message, e.StatusCode); }
+        }
+        // Repository-only construction is retained for existing isolated tests; tours always require the progress service.
+        if (dto.TourId is not null) return ResponseDto<VisitResponseDto>.Fail("Dịch vụ tour chưa được cấu hình.", 503);
         var museum = await museumRepo.GetByIdAsync(dto.MuseumId);
         if (museum is null || !museum.IsActive)
             return ResponseDto<VisitResponseDto>.Fail("Không tìm thấy bảo tàng.", 404);
@@ -37,9 +44,15 @@ public class VisitService(IVisitRepository visitRepo, IMuseumRepository museumRe
 
     public async Task<ResponseDto<VisitResponseDto>> CompleteAsync(int visitId, Guid visitorId)
     {
+        if (progress is not null) {
+            try { return ResponseDto<VisitResponseDto>.Success(await progress.CompleteTourAsync(visitorId, visitId)); }
+            catch (ExperienceException e) { return ResponseDto<VisitResponseDto>.Fail(e.Message, e.StatusCode); }
+        }
         var visit = await visitRepo.GetByIdAsync(visitId);
         if (visit is null || visit.VisitorId != visitorId)
             return ResponseDto<VisitResponseDto>.Fail("Không tìm thấy lượt tham quan.", 404);
+
+        if (visit.TourId is not null) return ResponseDto<VisitResponseDto>.Fail("Dịch vụ tour chưa được cấu hình.", 503);
 
         if (visit.Status != VisitStatus.InProgress)
             return ResponseDto<VisitResponseDto>.Fail("Lượt tham quan không ở trạng thái đang diễn ra.", 400);
