@@ -21,7 +21,7 @@ public class UserRepository(UserManager<ApplicationUser> userManager,
         string email, string fullName, string password)
     {
         await using var transaction = await db.Database.BeginTransactionAsync();
-        var user = new ApplicationUser { UserName = email, Email = email, FullName = fullName };
+        var user = new ApplicationUser { UserName = email, Email = email, FullName = fullName, IsActive = true };
         try
         {
             var result = await userManager.CreateAsync(user, password);
@@ -46,7 +46,7 @@ public class UserRepository(UserManager<ApplicationUser> userManager,
     public async Task<bool> CheckPasswordAsync(Guid userId, string password)
     {
         var user = await userManager.FindByIdAsync(userId.ToString());
-        if (user is null) return false;
+        if (user is null || !user.IsActive) return false;
 
         var result = await signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
         return result.Succeeded;

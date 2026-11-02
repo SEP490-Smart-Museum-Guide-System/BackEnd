@@ -44,8 +44,60 @@ public static class DependencyInjection
                 "JwtSettings:Key must contain at least 32 UTF-8 bytes.")
             .ValidateOnStart();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IMuseumRepository, MuseumRepository>();
+        services.AddScoped<IArtifactRepository, ArtifactRepository>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IAccountAdminService, AccountAdminService>();
+        services.AddScoped<IMuseumService, MuseumService>();
+        services.AddScoped<OutdoorNavigationService>();
+        services.AddHttpClient<PlaceSearchService>(client =>
+        {
+            client.BaseAddress = new Uri((configuration["Photon:BaseUrl"] ?? "https://photon.komoot.io/").TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.MaxResponseContentBufferSize = 1024 * 1024;
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("SMGS/1.0");
+        }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+        services.AddHttpClient<IOutdoorRoutingService, OsrmRoutingService>(client =>
+        {
+            var baseUrl = configuration["Osrm:BaseUrl"] ?? throw new InvalidOperationException("Configure Osrm:BaseUrl.");
+            if (!Uri.TryCreate(baseUrl.TrimEnd('/') + "/", UriKind.Absolute, out var uri)
+                || (uri.Scheme != "https" && uri.Scheme != "http"))
+                throw new InvalidOperationException("Osrm:BaseUrl must be an HTTP(S) URL.");
+            client.BaseAddress = uri;
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.MaxResponseContentBufferSize = 8 * 1024 * 1024;
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("SMGS/1.0");
+        }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+        services.AddScoped<IArtifactService, ArtifactService>();
+        services.AddScoped<ITopicService, TopicService>();
+        services.AddSingleton<ArtifactAssetStore>();
+        services.AddScoped<IArtifactAssetService, ArtifactAssetService>();
+        services.AddScoped<ICommerceService, CommerceService>();
+        services.AddScoped<IIndoorMapService, IndoorMapService>();
+        services.AddSingleton<IndoorImageStore>();
+        services.AddScoped<IArtifactContentRepository, ArtifactContentRepository>();
+        services.AddScoped<IArtifactContentService, ArtifactContentService>();
+        services.AddSingleton<IQrCodeService, QrCodeService>();
+        services.AddScoped<IVisitRepository, VisitRepository>();
+        services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+        services.AddScoped<IComplaintRepository, ComplaintRepository>();
+        services.AddScoped<IVisitService, VisitService>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddOptions<SMGS.Application.DTOs.Experience.ExperienceOptions>().Bind(configuration.GetSection("VisitorExperience"))
+            .ValidateDataAnnotations().Validate(o => {
+                try { TimeZoneInfo.FindSystemTimeZoneById(o.TimeZoneId); return true; } catch { return false; }
+            }, "VisitorExperience:TimeZoneId is invalid.").ValidateOnStart();
+        services.AddScoped<ITourService, TourService>();
+        services.AddScoped<IVisitProgressService, VisitProgressService>();
+        services.AddScoped<IRecognitionService, RecognitionService>();
+        services.AddScoped<IVisitorNavigationService, VisitorNavigationService>();
+        services.AddScoped<IQuestionBankService, QuestionBankService>();
+        services.AddScoped<IDailyQuizService, DailyQuizService>();
+        services.AddScoped<IQuizAttemptService, QuizAttemptService>();
+        services.AddScoped<IGamificationService, GamificationService>();
+        services.AddScoped<IFeedbackService, FeedbackService>();
+        services.AddScoped<IComplaintService, ComplaintService>();
         return services;
     }
 }

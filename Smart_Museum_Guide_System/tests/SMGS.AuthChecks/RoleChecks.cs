@@ -31,7 +31,7 @@ internal static class RoleChecks
         using var provider = CreateProvider();
         using var scope = provider.CreateScope();
         var roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-        var requiredRoles = new[] { RoleNames.Visitor, RoleNames.Admin, RoleNames.Staff, RoleNames.MuseumStaff };
+        var requiredRoles = new[] { RoleNames.Visitor, RoleNames.Admin, RoleNames.Staff, RoleNames.MuseumStaff, RoleNames.Curator };
         foreach (var role in requiredRoles)
             if (!await roles.RoleExistsAsync(role)) throw new Exception($"Missing role: {role}");
 
@@ -71,7 +71,7 @@ internal static class RoleChecks
                 if (!principal.IsInRole(RoleNames.Visitor) || requiredRoles.Skip(1).Any(principal.IsInRole))
                     throw new Exception("JWT must contain Visitor without elevated roles.");
             }
-            Console.WriteLine("PASS: all four database roles, default Visitor membership/JWT and registration rollback on role failure.");
+            Console.WriteLine("PASS: all five database roles, default Visitor membership/JWT and registration rollback on role failure.");
         }
         finally
         {

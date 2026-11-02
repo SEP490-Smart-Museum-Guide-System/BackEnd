@@ -46,7 +46,8 @@ public class AuthService(IUserRepository userRepo, ITokenService tokenService) :
             AccessToken = token,
             AccessTokenExpiration = expiration,
             Email = user.Email,
-            FullName = user.FullName
+            FullName = user.FullName,
+            Roles = roles
         };
     }
 }

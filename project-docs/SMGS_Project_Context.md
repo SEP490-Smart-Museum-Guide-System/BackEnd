@@ -2,7 +2,7 @@
 
 > Tài liệu bàn giao bối cảnh cho thành viên dự án, giảng viên, người phân tích và AI hỗ trợ phát triển. Có thể đọc độc lập mà không cần mở lại hai tài liệu nguồn.
 >
-> Phiên bản: 1.2 — Cập nhật: 15/10/2026. Đây là bản tổng hợp yêu cầu hiện có, chưa phải SRS đã phê duyệt và không khẳng định các chức năng đã được triển khai.
+> Phiên bản: 1.3 — Cập nhật: 30/10/2026. Đây là bản tổng hợp yêu cầu hiện có, chưa phải SRS đã phê duyệt và không khẳng định các chức năng đã được triển khai.
 
 ## 1. Cách đọc và mức độ xác nhận
 
@@ -15,11 +15,13 @@ Tài liệu được tổng hợp từ:
 
 - **[U2]** Quyết định sau buổi trao đổi giữa nhóm và giảng viên, được chủ dự án cung cấp ngày 15/10/2026: bỏ tham quan online/virtual tour tại nhà; cập nhật vị trí khách khi quét QR hoặc nhận diện ảnh bằng AI; chỉ đường tới hiện vật tiếp theo không cần theo dõi vị trí liên tục; có chỉ đường từ nhà đến bảo tàng; tích lũy quiz theo hiện vật đã quét/nhận diện trong ngày, cho phép làm ngay sau khi đọc hoặc làm sau.
 
+- **[U3]** Bổ sung trực tiếp của chủ dự án ngày 30/10/2026: tài liệu tổng quan cần có chức năng mô hình 3D của hiện vật. Các chi tiết triển khai chưa được xác nhận.
+
 Cách tổng hợp: dùng [F] làm nền, dùng câu trả lời trong [Q] để cụ thể hóa hoặc cập nhật phạm vi. Phần [QB] được hiểu là cập nhật sau các câu trả lời trước đó. Nếu hai ý vẫn chưa thống nhất, giữ nguyên vấn đề dưới nhãn **Cần xác nhận**, không tự chọn một cách hiểu rồi coi là yêu cầu đã chốt.
 
-Xác nhận trực tiếp được ưu tiên theo thứ tự [U2] → [U1] → các nguồn cũ tại những điểm đã thay đổi. Phần tham quan online, virtual tour tại nhà và đề xuất gói online trước đây đã bị loại khỏi phạm vi theo [U2].
+Xác nhận trực tiếp được ưu tiên theo thứ tự [U3] → [U2] → [U1] → các nguồn cũ tại những điểm đã thay đổi. Phần tham quan online, virtual tour tại nhà và đề xuất gói online trước đây đã bị loại khỏi phạm vi theo [U2]. Bổ sung mô hình 3D của từng hiện vật tại [U3] không khôi phục phạm vi tham quan online/virtual tour tại nhà.
 
-- **Đã xác nhận**: có câu trả lời hoặc bổ sung rõ ràng trong Question hoặc xác nhận trực tiếp [U1], [U2].
+- **Đã xác nhận**: có câu trả lời hoặc bổ sung rõ ràng trong Question hoặc xác nhận trực tiếp [U1], [U2], [U3].
 - **Yêu cầu nền**: có trong FALL26, chưa có nội dung thay thế rõ ràng. Áp dụng các điều chỉnh phạm vi mới nhất tại [U1], [U2]; một số cách triển khai vẫn cần làm rõ.
 - **Định hướng**: ý kiến còn mang tính đề xuất, chẳng hạn “tôi nghĩ”, “nên”.
 - **Cần xác nhận**: nguồn thiếu thông tin, có cách hiểu khác nhau hoặc có xung đột.
@@ -36,6 +38,8 @@ Khách sử dụng tài khoản để truy cập. Tại bảo tàng, khách có 
 Hệ thống hỗ trợ **nhiều bảo tàng**, có nội dung cơ bản miễn phí và dịch vụ hướng dẫn số trả phí. Theo cập nhật [U1], hệ thống bán **vé vào bảo tàng**, **dịch vụ số riêng** hoặc **combo vé và dịch vụ số**. Quy định cũ về dịch vụ theo tour/ngày cần được làm rõ trong mô hình mới; chưa có thuê bao tháng/năm được xác nhận. Triển lãm tạm được gác lại để tập trung vào bảo tàng.
 
 Phạm vi hiện tại tập trung vào **tham quan trực tiếp tại bảo tàng**. Đã bỏ tham quan online và virtual tour tại nhà. Hệ thống phải chỉ đường từ nhà đến bảo tàng và chỉ đường tới hiện vật tiếp theo trong bảo tàng. Vị trí trong bảo tàng chỉ cập nhật theo lần quét QR/nhận diện ảnh, không cần cập nhật liên tục. Quiz được tích lũy theo các hiện vật đã nhận diện trong ngày, cho khách chọn làm ngay sau khi đọc hoặc làm sau để tích điểm. [U2]
+
+Ngoài nội dung thuyết minh và media, hệ thống hỗ trợ **xem mô hình 3D của hiện vật** để khách khám phá hình dáng và chi tiết hiện vật. Đây là nội dung gắn với từng hiện vật trong trải nghiệm tham quan tại bảo tàng. [U3]
 
 ## 3. Bối cảnh và mục tiêu
 
@@ -65,6 +69,7 @@ SMGS tận dụng điện thoại của khách để:
 | Quiz AI | Có tạo câu hỏi tương tác | Tạo trước, duyệt vào ngân hàng [Q16]; tích lũy theo hiện vật đã quét QR/nhận diện ảnh trong ngày, làm ngay hoặc làm sau [U2] |
 | Bản đồ | Có route/indoor navigation guidance | Cập nhật vị trí khách theo QR/ảnh; chỉ đường tới hiện vật tiếp theo, không định vị liên tục; có chỉ đường từ nhà đến bảo tàng [U2] |
 | Tham quan | Chủ yếu tại địa điểm | Tham quan tại bảo tàng; phần online/virtual tour tại nhà từng bổ sung ở [QB] đã bị bỏ [U2] |
+| Mô hình 3D hiện vật | Chưa đối chiếu yêu cầu 3D cụ thể trong nguồn gốc | Bổ sung chức năng xem mô hình 3D gắn với hiện vật [U3]; không phải virtual tour toàn bảo tàng |
 
 **Đã chốt công nghệ chính:** C# .NET API, Flutter cho mobile, React/Vite cho web, PostgreSQL và Python cho AI [U1]. **Chưa có xác nhận** về tiến độ triển khai, repository, kiến trúc cuối cùng, framework Python, phiên bản công nghệ, cổng thanh toán, số ngôn ngữ, khối lượng hiện vật hoặc lịch nghiệm thu.
 
@@ -77,6 +82,7 @@ SMGS tận dụng điện thoại của khách để:
 | Floor | Tầng của tòa nhà |
 | Gallery | Phòng hoặc khu trưng bày |
 | Artifact | Hiện vật |
+| Mô hình 3D hiện vật | Tài nguyên số biểu diễn hình dạng ba chiều của hiện vật, phục vụ chức năng xem 3D [U3] |
 | Exhibit | “Vật/hiện vật được trưng bày” theo [Q2]; chưa đủ căn cứ xem là triển lãm độc lập |
 | Exhibition | Triển lãm; tạm ngoài phạm vi hiện tại theo [U1] |
 | Theme | Chủ đề, chỉ phân loại hiện vật |
@@ -201,6 +207,21 @@ Ví dụ: khách nhận diện hiện vật A bằng QR và chọn làm quiz sau
 
 Chưa rõ ảnh/video/audio gắn trực tiếp với hiện vật hay với từng bài/ngôn ngữ; nội dung có được tái sử dụng giữa hiện vật hay không; audio tạo sẵn, thu âm hay dùng TTS. [F] chỉ nêu TTS là tùy chọn.
 
+#### 8.2.1 Mô hình 3D của hiện vật
+
+**Đã xác nhận:** hệ thống có chức năng xem mô hình 3D gắn với hiện vật. [U3]
+
+**Gợi ý phân tích cho luồng sử dụng và quản lý:**
+
+- Visitor mở mô hình 3D từ trang chi tiết hiện vật; có thể xoay, phóng to/thu nhỏ để quan sát nhiều góc độ. Các thao tác cụ thể cần chốt khi thiết kế giao diện.
+- Museum Staff tải lên, thay thế hoặc gỡ liên kết mô hình 3D trong phần quản lý media của hiện vật thuộc phạm vi được giao. Cần xác nhận quyền thao tác và bước Curator kiểm duyệt trước khi hiển thị cho khách.
+- Khi hiện vật chưa có mô hình hoặc tải mô hình thất bại, vẫn cho khách đọc thông tin và sử dụng media khác; hiển thị trạng thái phù hợp.
+- Việc mở hoặc tương tác với mô hình 3D không tự tạo sự kiện quét QR/nhận diện ảnh, cập nhật vị trí, mở quiz hoặc ghi nhận hoàn thành điểm dừng.
+
+**Cần xác nhận:** hiện vật nào bắt buộc có mô hình; số mô hình cho mỗi hiện vật; nguồn cung cấp và quyền sử dụng tài nguyên; định dạng, dung lượng và mức chi tiết; nền tảng mobile/web được hỗ trợ; công cụ hiển thị; quy trình duyệt/phiên bản; quyền free/premium; tải trước, cache và sử dụng khi mạng yếu. GLB/glTF chỉ là định dạng có thể cân nhắc, chưa phải lựa chọn đã chốt.
+
+Phạm vi này là xem mô hình của từng hiện vật. Chưa có yêu cầu tự tạo mô hình bằng AI, quét dựng 3D, AR/VR hoặc tái dựng không gian bảo tàng thành virtual tour.
+
 ### 8.3 Chatbot và kiến thức AI
 
 - Quản lý tài liệu nguồn làm cơ sở cho AI. [Q15]
@@ -309,6 +330,7 @@ Gợi ý phân tích từ phạm vi nhiều bảo tàng: phải làm rõ phạm 
 | Không gian | Museum, Building, Floor, Gallery | Phân cấp bảo tàng → tòa nhà → tầng → phòng |
 | Hiện vật | Artifact, Theme, QR, Reference Image, Map Position | Nhiều chủ đề; phòng không bắt buộc; không lưu lịch sử vị trí |
 | Nội dung | Narration, Language, Media, Content Version, Review | Nhiều biến thể độ dài/chi tiết; giữ phiên bản và lịch sử duyệt |
+| Mô hình 3D | Artifact 3D Model / tài nguyên media 3D | Gắn với hiện vật [U3]; gợi ý lưu tham chiếu file, định dạng, dung lượng và ảnh xem trước; số lượng, metadata, phiên bản và quy trình duyệt chưa chốt |
 | AI | Source Document, Conversation, Message, Recognition History | Kiến thức đã duyệt; hội thoại nhiều hiện vật; lưu lịch sử nhận diện |
 | Tour | Tour, Ordered Tour Item, Visit, Progress | Tách kế hoạch tour khỏi lần thực hiện; tour được lưu/chỉnh sửa |
 | Quiz | Quiz, Question, Quiz Question, Daily Quiz Eligibility, Attempt, Answer/Result | Quiz gắn hiện vật; danh sách đủ điều kiện trong ngày theo QR/ảnh; làm ngay hoặc sau; lưu kết quả từng lần/từng câu |
@@ -340,6 +362,7 @@ Không trộn lẫn các khái niệm sau:
 | AI/NLP | LLM phục vụ thuyết minh/hỏi đáp theo yêu cầu nền; nhà cung cấp và mô hình chưa chốt |
 | Nhận diện ảnh | Vision model, chưa chỉ định mô hình |
 | Audio | Có thể dùng text-to-speech; phương án audio chưa chốt |
+| Hiển thị mô hình 3D | Có chức năng xem mô hình hiện vật [U3]; thư viện hiển thị, định dạng file, lưu trữ/phân phối và hỗ trợ từng client chưa chốt |
 | Thanh toán | VNPay, MoMo, ZaloPay và thẻ là các ví dụ trong [F], chưa phải lựa chọn |
 
 Các thành phần sản phẩm dự kiến: mobile Flutter, web React/Vite, backend API C# .NET, phần AI Python, PostgreSQL, module vé/dịch vụ/combo và thanh toán. Chưa chốt vai trò/chức năng cụ thể trên từng client, framework AI, cách giao tiếp .NET–Python, microservices, số dịch vụ, công nghệ bản đồ/chỉ đường, cloud, CI/CD hoặc phương thức triển khai. Các lựa chọn Spring Boot, React Native, Angular, SQL Server/MySQL trong [F] là phương án cũ, không còn là stack hiện tại.
@@ -385,7 +408,7 @@ Biểu mẫu gốc có số điện thoại và email. Bản bàn giao bối c�
 
 1. Xây dựng dịch vụ AI: chatbot thuyết minh, tạo câu hỏi, nhận diện hiện vật, đánh giá chất lượng.
 2. Xây dựng backend: quản lý nội dung, theo dõi tour/lượt, gói/quyền truy cập, thanh toán, hóa đơn; bổ sung vé/combo theo [U1].
-3. Xây dựng ứng dụng: nhận diện hiện vật, chatbot, quiz và bản đồ/hướng dẫn tham quan.
+3. Xây dựng ứng dụng: nhận diện hiện vật, chatbot, quiz, bản đồ/hướng dẫn tham quan và xem mô hình 3D hiện vật [U3]; bổ sung quản lý tài nguyên 3D trong phần quản lý nội dung.
 4. Build, triển khai và kiểm thử.
 5. Chuẩn bị tài liệu phân tích, thiết kế, kiểm thử, cài đặt và hướng dẫn sử dụng.
 
@@ -401,6 +424,7 @@ Người tiếp nhận có thể dùng tài liệu để phân tích nghiệp v�
 - Không mặc định Exhibit là triển lãm độc lập.
 - Bán vé vào cửa, dịch vụ số và combo đã được xác nhận. Không tự thêm thuê bao tháng/năm hoặc mua hộ; phạm vi vé nhóm/mua hộ cần hỏi thêm.
 - Tham quan online/virtual tour tại nhà và đề xuất gói online 7 ngày đã bị bỏ theo [U2]. Không đưa chúng vào yêu cầu hoặc mô hình dữ liệu hiện tại. Web React/Vite vẫn thuộc stack đã chốt.
+- Giữ chức năng mô hình 3D của hiện vật theo [U3]; không đồng nhất với virtual tour tại nhà, AR/VR hoặc tự động dựng mô hình. Chi tiết tương tác, quản lý và công nghệ tại mục 8.2.1 vẫn là gợi ý hoặc điểm cần xác nhận.
 - Có chỉ đường từ nhà đến bảo tàng; bên trong bảo tàng cập nhật vị trí theo QR/ảnh và chỉ đường tới hiện vật tiếp theo, không yêu cầu theo dõi liên tục.
 - QR và nhận diện ảnh thành công đều cập nhật vị trí và mở quiz trong ngày. Mở trang đơn thuần không mở quiz. Không tự suy ra nhận diện ảnh hoàn thành điểm dừng hoặc được cộng điểm nhận diện khi các quy tắc đó chưa chốt.
 - Gợi ý quiz sau khi đọc xong; cho làm ngay hoặc sau. Danh sách cuối ngày chỉ chứa quiz của hiện vật đã quét QR/nhận diện ảnh; không tự yêu cầu hoàn thành tour trước khi được làm quiz.
@@ -424,6 +448,7 @@ Người tiếp nhận có thể dùng tài liệu để phân tích nghiệp v�
 | F | Bối cảnh, toàn bộ nhóm chức năng nền, phi chức năng, công nghệ gợi ý, tổ chức và sản phẩm đồ án |
 | U1 | Vé/dịch vụ/combo bán riêng hoặc kết hợp; tạm gác triển lãm; stack đã chốt; đề xuất online sau đó bị [U2] loại bỏ |
 | U2 | Bỏ tham quan online; định vị theo QR/ảnh; chỉ đường trong bảo tàng không theo dõi liên tục; chỉ đường từ nhà; quiz làm ngay hoặc tích lũy trong ngày |
+| U3 | Bổ sung mô hình 3D của hiện vật; phân biệt phạm vi đã xác nhận với gợi ý tương tác, quản lý và các lựa chọn triển khai còn mở |
 
 ## 16. Lịch sử cập nhật
 
@@ -432,3 +457,4 @@ Người tiếp nhận có thể dùng tài liệu để phân tích nghiệp v�
 | 1.0 | 12/10/2026 | Tổng hợp FALL26 và Question, phân biệt yêu cầu xác nhận với điểm còn mở |
 | 1.1 | 12/10/2026 | Cập nhật xác nhận trực tiếp về vé/dịch vụ/combo, gác triển lãm và stack; thêm đề xuất gói online 7 ngày, chưa phê duyệt |
 | 1.2 | 15/10/2026 | Bỏ tham quan online/virtual tour và gói online; cập nhật định vị QR/ảnh, chỉ đường trong/ngoài bảo tàng và quiz tích lũy trong ngày theo quyết định của nhóm với giảng viên |
+| 1.3 | 30/10/2026 | Bổ sung chức năng mô hình 3D hiện vật, khái niệm dữ liệu, công nghệ còn mở và công việc liên quan theo [U3] |
