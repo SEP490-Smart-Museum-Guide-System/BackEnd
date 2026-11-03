@@ -132,12 +132,11 @@ Check(mediaCheck is { MediaType: "audio", ContentType: "audio/mpeg", Extension: 
 try { ArtifactAssetStore.ValidateMedia([1, 2], "script.exe"); throw new Exception("Exe must fail"); } catch (ArgumentException) { }
 try { ArtifactAssetStore.ValidateMedia([1, 2], "photo.png", "video"); throw new Exception("Mismatched mediaType must fail"); } catch (ArgumentException) { }
 
-var glbBytes = new byte[] { 0x67, 0x6C, 0x54, 0x46, 2, 0, 0, 0, 12, 0, 0, 0 };
+var glbBytes = Convert.FromBase64String("Z2xURgIAAAAwAAAAHAAAAEpTT057ImFzc2V0Ijp7InZlcnNpb24iOiIyLjAifX0g");
 var glbCheck = ArtifactAssetStore.Validate3DModel(glbBytes, "drum.glb");
 Check(glbCheck is { Format: "glb", ContentType: "model/gltf-binary", Extension: ".glb" }, "Valid GLB header accepted.");
 var gltfBytes = Encoding.UTF8.GetBytes("{\"asset\":{\"version\":\"2.0\"}}");
-var gltfCheck = ArtifactAssetStore.Validate3DModel(gltfBytes, "drum.gltf");
-Check(gltfCheck is { Format: "gltf", ContentType: "model/gltf+json", Extension: ".gltf" }, "Valid GLTF JSON accepted.");
+try { ArtifactAssetStore.Validate3DModel(gltfBytes, "drum.gltf"); throw new Exception("GLTF must fail"); } catch (ArgumentException) { }
 try { ArtifactAssetStore.Validate3DModel([1, 2, 3, 4], "fake.glb"); throw new Exception("Fake GLB must fail"); } catch (ArgumentException) { }
 try { ArtifactAssetStore.Validate3DModel(Encoding.UTF8.GetBytes("{}"), "invalid.gltf"); throw new Exception("GLTF without asset must fail"); } catch (ArgumentException) { }
 

@@ -15,6 +15,15 @@ public class ArtifactAssetService(
     ArtifactAssetStore store,
     ICommerceService? commerce = null) : IArtifactAssetService
 {
+    private async Task DeleteUnreferenced(string key)
+    {
+        try {
+            if (!await db.ArtifactMedias.AnyAsync(m => m.StorageKey == key) && !await db.Artifact3DModels.AnyAsync(m => m.StorageKey == key))
+                await store.DeleteIfExists(key);
+        }
+        catch { /* Database commit succeeded; retain orphan rather than undo a valid replacement. */ }
+    }
+
     private async Task<bool> CanManageArtifactAsync(Guid userId, bool isAdmin, Artifact artifact)
     {
         if (isAdmin) return true;
@@ -30,6 +39,10 @@ public class ArtifactAssetService(
 
     private async Task<bool> CanReadArtifactAssetsAsync(Artifact artifact, Guid? userId)
     {
+        if (userId.HasValue) {
+            var isAdmin = await (from ur in db.UserRoles join role in db.Roles on ur.RoleId equals role.Id where ur.UserId == userId.Value && role.Name == RoleNames.Admin select ur).AnyAsync();
+            if (await CanManageArtifactAsync(userId.Value, isAdmin, artifact)) return true;
+        }
         if (commerce is not null)
             return await commerce.CanReadArtifact(artifact.Id, userId);
         return artifact.AccessLevel == "free";
@@ -106,7 +119,7 @@ public class ArtifactAssetService(
         string? languageCode,
         int sortOrder,
         Guid userId,
-        bool isAdmin)
+        bool isAdmin, CancellationToken cancellationToken = default)
     {
         var artifact = await db.Artifacts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == artifactId);
         if (artifact is null)
@@ -118,7 +131,7 @@ public class ArtifactAssetService(
         (string StorageKey, string MediaType, string ContentType) saved;
         try
         {
-            saved = await store.SaveMediaAsync(bytes, originalFileName, mediaType);
+            saved = await store.SaveMediaAsync(bytes, originalFileName, mediaType, artifact.MuseumId, artifactId, cancellationToken);
         }
         catch (ArgumentException ex)
         {
@@ -148,34 +161,31 @@ public class ArtifactAssetService(
         try
         {
             db.ArtifactMedias.Add(media);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
             return ResponseDto<ArtifactMediaResponseDto>.Success(MapMedia(media), "Tải lên media thành công.", 201);
         }
         catch
         {
-            store.DeleteIfExists(saved.StorageKey);
+            await store.DeleteIfExists(saved.StorageKey);
             throw;
         }
     }
 
-    public async Task<ResponseDto<(string FilePath, string ContentType, string DownloadName)>> GetMediaFileAsync(
-        int artifactId, int mediaId, Guid? userId = null)
+    public async Task<ResponseDto<(Stream Content, string ContentType, string DownloadName)>> GetMediaFileAsync(
+        int artifactId, int mediaId, Guid? userId = null, CancellationToken cancellationToken = default)
     {
         var media = await db.ArtifactMedias.AsNoTracking()
             .Include(m => m.Artifact)
             .FirstOrDefaultAsync(m => m.Id == mediaId && m.ArtifactId == artifactId);
 
         if (media is null)
-            return ResponseDto<(string, string, string)>.Fail("Không tìm thấy media.", 404);
+            return ResponseDto<(Stream, string, string)>.Fail("Không tìm thấy media.", 404);
 
         if (!await CanReadArtifactAssetsAsync(media.Artifact, userId))
-            return ResponseDto<(string, string, string)>.Fail("Cần pass còn hiệu lực cho nội dung premium này.", 403);
+            return ResponseDto<(Stream, string, string)>.Fail("Cần pass còn hiệu lực cho nội dung premium này.", 403);
 
-        var path = store.PathFor(media.StorageKey);
-        if (!File.Exists(path))
-            return ResponseDto<(string, string, string)>.Fail("Không tìm thấy file media trên hệ thống lưu trữ.", 404);
-
-        return ResponseDto<(string, string, string)>.Success((path, media.ContentType, media.FileName));
+        try { return ResponseDto<(Stream, string, string)>.Success((await store.OpenReadAsync(media.StorageKey, cancellationToken), media.ContentType, media.FileName)); }
+        catch (FileNotFoundException) { return ResponseDto<(Stream, string, string)>.Fail("Không tìm thấy file.", 404); }
     }
 
     public async Task<ResponseDto<object>> DeleteMediaAsync(
@@ -194,7 +204,7 @@ public class ArtifactAssetService(
         var key = media.StorageKey;
         db.ArtifactMedias.Remove(media);
         await db.SaveChangesAsync();
-        store.DeleteIfExists(key);
+        await DeleteUnreferenced(key);
 
         return ResponseDto<object>.Success(null!, "Đã xóa media thành công.");
     }
@@ -215,11 +225,13 @@ public class ArtifactAssetService(
 
     public async Task<ResponseDto<Artifact3DModelResponseDto>> UploadOrReplace3DModelAsync(
         int artifactId,
-        byte[] bytes,
+        Stream content,
+        long length,
+        string contentType,
         string originalFileName,
         Update3DModelSettingsRequestDto settings,
         Guid userId,
-        bool isAdmin)
+        bool isAdmin, CancellationToken cancellationToken = default)
     {
         var artifact = await db.Artifacts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == artifactId);
         if (artifact is null)
@@ -228,10 +240,11 @@ public class ArtifactAssetService(
         if (!await CanManageArtifactAsync(userId, isAdmin, artifact))
             return ResponseDto<Artifact3DModelResponseDto>.Fail("Bạn không có quyền quản lý hiện vật này.", 403);
 
+        var existing = await db.Artifact3DModels.FirstOrDefaultAsync(m => m.ArtifactId == artifactId);
         (string StorageKey, string Format, string ContentType) saved;
         try
         {
-            saved = await store.Save3DModelAsync(bytes, originalFileName);
+            saved = await store.Save3DModelAsync(content, length, originalFileName, contentType, artifact.MuseumId, artifactId, cancellationToken);
         }
         catch (ArgumentException ex)
         {
@@ -243,7 +256,6 @@ public class ArtifactAssetService(
             ? artifact.Name
             : settings.Name.Trim();
 
-        var existing = await db.Artifact3DModels.FirstOrDefaultAsync(m => m.ArtifactId == artifactId);
         string? oldKey = existing?.StorageKey;
         var isNew = existing is null;
 
@@ -259,7 +271,7 @@ public class ArtifactAssetService(
                     StorageKey = saved.StorageKey,
                     FileFormat = saved.Format,
                     ContentType = saved.ContentType,
-                    FileSize = bytes.LongLength,
+                    FileSize = length,
                     PosterUrl = string.IsNullOrWhiteSpace(settings.PosterUrl) ? null : settings.PosterUrl.Trim(),
                     AutoRotate = settings.AutoRotate,
                     CameraOrbit = string.IsNullOrWhiteSpace(settings.CameraOrbit) ? null : settings.CameraOrbit.Trim(),
@@ -277,7 +289,7 @@ public class ArtifactAssetService(
                 existing.StorageKey = saved.StorageKey;
                 existing.FileFormat = saved.Format;
                 existing.ContentType = saved.ContentType;
-                existing.FileSize = bytes.LongLength;
+                existing.FileSize = length;
                 existing.PosterUrl = string.IsNullOrWhiteSpace(settings.PosterUrl) ? existing.PosterUrl : settings.PosterUrl.Trim();
                 existing.AutoRotate = settings.AutoRotate;
                 existing.CameraOrbit = string.IsNullOrWhiteSpace(settings.CameraOrbit) ? existing.CameraOrbit : settings.CameraOrbit.Trim();
@@ -287,9 +299,9 @@ public class ArtifactAssetService(
                 existing.UpdatedAt = DateTime.UtcNow;
             }
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
             if (oldKey is not null && oldKey != saved.StorageKey)
-                store.DeleteIfExists(oldKey);
+                await DeleteUnreferenced(oldKey);
 
             return ResponseDto<Artifact3DModelResponseDto>.Success(
                 Map3DModel(existing),
@@ -298,7 +310,7 @@ public class ArtifactAssetService(
         }
         catch
         {
-            store.DeleteIfExists(saved.StorageKey);
+            await store.DeleteIfExists(saved.StorageKey);
             throw;
         }
     }
@@ -334,24 +346,21 @@ public class ArtifactAssetService(
         return ResponseDto<Artifact3DModelResponseDto>.Success(Map3DModel(model), "Cập nhật cấu hình mô hình 3D thành công.");
     }
 
-    public async Task<ResponseDto<(string FilePath, string ContentType, string DownloadName)>> Get3DModelFileAsync(
-        int artifactId, Guid? userId = null)
+    public async Task<ResponseDto<(Stream Content, string ContentType, string DownloadName)>> Get3DModelFileAsync(
+        int artifactId, Guid? userId = null, CancellationToken cancellationToken = default)
     {
         var model = await db.Artifact3DModels.AsNoTracking()
             .Include(m => m.Artifact)
             .FirstOrDefaultAsync(m => m.ArtifactId == artifactId);
 
         if (model is null)
-            return ResponseDto<(string, string, string)>.Fail("Hiện vật chưa có mô hình 3D.", 404);
+            return ResponseDto<(Stream, string, string)>.Fail("Hiện vật chưa có mô hình 3D.", 404);
 
         if (!await CanReadArtifactAssetsAsync(model.Artifact, userId))
-            return ResponseDto<(string, string, string)>.Fail("Cần pass còn hiệu lực cho nội dung premium này.", 403);
+            return ResponseDto<(Stream, string, string)>.Fail("Cần pass còn hiệu lực cho nội dung premium này.", 403);
 
-        var path = store.PathFor(model.StorageKey);
-        if (!File.Exists(path))
-            return ResponseDto<(string, string, string)>.Fail("Không tìm thấy file mô hình 3D trên hệ thống lưu trữ.", 404);
-
-        return ResponseDto<(string, string, string)>.Success((path, model.ContentType, model.FileName));
+        try { return ResponseDto<(Stream, string, string)>.Success((await store.OpenReadAsync(model.StorageKey, cancellationToken), model.ContentType, model.FileName)); }
+        catch (FileNotFoundException) { return ResponseDto<(Stream, string, string)>.Fail("Không tìm thấy file.", 404); }
     }
 
     public async Task<ResponseDto<object>> Delete3DModelAsync(
@@ -370,7 +379,7 @@ public class ArtifactAssetService(
         var key = model.StorageKey;
         db.Artifact3DModels.Remove(model);
         await db.SaveChangesAsync();
-        store.DeleteIfExists(key);
+        await DeleteUnreferenced(key);
 
         return ResponseDto<object>.Success(null!, "Đã xóa mô hình 3D thành công.");
     }

@@ -10,6 +10,7 @@ using SMGS.Domain.Constants;
 namespace SMGS.API.Controllers;
 
 [ApiController]
+[TypeFilter(typeof(MediaErrorFilter))]
 [Route("api/artifacts/{artifactId:int}")]
 [Produces("application/json")]
 public class ArtifactAssetsController(IArtifactAssetService assetService) : ControllerBase
@@ -78,7 +79,7 @@ public class ArtifactAssetsController(IArtifactAssetService assetService) : Cont
             return BadRequest(ResponseDto<object>.Fail("Vui lòng chọn file media để tải lên.", 400));
 
         await using var stream = new MemoryStream();
-        await file.CopyToAsync(stream);
+        await file.CopyToAsync(stream, HttpContext.RequestAborted);
 
         var response = await assetService.UploadMediaAsync(
             artifactId,
@@ -89,7 +90,7 @@ public class ArtifactAssetsController(IArtifactAssetService assetService) : Cont
             languageCode,
             sortOrder,
             CurrentUserId.Value,
-            IsAdmin);
+            IsAdmin, HttpContext.RequestAborted);
 
         if (response.Data is not null) WithAbsoluteUrl(response.Data);
         return StatusCode(response.StatusCode, response);
@@ -99,13 +100,14 @@ public class ArtifactAssetsController(IArtifactAssetService assetService) : Cont
     [HttpGet("media/{mediaId:int}/file")]
     public async Task<IActionResult> GetMediaFile(int artifactId, int mediaId)
     {
-        var response = await assetService.GetMediaFileAsync(artifactId, mediaId, CurrentUserId);
+        var response = await assetService.GetMediaFileAsync(artifactId, mediaId, CurrentUserId, HttpContext.RequestAborted);
         if (response.StatusCode != 200)
             return StatusCode(response.StatusCode, ResponseDto<object>.Fail(response.Message, response.StatusCode));
 
-        var (filePath, contentType, _) = response.Data;
+        var (content, contentType, _) = response.Data;
         Response.Headers.XContentTypeOptions = "nosniff";
-        return PhysicalFile(filePath, contentType, enableRangeProcessing: true);
+        Response.Headers.CacheControl = "private, no-store";
+        return File(content, contentType, enableRangeProcessing: true);
     }
 
     [Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff)]
@@ -150,10 +152,9 @@ public class ArtifactAssetsController(IArtifactAssetService assetService) : Cont
         if (CurrentUserId is null)
             return Unauthorized(ResponseDto<object>.Fail("Vui lòng đăng nhập.", 401));
         if (file is null || file.Length == 0)
-            return BadRequest(ResponseDto<object>.Fail("Vui lòng chọn file mô hình 3D (.glb hoặc .gltf).", 400));
+            return BadRequest(ResponseDto<object>.Fail("Vui lòng chọn file mô hình 3D (.glb).", 400));
 
-        await using var stream = new MemoryStream();
-        await file.CopyToAsync(stream);
+        await using var stream = file.OpenReadStream();
 
         var settings = new Update3DModelSettingsRequestDto
         {
@@ -167,11 +168,13 @@ public class ArtifactAssetsController(IArtifactAssetService assetService) : Cont
 
         var response = await assetService.UploadOrReplace3DModelAsync(
             artifactId,
-            stream.ToArray(),
+            stream,
+            file.Length,
+            file.ContentType,
             file.FileName,
             settings,
             CurrentUserId.Value,
-            IsAdmin);
+            IsAdmin, HttpContext.RequestAborted);
 
         if (response.Data is not null) WithAbsoluteUrl(response.Data);
         return StatusCode(response.StatusCode, response);
@@ -195,13 +198,14 @@ public class ArtifactAssetsController(IArtifactAssetService assetService) : Cont
     [HttpGet("model-3d/file")]
     public async Task<IActionResult> Get3DModelFile(int artifactId)
     {
-        var response = await assetService.Get3DModelFileAsync(artifactId, CurrentUserId);
+        var response = await assetService.Get3DModelFileAsync(artifactId, CurrentUserId, HttpContext.RequestAborted);
         if (response.StatusCode != 200)
             return StatusCode(response.StatusCode, ResponseDto<object>.Fail(response.Message, response.StatusCode));
 
-        var (filePath, contentType, _) = response.Data;
+        var (content, contentType, _) = response.Data;
         Response.Headers.XContentTypeOptions = "nosniff";
-        return PhysicalFile(filePath, contentType, enableRangeProcessing: true);
+        Response.Headers.CacheControl = "private, no-store";
+        return File(content, contentType, enableRangeProcessing: true);
     }
 
     [Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff)]

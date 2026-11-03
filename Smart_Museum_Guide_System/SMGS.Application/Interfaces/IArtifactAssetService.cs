@@ -17,10 +17,10 @@ public interface IArtifactAssetService
         string? languageCode,
         int sortOrder,
         Guid userId,
-        bool isAdmin);
+        bool isAdmin, CancellationToken cancellationToken = default);
 
-    Task<ResponseDto<(string FilePath, string ContentType, string DownloadName)>> GetMediaFileAsync(
-        int artifactId, int mediaId, Guid? userId = null);
+    Task<ResponseDto<(Stream Content, string ContentType, string DownloadName)>> GetMediaFileAsync(
+        int artifactId, int mediaId, Guid? userId = null, CancellationToken cancellationToken = default);
 
     Task<ResponseDto<object>> DeleteMediaAsync(
         int artifactId, int mediaId, Guid userId, bool isAdmin);
@@ -30,11 +30,13 @@ public interface IArtifactAssetService
 
     Task<ResponseDto<Artifact3DModelResponseDto>> UploadOrReplace3DModelAsync(
         int artifactId,
-        byte[] bytes,
+        Stream content,
+        long length,
+        string contentType,
         string originalFileName,
         Update3DModelSettingsRequestDto settings,
         Guid userId,
-        bool isAdmin);
+        bool isAdmin, CancellationToken cancellationToken = default);
 
     Task<ResponseDto<Artifact3DModelResponseDto>> Update3DModelSettingsAsync(
         int artifactId,
@@ -42,8 +44,8 @@ public interface IArtifactAssetService
         Guid userId,
         bool isAdmin);
 
-    Task<ResponseDto<(string FilePath, string ContentType, string DownloadName)>> Get3DModelFileAsync(
-        int artifactId, Guid? userId = null);
+    Task<ResponseDto<(Stream Content, string ContentType, string DownloadName)>> Get3DModelFileAsync(
+        int artifactId, Guid? userId = null, CancellationToken cancellationToken = default);
 
     Task<ResponseDto<object>> Delete3DModelAsync(
         int artifactId, Guid userId, bool isAdmin);

@@ -28,7 +28,6 @@ internal static class HttpChecks
         start.Environment["JwtSettings__Key"] = settings.Key;
         start.Environment["JwtSettings__Issuer"] = settings.Issuer;
         start.Environment["JwtSettings__Audience"] = settings.Audience;
-        start.Environment["IndoorMaps__StoragePath"] = storage;
         start.Environment["Logging__LogLevel__Default"] = "Error";
         using var process = Process.Start(start) ?? throw new Exception("Fixture API failed to start");
         var output = process.StandardOutput.ReadToEndAsync(); var errors = process.StandardError.ReadToEndAsync();

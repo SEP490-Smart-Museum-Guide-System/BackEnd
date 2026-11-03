@@ -1,13 +1,12 @@
-using System.Text.Json;
+using SMGS.Application.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 
 namespace SMGS.Infrastructure.Services;
 
-public class ArtifactAssetStore(IHostEnvironment environment, IConfiguration configuration)
+public class ArtifactAssetStore(IConfiguration configuration, IServiceProvider? services = null)
 {
-    private readonly string root = Path.GetFullPath(configuration["ArtifactAssets:StoragePath"]
-        ?? Path.Combine(environment.ContentRootPath, "App_Data", "artifact-assets"));
+    private IFileStorageService Storage => services?.GetRequiredService<IFileStorageService>() ?? throw new MediaStorageException();
 
     private static readonly Dictionary<string, (string MediaType, string ContentType, long MaxBytes)> SupportedMediaExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -40,89 +39,48 @@ public class ArtifactAssetStore(IHostEnvironment environment, IConfiguration con
             !string.Equals(requestedMediaType.Trim(), spec.MediaType, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"Loại media '{requestedMediaType}' không khớp với đuôi file '{ext}'.");
 
+        if (spec.MediaType == "image") MediaValidation.Image(bytes, ext);
         return (spec.MediaType, spec.ContentType, ext);
     }
 
-    public static (string Format, string ContentType, string Extension) Validate3DModel(
-        byte[] bytes, string originalFileName)
+    public static (string Format, string ContentType, string Extension) Validate3DModel(byte[] bytes, string originalFileName)
     {
-        if (bytes is null || bytes.Length == 0)
-            throw new ArgumentException("File mô hình 3D không được rỗng.");
-
-        if (bytes.Length > 100L * 1024 * 1024)
-            throw new ArgumentException("File mô hình 3D tối đa 100 MB.");
-
-        var ext = Path.GetExtension(originalFileName ?? string.Empty).ToLowerInvariant();
-        if (ext == ".glb")
-        {
-            // GLB header: magic 'glTF' (0x67, 0x6C, 0x54, 0x46) + version (4 bytes) + length (4 bytes) >= 12 bytes
-            if (bytes.Length < 12 || bytes[0] != 0x67 || bytes[1] != 0x6C || bytes[2] != 0x54 || bytes[3] != 0x46)
-                throw new ArgumentException("Nội dung file .glb không hợp lệ (thiếu header glTF binary).");
-            return ("glb", "model/gltf-binary", ".glb");
-        }
-
-        if (ext == ".gltf")
-        {
-            try
-            {
-                using var doc = JsonDocument.Parse(bytes);
-                if (doc.RootElement.ValueKind != JsonValueKind.Object || !doc.RootElement.TryGetProperty("asset", out _))
-                    throw new ArgumentException("Nội dung file .gltf không hợp lệ (thiếu thuộc tính asset).");
-            }
-            catch (JsonException)
-            {
-                throw new ArgumentException("Nội dung file .gltf không phải JSON hợp lệ.");
-            }
-            return ("gltf", "model/gltf+json", ".gltf");
-        }
-
-        throw new ArgumentException("Chỉ hỗ trợ mô hình 3D định dạng .glb hoặc .gltf.");
+        using var stream = new MemoryStream(bytes);
+        MediaValidation.Glb(stream, bytes.LongLength, originalFileName, "model/gltf-binary", 100L * 1024 * 1024, default).GetAwaiter().GetResult();
+        return ("glb", "model/gltf-binary", ".glb");
     }
 
     public async Task<(string StorageKey, string MediaType, string ContentType)> SaveMediaAsync(
-        byte[] bytes, string originalFileName, string? requestedMediaType = null)
+        byte[] bytes, string originalFileName, string? requestedMediaType, int museumId, int artifactId, CancellationToken token = default)
     {
         var (mediaType, contentType, ext) = ValidateMedia(bytes, originalFileName, requestedMediaType);
-        Directory.CreateDirectory(root);
-        var key = Guid.NewGuid().ToString("N") + ext;
-        await File.WriteAllBytesAsync(Path.Combine(root, key), bytes);
+        if (bytes.LongLength > MediaValidation.Limit(configuration, mediaType, mediaType == "image" ? 15 : mediaType == "audio" ? 50 : 100))
+            throw new ArgumentException("File vượt giới hạn dung lượng cấu hình.");
+        var key = $"museums/{museumId}/artifacts/{artifactId}/{mediaType}/{Guid.NewGuid():N}{ext}";
+        using var stream = new MemoryStream(bytes, false);
+        await Storage.UploadAsync(key, stream, contentType, token);
         return (key, mediaType, contentType);
     }
 
     public async Task<(string StorageKey, string Format, string ContentType)> Save3DModelAsync(
-        byte[] bytes, string originalFileName)
+        Stream stream, long length, string originalFileName, string mime, int museumId, int artifactId, CancellationToken token = default)
     {
-        var (format, contentType, ext) = Validate3DModel(bytes, originalFileName);
-        Directory.CreateDirectory(root);
-        var key = Guid.NewGuid().ToString("N") + ext;
-        await File.WriteAllBytesAsync(Path.Combine(root, key), bytes);
-        return (key, format, contentType);
+        await MediaValidation.Glb(stream, length, originalFileName, mime, MediaValidation.Limit(configuration, "Model", 100), token);
+        var key = $"museums/{museumId}/artifacts/{artifactId}/models/{Guid.NewGuid():N}.glb";
+        await Storage.UploadAsync(key, stream, "model/gltf-binary", token);
+        return (key, "glb", "model/gltf-binary");
     }
 
-    public string PathFor(string storageKey)
+    public async Task<Stream> OpenReadAsync(string key, CancellationToken token = default) => await Storage.OpenReadAsync(key, token);
+
+    public async Task DeleteIfExists(string? key)
     {
-        if (string.IsNullOrWhiteSpace(storageKey) || Path.GetFileName(storageKey) != storageKey)
-            throw new ArgumentException("Đường dẫn file không hợp lệ.");
-
-        var nameWithoutExt = Path.GetFileNameWithoutExtension(storageKey);
-        if (!Guid.TryParseExact(nameWithoutExt, "N", out _))
-            throw new ArgumentException("Đường dẫn file không hợp lệ.");
-
-        return Path.Combine(root, storageKey);
+        if (string.IsNullOrWhiteSpace(key)) return;
+        // Legacy files may be shared by old records; preserve originals during transition.
+        if (!key.StartsWith("museums/")) return;
+        try { await Storage.DeleteAsync(key); }
+        catch (Exception ex) when (ex is MediaStorageException or HttpRequestException or TaskCanceledException) { /* shortcut: retain failed cleanup for manual reconciliation; add a retry queue if orphan volume grows. */ }
     }
 
-    public void DeleteIfExists(string? storageKey)
-    {
-        if (string.IsNullOrWhiteSpace(storageKey)) return;
-        try
-        {
-            var path = PathFor(storageKey);
-            if (File.Exists(path)) File.Delete(path);
-        }
-        catch
-        {
-            // Ignore cleanup errors for missing/invalid keys.
-        }
-    }
+
 }
-

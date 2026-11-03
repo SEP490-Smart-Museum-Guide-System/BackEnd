@@ -1,3 +1,4 @@
+using SMGS.Application.Interfaces;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -53,7 +54,6 @@ internal static class DatabaseChecks
                 ["JwtSettings:Issuer"] = "SmartMuseumGuide",
                 ["JwtSettings:Audience"] = "SmartMuseumGuide.Client",
                 ["Osrm:BaseUrl"] = "https://router.project-osrm.org/",
-                ["ArtifactAssets:StoragePath"] = tempAssetsDir
             }).Build();
 
             var services = new ServiceCollection();
@@ -71,7 +71,8 @@ internal static class DatabaseChecks
                 scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(), db);
             var indoorService = new IndoorMapService(db);
             var topicService = new TopicService(db);
-            var assetStore = new ArtifactAssetStore(new FakeHostEnvironment(tempAssetsDir), testConfig);
+            using var storageProvider = new ServiceCollection().AddSingleton<IFileStorageService, TestFileStorage>().BuildServiceProvider();
+            var assetStore = new ArtifactAssetStore(testConfig, storageProvider);
             var assetService = new ArtifactAssetService(db, assetStore);
             var artifactService = new ArtifactService(
                 new ArtifactRepository(db),
@@ -234,8 +235,9 @@ internal static class DatabaseChecks
             Check(mediaList.StatusCode == 200 && mediaList.Data!.Any(m => m.Id == mediaId), "CD-06B: List media failed.");
 
             var mediaFile = await assetService.GetMediaFileAsync(seededArtifact.Id, mediaId);
-            Check(mediaFile.StatusCode == 200 && File.Exists(mediaFile.Data.FilePath), "CD-06B: Read physical media file failed.");
+            Check(mediaFile.StatusCode == 200 && mediaFile.Data.Content.CanRead, "CD-06B: Read physical media file failed.");
 
+            await mediaFile.Data.Content.DisposeAsync();
             // 4b. Nhập thủ công Narration đa ngôn ngữ + Duyệt phiên bản
             var contentService = new ArtifactContentService(new ArtifactContentRepository(db), new ArtifactRepository(db));
             var manualFr = await contentService.SubmitAsync(seededArtifact.Id, new SubmitArtifactContentRequestDto
@@ -256,9 +258,9 @@ internal static class DatabaseChecks
             Check(approveFr.StatusCode == 200 && approveFr.Data is { Status: ContentStatuses.Published, IsCurrent: true }, "CD-06A: Approve narration failed.");
 
             // 4c. Upload & Thay thế Mô hình 3D + Cấu hình Viewer
-            var glbBytes = new byte[] { 0x67, 0x6C, 0x54, 0x46, 2, 0, 0, 0, 12, 0, 0, 0 };
+            var glbBytes = Convert.FromBase64String("Z2xURgIAAAAwAAAAHAAAAEpTT057ImFzc2V0Ijp7InZlcnNpb24iOiIyLjAifX0g");
             var modelUpload = await assetService.UploadOrReplace3DModelAsync(
-                seededArtifact.Id, glbBytes, "ngoc-lu-v1.glb", new Update3DModelSettingsRequestDto
+                seededArtifact.Id, new MemoryStream(glbBytes), glbBytes.Length, "model/gltf-binary", "ngoc-lu-v1.glb", new Update3DModelSettingsRequestDto
                 {
                     Name = "Mô hình Trống đồng v1",
                     AutoRotate = true,
@@ -269,20 +271,20 @@ internal static class DatabaseChecks
 
             var gltfBytes = Encoding.UTF8.GetBytes("{\"asset\":{\"version\":\"2.0\"}}");
             var modelReplace = await assetService.UploadOrReplace3DModelAsync(
-                seededArtifact.Id, gltfBytes, "ngoc-lu-v2.gltf", new Update3DModelSettingsRequestDto
+                seededArtifact.Id, new MemoryStream(glbBytes), glbBytes.Length, "model/gltf-binary", "ngoc-lu-v2.glb", new Update3DModelSettingsRequestDto
                 {
                     Name = "Mô hình Trống đồng v2",
                     AutoRotate = false,
                     CameraOrbit = "45deg 60deg 100%",
                     Scale = 1.5m
                 }, staffId, false);
-            Check(modelReplace.StatusCode == 200 && modelReplace.Data is { FileFormat: "gltf", Name: "Mô hình Trống đồng v2", Scale: 1.5m }, "CD-07: Replace 3D model failed.");
+            Check(modelReplace.StatusCode == 200 && modelReplace.Data is { FileFormat: "glb", Name: "Mô hình Trống đồng v2", Scale: 1.5m }, "CD-07: Replace 3D model failed.");
 
             // 4d. Kết nối Viewer với dữ liệu thật & Quét QR
             var viewerData = await assetService.GetViewerDataAsync(seededArtifact.Id);
             Check(viewerData.StatusCode == 200
                 && viewerData.Data!.Topics.Count >= 2
-                && viewerData.Data.Model3D?.FileFormat == "gltf"
+                && viewerData.Data.Model3D?.FileFormat == "glb"
                 && viewerData.Data.Media.Count == 1
                 && viewerData.Data.Contents.Count == 3
                 && viewerData.Data.Contents.Any(c => c.LanguageCode == "fr" && c.NarrationText == "Bienvenue devant le tambour de bronze de Ngoc Lu."),

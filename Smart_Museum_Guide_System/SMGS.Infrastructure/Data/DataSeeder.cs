@@ -45,39 +45,8 @@ public static class DataSeeder
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var assetService = scope.ServiceProvider.GetService<IArtifactAssetService>();
 
-        async Task<ApplicationUser> EnsureUserAsync(string email, string fullName, string password, string role)
-        {
-            var existing = await userManager.FindByEmailAsync(email);
-            if (existing is not null)
-            {
-                if (!await userManager.IsInRoleAsync(existing, role))
-                    await userManager.AddToRoleAsync(existing, role);
-                return existing;
-            }
-
-            var user = new ApplicationUser
-            {
-                UserName = email,
-                Email = email,
-                FullName = fullName,
-                EmailConfirmed = true,
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            var createRes = await userManager.CreateAsync(user, password);
-            if (!createRes.Succeeded)
-                throw new InvalidOperationException($"Could not seed user {email}: {string.Join("; ", createRes.Errors.Select(e => e.Description))}");
-
-            await userManager.AddToRoleAsync(user, role);
-            return user;
-        }
-
-        var admin = await EnsureUserAsync("admin@museum.vn", "Quản trị viên Hệ thống", "Admin123", RoleNames.Admin);
-        var museumStaff = await EnsureUserAsync("staff@museum.vn", "Nhân viên Bảo tàng", "Staff123", RoleNames.MuseumStaff);
-        var curator = await EnsureUserAsync("curator@museum.vn", "Chuyên gia Duyệt nội dung", "Curator123", RoleNames.Curator);
-        _ = await EnsureUserAsync("support@museum.vn", "Nhân viên Hỗ trợ", "Support123", RoleNames.Staff);
-        _ = await EnsureUserAsync("visitor@museum.vn", "Khách tham quan Mẫu", "Visitor123", RoleNames.Visitor);
+        var (admin, museumStaff, curator) = await AccountSeeder.SeedAsync(userManager);
+        _ = await AccountSeeder.EnsureUserAsync(userManager, "visitor@museum.vn", "Khách tham quan Mẫu", "Visitor123", RoleNames.Visitor);
 
         if (!await db.Museums.AnyAsync())
         {
@@ -253,13 +222,14 @@ public static class DataSeeder
 
         // 7. Seed sẵn mô hình 3D thật (.glb) và file âm thanh thật (.wav) cho Hiện vật 1 nếu chưa có
         var firstArtifact = await db.Artifacts.OrderBy(a => a.Id).FirstOrDefaultAsync();
-        if (firstArtifact is not null && assetService is not null)
+        if (firstArtifact is not null && assetService is not null && services.GetRequiredService<IConfiguration>().GetValue<bool>("CloudflareR2:SeedDemoMedia"))
         {
             if (!await db.Artifact3DModels.AnyAsync(m => m.ArtifactId == firstArtifact.Id))
             {
+                using var sampleModel = new MemoryStream(BuildSampleGlbBytes());
                 await assetService.UploadOrReplace3DModelAsync(
                     firstArtifact.Id,
-                    BuildSampleGlbBytes(),
+                    sampleModel, sampleModel.Length, "model/gltf-binary",
                     "trong-dong-3d-sample.glb",
                     new Update3DModelSettingsRequestDto
                     {

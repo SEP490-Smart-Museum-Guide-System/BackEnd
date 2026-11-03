@@ -13,6 +13,7 @@ using SMGS.Infrastructure.Services;
 namespace SMGS.API.Controllers;
 
 [ApiController]
+[TypeFilter(typeof(MediaErrorFilter))]
 [Route("api")]
 [Authorize(Roles = RoleNames.MuseumStaff + "," + RoleNames.Admin)]
 [TypeFilter(typeof(IndoorMapErrorFilter))]
@@ -107,12 +108,12 @@ public class IndoorMapsController(IIndoorMapService service, IndoorImageStore im
     [RequestFormLimits(MultipartBodyLengthLimit = 11 * 1024 * 1024)]
     public async Task<object> Upload(int id, IFormFile file, [FromForm] int revision, [FromForm] bool confirm = false)
     {
-        await service.Get(id, UserId, Admin);
-        if (file.Length == 0 || file.Length > 10 * 1024 * 1024) throw new IndoorMapException("Ảnh phải nhỏ hơn hoặc bằng 10 MB.");
-        using var stream = new MemoryStream(); await file.CopyToAsync(stream);
-        var saved = await images.Save(stream.ToArray(), Path.GetExtension(file.FileName));
+        var map = await service.Get(id, UserId, Admin);
+        if (file is null || file.Length == 0 || file.Length > 10 * 1024 * 1024) throw new IndoorMapException("Ảnh phải nhỏ hơn hoặc bằng 10 MB.");
+        using var stream = new MemoryStream(); await file.CopyToAsync(stream, HttpContext.RequestAborted);
+        var saved = await images.Save(stream.ToArray(), Path.GetExtension(file.FileName), map.MuseumId, map.Id, HttpContext.RequestAborted);
         try { return OkData(await service.SetImage(id, revision, saved.Key, saved.Width, saved.Height, confirm, UserId, Admin)); }
-        catch { images.Delete(saved.Key); throw; }
+        catch { await images.Delete(saved.Key); throw; }
     }
 
     [HttpGet("indoor-maps/{id:int}/image")]
@@ -158,11 +159,10 @@ public class IndoorMapsController(IIndoorMapService service, IndoorImageStore im
         var key = await service.ImageKey(id, UserId, Admin, published);
         if (Request.Query.TryGetValue("key", out var expected) && expected != key)
             throw new IndoorMapException("Ảnh sơ đồ đã thay đổi. Hãy tải lại bản đồ.", 409);
-        var path = images.PathFor(key);
-        if (!System.IO.File.Exists(path)) throw new IndoorMapException("Không tìm thấy file ảnh sơ đồ.", 404);
+
         Response.Headers.CacheControl = "private, no-store";
         Response.Headers.XContentTypeOptions = "nosniff";
-        return PhysicalFile(path, "image/png");
+        return File(await images.OpenRead(key, HttpContext.RequestAborted), "image/png");
     }
 }
 

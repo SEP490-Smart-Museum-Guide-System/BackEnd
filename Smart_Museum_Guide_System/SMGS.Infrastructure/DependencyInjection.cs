@@ -71,6 +71,20 @@ public static class DependencyInjection
         }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddScoped<IArtifactService, ArtifactService>();
         services.AddScoped<ITopicService, TopicService>();
+        services.AddSingleton<Amazon.S3.IAmazonS3>(_ => {
+            var account = configuration["CloudflareR2:AccountId"];
+            var key = configuration["CloudflareR2:AccessKeyId"];
+            var secret = configuration["CloudflareR2:SecretAccessKey"];
+            if (string.IsNullOrWhiteSpace(account) || string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(secret))
+                throw new MediaStorageException();
+            if (!System.Text.RegularExpressions.Regex.IsMatch(account, "^[a-fA-F0-9]{32}$")) throw new MediaStorageException();
+            var endpoint = configuration["CloudflareR2:Endpoint"] ?? $"https://{account}.r2.cloudflarestorage.com";
+            if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) || uri.Scheme != "https" || !uri.Host.EndsWith(".r2.cloudflarestorage.com") || uri.AbsolutePath != "/") throw new MediaStorageException();
+            return new Amazon.S3.AmazonS3Client(key, secret, new Amazon.S3.AmazonS3Config {
+                ServiceURL = endpoint, ForcePathStyle = true, AuthenticationRegion = "auto", MaxErrorRetry = 2, Timeout = TimeSpan.FromSeconds(60)
+            });
+        });
+        services.AddSingleton<IFileStorageService, R2FileStorageService>();
         services.AddSingleton<ArtifactAssetStore>();
         services.AddScoped<IArtifactAssetService, ArtifactAssetService>();
         services.AddScoped<ICommerceService, CommerceService>();
