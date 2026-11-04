@@ -51,6 +51,21 @@ using (var image = SKImage.FromBitmap(bitmap))
 var auth = (AuthorizeAttribute)Attribute.GetCustomAttribute(typeof(IndoorMapsController), typeof(AuthorizeAttribute))!;
 Check(auth.Roles!.Contains(RoleNames.MuseumStaff), "staff controller policy");
 Check(typeof(IndoorMapsController).GetMethod("Assign")!.GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>().Single().Roles == RoleNames.Admin, "assignment admin policy");
+Check(Attribute.IsDefined(typeof(VisitorDirectoryController), typeof(AuthorizeAttribute)), "visitor directory requires authentication");
+var destination = new MapMarker { Id = Guid.NewGuid(), ArtifactId = 11, GalleryId = 3, NodeId = a.Id, IsActive = true, IsDestination = true };
+var catalogMap = new MapDocument { FloorId = 2, Nodes = [a], Markers = [destination] };
+Check(VisitorMapCatalog.HasDestination(catalogMap, 11, 3, 2), "published destination links to its actual artifact room and floor");
+Check(!VisitorMapCatalog.HasDestination(catalogMap, 11, 3, 6), "other floor is excluded");
+Check(!VisitorMapCatalog.HasDestination(catalogMap, 11, 4, 2), "other room is excluded");
+destination.NodeId = Guid.NewGuid();
+Check(!VisitorMapCatalog.HasDestination(catalogMap, 11, 3, 2), "dangling destination node is excluded");
+destination.NodeId = a.Id;
+destination.IsActive = false;
+Check(!VisitorMapCatalog.HasDestination(catalogMap, 11, 3, 2), "inactive destination is excluded");
+destination.IsActive = true;
+catalogMap.Markers.Add(new MapMarker { Id = Guid.NewGuid(), ArtifactId = 11, GalleryId = 3, NodeId = a.Id, IsActive = true, IsDestination = true });
+Check(!VisitorMapCatalog.HasDestination(catalogMap, 11, 3, 2), "ambiguous duplicate destinations are excluded");
+Console.WriteLine("PASS: visitor catalog links, room/floor isolation, missing nodes, inactive/ambiguous destinations and authentication.");
 Console.WriteLine("PASS: graph validation, directed/accessibility routing, aspect ratio, warnings, real image decode and authorization policies.");
 if (args.Contains("--database")) await DatabaseChecks.RunAsync();
 

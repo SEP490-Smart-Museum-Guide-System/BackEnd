@@ -86,6 +86,7 @@ public static class DependencyInjection
         });
         services.AddSingleton<IFileStorageService, R2FileStorageService>();
         services.AddSingleton<ArtifactAssetStore>();
+        services.AddSingleton<MuseumImageStore>();
         services.AddScoped<IArtifactAssetService, ArtifactAssetService>();
         services.AddScoped<ICommerceService, CommerceService>();
         services.AddScoped<IIndoorMapService, IndoorMapService>();
