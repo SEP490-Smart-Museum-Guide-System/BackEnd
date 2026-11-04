@@ -1,0 +1,786 @@
+Project SMGS {
+  database_type: 'PostgreSQL'
+}
+
+Table Roles {
+  Id uuid [pk, not null]
+  ConcurrencyStamp text
+  Name varchar(256)
+  NormalizedName varchar(256)
+  indexes {
+    NormalizedName [unique]
+  }
+}
+
+Table RoleClaims {
+  Id integer [pk, not null, increment]
+  ClaimType text
+  ClaimValue text
+  RoleId uuid [not null]
+  indexes {
+    RoleId
+  }
+}
+
+Table UserClaims {
+  Id integer [pk, not null, increment]
+  ClaimType text
+  ClaimValue text
+  UserId uuid [not null]
+  indexes {
+    UserId
+  }
+}
+
+Table UserLogins {
+  LoginProvider text [not null]
+  ProviderKey text [not null]
+  ProviderDisplayName text
+  UserId uuid [not null]
+  indexes {
+    (LoginProvider, ProviderKey) [pk]
+    UserId
+  }
+}
+
+Table UserRoles {
+  UserId uuid [not null]
+  RoleId uuid [not null]
+  indexes {
+    (UserId, RoleId) [pk]
+    RoleId
+  }
+}
+
+Table UserTokens {
+  UserId uuid [not null]
+  LoginProvider text [not null]
+  Name text [not null]
+  Value text
+  indexes {
+    (UserId, LoginProvider, Name) [pk]
+  }
+}
+
+Table artifacts {
+  Id integer [pk, not null, increment]
+  AccessLevel varchar(20) [not null, default: 'free']
+  Code varchar(100)
+  CreatedAt timestamptz [not null]
+  GalleryId integer
+  IsActive boolean [not null, default: true]
+  MapIcon varchar(500)
+  MapNodeId integer
+  MapX real
+  MapY real
+  MuseumId integer [not null]
+  Name varchar(300) [not null]
+  QrCode varchar(200)
+  // QrCode [unique] WHERE "QrCode" IS NOT NULL
+  indexes {
+    GalleryId
+    MuseumId
+  }
+}
+
+Table artifact_3d_models {
+  Id integer [pk, not null, increment]
+  ArtifactId integer [not null]
+  AutoRotate boolean [not null]
+  CameraOrbit varchar(100)
+  ContentType varchar(100) [not null]
+  FieldOfView varchar(50)
+  FileFormat varchar(20) [not null]
+  FileName varchar(300) [not null]
+  FileSize bigint [not null]
+  Name varchar(300) [not null]
+  PosterUrl varchar(1000)
+  Scale decimal(10,4) [not null, default: 1.0]
+  StorageKey varchar(200) [not null]
+  UpdatedAt timestamptz [not null]
+  UpdatedBy uuid [not null]
+  indexes {
+    ArtifactId [unique]
+  }
+}
+
+Table artifact_contents {
+  Id integer [pk, not null, increment]
+  ArtifactId integer [not null]
+  LanguageCode varchar(35) [not null]
+  Revision uuid [not null]
+  indexes {
+    (ArtifactId, LanguageCode) [unique]
+  }
+}
+
+Table artifact_content_versions {
+  Id integer [pk, not null, increment]
+  ArtifactContentId integer [not null]
+  AudioUrl varchar(1000)
+  CreatedAt timestamptz [not null]
+  CreatedBy uuid [not null]
+  Description text [not null]
+  IsAiGenerated boolean [not null]
+  IsCurrent boolean [not null]
+  NarrationText text
+  PublishedAt timestamptz
+  ReviewNote varchar(2000)
+  ReviewedAt timestamptz
+  ReviewedBy uuid
+  Status varchar(30) [not null]
+  Title varchar(300) [not null]
+  VersionNo integer [not null]
+  // ArtifactContentId [unique] WHERE "IsCurrent" = TRUE
+  indexes {
+    CreatedBy
+    ReviewedBy
+    (ArtifactContentId, VersionNo) [unique]
+  }
+}
+
+Table artifact_medias {
+  Id integer [pk, not null, increment]
+  ArtifactId integer [not null]
+  ContentType varchar(100) [not null]
+  CreatedAt timestamptz [not null]
+  CreatedBy uuid [not null]
+  FileName varchar(300) [not null]
+  FileSize bigint [not null]
+  LanguageCode varchar(35)
+  MediaType varchar(30) [not null]
+  SortOrder integer [not null]
+  StorageKey varchar(200) [not null]
+  Title varchar(300) [not null]
+  indexes {
+    ArtifactId
+  }
+}
+
+Table artifact_topics {
+  ArtifactId integer [not null]
+  TopicId integer [not null]
+  AssignedAt timestamptz [not null]
+  indexes {
+    (ArtifactId, TopicId) [pk]
+    TopicId
+  }
+}
+
+Table badges {
+  Id integer [pk, not null, increment]
+  Code varchar(50) [not null]
+  MuseumId integer
+  Name varchar(200) [not null]
+  RuleJson jsonb [not null]
+  indexes {
+    Code [unique]
+    MuseumId
+  }
+}
+
+Table buildings {
+  Id integer [pk, not null, increment]
+  MuseumId integer [not null]
+  Name varchar(200) [not null]
+  indexes {
+    MuseumId
+  }
+}
+
+Table cities {
+  Code varchar(2) [pk, not null]
+  Name varchar(100) [not null]
+}
+
+Table commerce_products {
+  Id integer [pk, not null, increment]
+  Currency varchar(3) [not null]
+  IsActive boolean [not null]
+  Kind varchar(20) [not null]
+  MuseumId integer [not null]
+  Name varchar(200) [not null]
+  Price numeric(18,2) [not null]
+  ResourceIdsJson text [not null]
+  Seats integer [not null]
+  ValidityHours integer
+  ValidityStartsAt text
+  indexes {
+    MuseumId
+  }
+}
+
+Table commerce_resources {
+  Id integer [pk, not null, increment]
+  AccessLevel varchar(20) [not null]
+  ArtifactId integer
+  Kind varchar(20) [not null]
+  MuseumId integer [not null]
+  Name varchar(200) [not null]
+  ScopeReference varchar(200)
+  indexes {
+    ArtifactId [unique]
+    MuseumId
+  }
+}
+
+Table complaints {
+  Id integer [pk, not null, increment]
+  AssignedTo uuid
+  Body varchar(5000) [not null]
+  CreatedAt timestamptz [not null]
+  ResolutionNote varchar(2000)
+  ResolvedAt timestamptz
+  Status varchar(20) [not null, default: 'New']
+  Subject varchar(300) [not null]
+  UpdatedAt timestamptz
+  VisitorId uuid [not null]
+  indexes {
+    AssignedTo
+    Status
+    VisitorId
+  }
+}
+
+Table daily_quiz_entries {
+  Id bigint [pk, not null, increment]
+  ArtifactId integer [not null]
+  CreatedAt timestamptz [not null]
+  EntryDate date [not null]
+  QuizId integer [not null]
+  RecognitionId bigint [not null]
+  Status varchar(20) [not null]
+  UserId uuid [not null]
+  VisitId integer
+  indexes {
+    ArtifactId
+    QuizId
+    RecognitionId
+    VisitId
+    (UserId, QuizId, EntryDate) [unique]
+  }
+}
+
+Table floors {
+  Id integer [pk, not null, increment]
+  BuildingId integer [not null]
+  LevelNo integer [not null]
+  MapImageUrl varchar(1000)
+  Name varchar(200)
+  indexes {
+    (BuildingId, LevelNo) [unique]
+  }
+}
+
+Table galleries {
+  Id integer [pk, not null, increment]
+  Description text
+  FloorId integer [not null]
+  Name varchar(300) [not null]
+  indexes {
+    FloorId
+  }
+}
+
+Table indoor_maps {
+  Id integer [pk, not null, increment]
+  FloorId integer
+  ImageHeight integer [not null]
+  ImageKey text
+  ImageWidth integer [not null]
+  MuseumId integer [not null]
+  Name varchar(200) [not null]
+  PublishedAt timestamptz
+  PublishedJson jsonb
+  Revision integer [not null]
+  // FloorId [unique] WHERE "FloorId" IS NOT NULL
+  // MuseumId [unique] WHERE "FloorId" IS NULL
+}
+
+Table map_edges {
+  Id uuid [pk, not null]
+  Bidirectional boolean [not null]
+  FromNodeId uuid [not null]
+  IndoorMapId integer [not null]
+  IsAccessible boolean [not null]
+  ToNodeId uuid [not null]
+  indexes {
+    (IndoorMapId, ToNodeId)
+    (IndoorMapId, FromNodeId, ToNodeId) [unique]
+  }
+}
+
+Table map_markers {
+  Id uuid [pk, not null]
+  ArtifactId integer
+  GalleryId integer
+  IndoorMapId integer [not null]
+  IsActive boolean [not null]
+  IsDestination boolean [not null]
+  Label varchar(200) [not null]
+  NodeId uuid
+  Type varchar(30) [not null]
+  X float8 [not null]
+  Y float8 [not null]
+  indexes {
+    ArtifactId
+    GalleryId
+    (IndoorMapId, NodeId)
+  }
+}
+
+Table map_nodes {
+  Id uuid [pk, not null]
+  IndoorMapId integer [not null]
+  Label varchar(200) [not null]
+  Type varchar(30) [not null]
+  X float8 [not null]
+  Y float8 [not null]
+}
+
+Table museums {
+  Id integer [pk, not null, increment]
+  Address varchar(500)
+  CityCode varchar(2)
+  CoverImageUrl varchar(1000)
+  CreatedAt timestamptz [not null]
+  Description text
+  IndoorLayout varchar(20) [not null, default: 'unknown']
+  IsActive boolean [not null, default: true]
+  Latitude decimal(9,6)
+  Longitude decimal(9,6)
+  Name varchar(200) [not null]
+  OpeningHours varchar(500)
+  indexes {
+    CityCode
+  }
+}
+
+Table museum_passes {
+  Id uuid [pk, not null]
+  ClaimedAt timestamptz [not null]
+  OrderId uuid [not null]
+  RevokedAt timestamptz
+  UserId uuid [not null]
+  indexes {
+    UserId
+    (OrderId, UserId) [unique]
+  }
+}
+
+Table payment_attempts {
+  Id uuid [pk, not null]
+  CompletedAt timestamptz
+  ConfirmedBy uuid
+  CreatedAt timestamptz [not null]
+  FailureReason text
+  OrderId uuid [not null]
+  Reference text
+  Status text [not null]
+  // Reference [unique] WHERE "Reference" IS NOT NULL
+  // (OrderId, IX_payment_attempts_pending) [unique] WHERE "Status" = 'pending'
+  // (OrderId, IX_payment_attempts_success) [unique] WHERE "Status" = 'succeeded'
+  indexes {
+    ConfirmedBy
+  }
+}
+
+Table point_transactions {
+  Id bigint [pk, not null, increment]
+  CreatedAt timestamptz [not null]
+  Points integer [not null]
+  Reason varchar(50) [not null]
+  RefId bigint [not null]
+  RefType varchar(50) [not null]
+  UserId uuid [not null]
+  indexes {
+    (UserId, Reason, RefType, RefId) [unique]
+  }
+}
+
+Table purchase_invoices {
+  Id uuid [pk, not null]
+  Amount numeric(18,2) [not null]
+  BuyerDetailsJson text [not null]
+  BuyerName text [not null]
+  Currency text [not null]
+  IssuedAt timestamptz [not null]
+  Number text [not null]
+  OrderId uuid [not null]
+  ProductKind text [not null]
+  ProductName text [not null]
+  Seats integer [not null]
+  indexes {
+    Number [unique]
+    OrderId [unique]
+  }
+}
+
+Table purchase_orders {
+  Id uuid [pk, not null]
+  Amount numeric(18,2) [not null]
+  BuyerDetailsJson text [not null]
+  BuyerId uuid [not null]
+  BuyerName text [not null]
+  CreatedAt timestamptz [not null]
+  Currency varchar(3) [not null]
+  ExpiresAt timestamptz
+  GroupKeyHash varchar(64)
+  MuseumId integer [not null]
+  PaidAt timestamptz
+  ProductId integer [not null]
+  ProductKind text [not null]
+  ProductName text [not null]
+  ResourceIdsJson text [not null]
+  Seats integer [not null]
+  Status text [not null]
+  ValidityHours integer [not null]
+  ValidityStartsAt text [not null]
+  indexes {
+    GroupKeyHash [unique]
+    ProductId
+    (BuyerId, CreatedAt)
+    (MuseumId, PaidAt)
+  }
+}
+
+Table questions {
+  Id integer [pk, not null, increment]
+  ArtifactId integer [not null]
+  Content varchar(4000) [not null]
+  CreatedAt timestamptz [not null]
+  CreatedBy uuid [not null]
+  Explanation varchar(4000) [not null]
+  LanguageCode varchar(35) [not null]
+  ReviewNote varchar(1000)
+  ReviewedAt timestamptz
+  ReviewedBy uuid
+  Status varchar(20) [not null]
+  indexes {
+    ArtifactId
+    CreatedBy
+    ReviewedBy
+  }
+}
+
+Table question_options {
+  Id integer [pk, not null, increment]
+  Content varchar(1000) [not null]
+  IsCorrect boolean [not null]
+  OrderNo integer [not null]
+  QuestionId integer [not null]
+  indexes {
+    QuestionId
+  }
+}
+
+Table quizzes {
+  Id integer [pk, not null, increment]
+  ArtifactId integer [not null]
+  CreatedAt timestamptz [not null]
+  CreatedBy uuid [not null]
+  QuestionsPerAttempt integer [not null]
+  Status varchar(20) [not null]
+  Title varchar(200) [not null]
+  indexes {
+    ArtifactId
+    CreatedBy
+  }
+}
+
+Table quiz_attempts {
+  Id bigint [pk, not null, increment]
+  CompletedAt timestamptz
+  CorrectCount integer [not null]
+  DailyEntryId bigint [not null]
+  Mode varchar(20) [not null]
+  QuizId integer [not null]
+  Score integer [not null]
+  StartedAt timestamptz [not null]
+  Status varchar(20) [not null]
+  TotalQuestions integer [not null]
+  UserId uuid [not null]
+  // DailyEntryId [unique] WHERE "Status" = 'in_progress'
+  indexes {
+    QuizId
+    UserId
+  }
+}
+
+Table quiz_attempt_answers {
+  Id bigint [pk, not null, increment]
+  AnsweredAt timestamptz
+  AttemptId bigint [not null]
+  IsCorrect boolean [not null]
+  OrderNo integer [not null]
+  Points integer [not null]
+  QuestionId integer [not null]
+  SelectedOptionId integer
+  indexes {
+    QuestionId
+    SelectedOptionId
+    (AttemptId, QuestionId) [unique]
+  }
+}
+
+Table quiz_questions {
+  QuizId integer [not null]
+  QuestionId integer [not null]
+  indexes {
+    (QuizId, QuestionId) [pk]
+    QuestionId
+  }
+}
+
+Table recognition_history {
+  Id bigint [pk, not null, increment]
+  ArtifactId integer
+  IsSuccess boolean [not null]
+  Method varchar(20) [not null]
+  RecognizedAt timestamptz [not null]
+  RequestId uuid [not null]
+  UserId uuid [not null]
+  VisitId integer
+  indexes {
+    ArtifactId
+    VisitId
+    (UserId, RecognizedAt)
+    (UserId, RequestId) [unique]
+  }
+}
+
+Table staff_assignments {
+  Id integer [pk, not null, increment]
+  ArtifactId integer
+  AssignedAt timestamptz [not null]
+  GalleryId integer
+  MuseumId integer [not null]
+  UserId uuid [not null]
+  // (UserId, MuseumId) [unique] WHERE "GalleryId" IS NULL AND "ArtifactId" IS NULL
+  indexes {
+    ArtifactId
+    GalleryId
+    MuseumId
+  }
+}
+
+Table staff_responses {
+  Id integer [pk, not null, increment]
+  Content varchar(2000) [not null]
+  CreatedAt timestamptz [not null]
+  FeedbackId integer [not null]
+  RespondedBy uuid [not null]
+  UpdatedAt timestamptz
+  indexes {
+    FeedbackId [unique]
+    RespondedBy
+  }
+}
+
+Table topics {
+  Id integer [pk, not null, increment]
+  CreatedAt timestamptz [not null]
+  Description varchar(2000)
+  IsActive boolean [not null, default: true]
+  MuseumId integer [not null]
+  Name varchar(200) [not null]
+  indexes {
+    (MuseumId, Name) [unique]
+  }
+}
+
+Table tours {
+  Id integer [pk, not null, increment]
+  CreatedAt timestamptz [not null]
+  CreatedBy uuid [not null]
+  Description varchar(4000) [not null]
+  EstimatedMinutes integer [not null]
+  MuseumId integer [not null]
+  Revision integer [not null]
+  Status varchar(20) [not null]
+  Title varchar(200) [not null]
+  indexes {
+    CreatedBy
+    MuseumId
+  }
+}
+
+Table tour_items {
+  Id integer [pk, not null, increment]
+  ArtifactId integer [not null]
+  OrderNo integer [not null]
+  TourId integer [not null]
+  indexes {
+    ArtifactId
+    (TourId, ArtifactId) [unique]
+    (TourId, OrderNo) [unique]
+  }
+}
+
+Table user_badges {
+  UserId uuid [not null]
+  BadgeId integer [not null]
+  AwardedAt timestamptz [not null]
+  indexes {
+    (UserId, BadgeId) [pk]
+    BadgeId
+  }
+}
+
+Table visits {
+  Id integer [pk, not null, increment]
+  CompletedAt timestamptz
+  MuseumId integer [not null]
+  StartedAt timestamptz [not null]
+  Status varchar(20) [not null]
+  TourId integer
+  VisitorId uuid [not null]
+  indexes {
+    MuseumId
+    TourId
+    (VisitorId, MuseumId, Status)
+  }
+}
+
+Table visit_feedbacks {
+  Id integer [pk, not null, increment]
+  ChatbotRating integer
+  Comment varchar(2000)
+  ContentRating integer
+  CreatedAt timestamptz [not null]
+  ModerationNote varchar(1000)
+  ModerationStatus varchar(20) [not null, default: 'Visible']
+  OverallRating integer [not null]
+  TourRating integer
+  UpdatedAt timestamptz
+  VisitId integer [not null]
+  indexes {
+    VisitId [unique]
+  }
+}
+
+Table visit_items {
+  Id integer [pk, not null, increment]
+  ArtifactId integer [not null]
+  LastVisitedAt timestamptz [not null]
+  TourItemId integer
+  VisitId integer [not null]
+  indexes {
+    ArtifactId
+    TourItemId
+    (VisitId, ArtifactId) [unique]
+  }
+}
+
+Table Users {
+  Id uuid [pk, not null]
+  AccessFailedCount integer [not null]
+  ConcurrencyStamp text
+  CreatedAt timestamptz [not null]
+  Email varchar(256)
+  EmailConfirmed boolean [not null]
+  FullName varchar(200) [not null]
+  IsActive boolean [not null, default: true]
+  LockoutEnabled boolean [not null]
+  LockoutEnd timestamptz
+  NormalizedEmail varchar(256)
+  NormalizedUserName varchar(256)
+  PasswordHash text
+  PhoneNumber text
+  PhoneNumberConfirmed boolean [not null]
+  SecurityStamp text
+  TwoFactorEnabled boolean [not null]
+  UserName varchar(256)
+  indexes {
+    NormalizedEmail [unique]
+    NormalizedUserName [unique]
+  }
+}
+
+Ref: Roles.Id < RoleClaims.RoleId
+Ref: Users.Id < UserClaims.UserId
+Ref: Users.Id < UserLogins.UserId
+Ref: Roles.Id < UserRoles.RoleId
+Ref: Users.Id < UserRoles.UserId
+Ref: Users.Id < UserTokens.UserId
+Ref: galleries.Id < artifacts.GalleryId
+Ref: museums.Id < artifacts.MuseumId
+Ref: artifacts.Id - artifact_3d_models.ArtifactId
+Ref: artifacts.Id < artifact_contents.ArtifactId
+Ref: artifact_contents.Id < artifact_content_versions.ArtifactContentId
+Ref: Users.Id < artifact_content_versions.CreatedBy
+Ref: Users.Id < artifact_content_versions.ReviewedBy
+Ref: artifacts.Id < artifact_medias.ArtifactId
+Ref: artifacts.Id < artifact_topics.ArtifactId
+Ref: topics.Id < artifact_topics.TopicId
+Ref: museums.Id < badges.MuseumId
+Ref: museums.Id < buildings.MuseumId
+Ref: museums.Id < commerce_products.MuseumId
+Ref: artifacts.Id < commerce_resources.ArtifactId
+Ref: museums.Id < commerce_resources.MuseumId
+Ref: Users.Id < complaints.AssignedTo
+Ref: Users.Id < complaints.VisitorId
+Ref: artifacts.Id < daily_quiz_entries.ArtifactId
+Ref: quizzes.Id < daily_quiz_entries.QuizId
+Ref: recognition_history.Id < daily_quiz_entries.RecognitionId
+Ref: Users.Id < daily_quiz_entries.UserId
+Ref: visits.Id < daily_quiz_entries.VisitId
+Ref: buildings.Id < floors.BuildingId
+Ref: floors.Id < galleries.FloorId
+Ref: floors.Id < indoor_maps.FloorId
+Ref: museums.Id < indoor_maps.MuseumId
+Ref: indoor_maps.Id < map_edges.IndoorMapId
+Ref: map_nodes.(IndoorMapId, Id) < map_edges.(IndoorMapId, FromNodeId)
+Ref: map_nodes.(IndoorMapId, Id) < map_edges.(IndoorMapId, ToNodeId)
+Ref: artifacts.Id < map_markers.ArtifactId
+Ref: galleries.Id < map_markers.GalleryId
+Ref: indoor_maps.Id < map_markers.IndoorMapId
+Ref: map_nodes.(IndoorMapId, Id) < map_markers.(IndoorMapId, NodeId)
+Ref: indoor_maps.Id < map_nodes.IndoorMapId
+Ref: cities.Code < museums.CityCode
+Ref: purchase_orders.Id < museum_passes.OrderId
+Ref: Users.Id < museum_passes.UserId
+Ref: Users.Id < payment_attempts.ConfirmedBy
+Ref: purchase_orders.Id < payment_attempts.OrderId
+Ref: Users.Id < point_transactions.UserId
+Ref: purchase_orders.Id < purchase_invoices.OrderId
+Ref: Users.Id < purchase_orders.BuyerId
+Ref: museums.Id < purchase_orders.MuseumId
+Ref: commerce_products.Id < purchase_orders.ProductId
+Ref: artifacts.Id < questions.ArtifactId
+Ref: Users.Id < questions.CreatedBy
+Ref: Users.Id < questions.ReviewedBy
+Ref: questions.Id < question_options.QuestionId
+Ref: artifacts.Id < quizzes.ArtifactId
+Ref: Users.Id < quizzes.CreatedBy
+Ref: daily_quiz_entries.Id < quiz_attempts.DailyEntryId
+Ref: quizzes.Id < quiz_attempts.QuizId
+Ref: Users.Id < quiz_attempts.UserId
+Ref: quiz_attempts.Id < quiz_attempt_answers.AttemptId
+Ref: questions.Id < quiz_attempt_answers.QuestionId
+Ref: question_options.Id < quiz_attempt_answers.SelectedOptionId
+Ref: questions.Id < quiz_questions.QuestionId
+Ref: quizzes.Id < quiz_questions.QuizId
+Ref: artifacts.Id < recognition_history.ArtifactId
+Ref: Users.Id < recognition_history.UserId
+Ref: visits.Id < recognition_history.VisitId
+Ref: artifacts.Id < staff_assignments.ArtifactId
+Ref: galleries.Id < staff_assignments.GalleryId
+Ref: museums.Id < staff_assignments.MuseumId
+Ref: Users.Id < staff_assignments.UserId
+Ref: visit_feedbacks.Id - staff_responses.FeedbackId
+Ref: Users.Id < staff_responses.RespondedBy
+Ref: museums.Id < topics.MuseumId
+Ref: Users.Id < tours.CreatedBy
+Ref: museums.Id < tours.MuseumId
+Ref: artifacts.Id < tour_items.ArtifactId
+Ref: tours.Id < tour_items.TourId
+Ref: badges.Id < user_badges.BadgeId
+Ref: Users.Id < user_badges.UserId
+Ref: museums.Id < visits.MuseumId
+Ref: tours.Id < visits.TourId
+Ref: Users.Id < visits.VisitorId
+Ref: visits.Id - visit_feedbacks.VisitId
+Ref: artifacts.Id < visit_items.ArtifactId
+Ref: tour_items.Id < visit_items.TourItemId
+Ref: visits.Id < visit_items.VisitId

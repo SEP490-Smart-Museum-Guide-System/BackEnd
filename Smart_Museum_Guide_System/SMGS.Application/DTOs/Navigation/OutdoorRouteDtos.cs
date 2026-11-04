@@ -12,7 +12,8 @@ public class CoordinateDto
 
 public class OutdoorRouteRequestDto
 {
-    [Range(1, int.MaxValue)] public int MuseumId { get; set; }
+    public CoordinateDto? Destination { get; set; }
+    [Range(1, int.MaxValue)] public int? MuseumId { get; set; }
     [Required] public CoordinateDto? Origin { get; set; }
     [Required] public string TravelMode { get; set; } = "DRIVE";
 }

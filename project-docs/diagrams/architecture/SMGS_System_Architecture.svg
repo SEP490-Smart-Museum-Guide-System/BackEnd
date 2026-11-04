@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1728 972" width="1728" height="972" font-family="Arial,sans-serif">
+  <defs>
+    <marker id="tip" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#527184" />
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1728" height="972" rx="0" fill="#F8FAFC" stroke="none" />
+  <text x="56" y="53.6" text-anchor="start" font-size="16" font-weight="700" fill="#14756C">SMGS    /    SYSTEM ARCHITECTURE</text>
+  <text x="56" y="117.25" text-anchor="start" font-size="45" font-weight="700" fill="#173449">Smart Museum Guide System</text>
+  <text x="58" y="167.85" text-anchor="start" font-size="21" font-weight="400" fill="#173449">Arrows point from caller to provider. Labels show the protocol or data exchanged.</text>
+  <text x="56" y="233.6" text-anchor="start" font-size="16" font-weight="700" fill="#597383">CLIENT INTEGRATIONS</text>
+  <text x="470" y="233.6" text-anchor="start" font-size="16" font-weight="700" fill="#597383">CLIENT APPLICATIONS</text>
+  <text x="875" y="233.6" text-anchor="start" font-size="16" font-weight="700" fill="#597383">APPLICATION BACKEND</text>
+  <text x="1400" y="233.6" text-anchor="start" font-size="16" font-weight="700" fill="#597383">DATA &amp; MAP SERVICES</text>
+  <rect x="56" y="275" width="240" height="110" rx="12" fill="#EFF8F0" stroke="#28754C" />
+  <text x="72" y="304.75" text-anchor="start" font-size="15" font-weight="700" fill="#28754C">▧   BASEMAP</text>
+  <text x="72" y="341.55" text-anchor="start" font-size="23" font-weight="700" fill="#173449">OpenStreetMap</text>
+  <text x="72" y="369.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Raster tiles · z/x/y</text>
+  <rect x="56" y="438" width="240" height="320" rx="12" fill="#F5F1FA" stroke="#74539B" />
+  <text x="72" y="467.75" text-anchor="start" font-size="15" font-weight="700" fill="#74539B">✦   AI  /  PYTHON¹</text>
+  <text x="72" y="504.55" text-anchor="start" font-size="23" font-weight="700" fill="#173449">AI interfaces</text>
+  <text x="72" y="551.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Vision · image recognition</text>
+  <text x="72" y="584.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">TTS · WAV narration</text>
+  <text x="72" y="663.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">3D scan · submit photos</text>
+  <text x="72" y="692.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">and track GLB build jobs</text>
+  <text x="72" y="730.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Called by the web portal.</text>
+  <rect x="470" y="288" width="220" height="204" rx="12" fill="#EFF7FB" stroke="#176D91" />
+  <text x="486" y="317.75" text-anchor="start" font-size="15" font-weight="700" fill="#176D91">◈   VISITOR APP</text>
+  <text x="486" y="354.55" text-anchor="start" font-size="23" font-weight="700" fill="#173449">Flutter</text>
+  <text x="486" y="399.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Artifact discovery,</text>
+  <text x="486" y="429.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">maps and audio guides</text>
+  <rect x="470" y="572" width="220" height="184" rx="12" fill="#EFF7FB" stroke="#176D91" />
+  <text x="486" y="601.75" text-anchor="start" font-size="15" font-weight="700" fill="#176D91">⚛   STAFF PORTAL</text>
+  <text x="486" y="638.55" text-anchor="start" font-size="23" font-weight="700" fill="#173449">React + Vite</text>
+  <text x="486" y="682.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Museum operations</text>
+  <text x="486" y="712.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Vercel build configured</text>
+  <rect x="875" y="280" width="300" height="552" rx="12" fill="#EAF6F2" stroke="#14685E" />
+  <text x="891" y="309.75" text-anchor="start" font-size="15" font-weight="700" fill="#14685E">.NET   /   SINGLE APPLICATION</text>
+  <text x="891" y="346.55" text-anchor="start" font-size="23" font-weight="700" fill="#173449">ASP.NET Core API</text>
+  <text x="891" y="405.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">JWT and role-based access</text>
+  <text x="891" y="460.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Artifacts, content and media</text>
+  <text x="891" y="497.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Tours, visits and navigation</text>
+  <text x="891" y="579.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Orders and payments</text>
+  <text x="891" y="619.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">API creates payment attempts.</text>
+  <text x="891" y="651.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Staff confirm the outcome.</text>
+  <text x="891" y="736.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">EF Core / Npgsql</text>
+  <text x="891" y="770.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Business data access</text>
+  <rect x="1400" y="265" width="273" height="118" rx="12" fill="#EFF7FB" stroke="#216788" />
+  <text x="1416" y="294.75" text-anchor="start" font-size="15" font-weight="700" fill="#216788">▤   DATABASE</text>
+  <text x="1416" y="331.55" text-anchor="start" font-size="23" font-weight="700" fill="#173449">PostgreSQL</text>
+  <text x="1416" y="361.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Business data and metadata</text>
+  <rect x="1400" y="410" width="273" height="118" rx="12" fill="#FFF6E7" stroke="#96611B" />
+  <text x="1416" y="439.75" text-anchor="start" font-size="15" font-weight="700" fill="#96611B">R2   OBJECT STORAGE</text>
+  <text x="1416" y="476.55" text-anchor="start" font-size="23" font-weight="700" fill="#173449">Cloudflare R2</text>
+  <text x="1416" y="506.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Images, audio, video, GLB</text>
+  <rect x="1400" y="570" width="273" height="118" rx="12" fill="#EFF8F0" stroke="#28754C" />
+  <text x="1416" y="599.75" text-anchor="start" font-size="15" font-weight="700" fill="#28754C">↱   ROUTING</text>
+  <text x="1416" y="636.55" text-anchor="start" font-size="23" font-weight="700" fill="#173449">OSRM</text>
+  <text x="1416" y="666.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Outdoor driving routes</text>
+  <rect x="1400" y="715" width="273" height="118" rx="12" fill="#EFF8F0" stroke="#28754C" />
+  <text x="1416" y="744.75" text-anchor="start" font-size="15" font-weight="700" fill="#28754C">⌖   GEOCODING</text>
+  <text x="1416" y="781.55" text-anchor="start" font-size="23" font-weight="700" fill="#173449">Photon</text>
+  <text x="1416" y="811.45" text-anchor="start" font-size="17" font-weight="400" fill="#173449">Search for places by name</text>
+  <path d="M470 335H296" stroke="#527184" stroke-width="2" marker-end="url(#tip)" />
+  <text x="383" y="325" text-anchor="middle" font-size="15" fill="#39586B">HTTPS / PNG tiles</text>
+  <path d="M470 466H296" stroke="#527184" stroke-width="2" marker-end="url(#tip)" />
+  <text x="383" y="456" text-anchor="middle" font-size="15" fill="#39586B">Image / JSON · text / WAV</text>
+  <path d="M470 663H296" stroke="#527184" stroke-width="2" marker-end="url(#tip)" />
+  <text x="383" y="653" text-anchor="middle" font-size="15" fill="#39586B">Photos / job JSON · WAV</text>
+  <path d="M690 380H875" stroke="#527184" stroke-width="2" marker-end="url(#tip)" />
+  <text x="782.5" y="370" text-anchor="middle" font-size="15" fill="#39586B">REST / JSON · media</text>
+  <path d="M690 620H875" stroke="#527184" stroke-width="2" marker-end="url(#tip)" />
+  <text x="782.5" y="610" text-anchor="middle" font-size="15" fill="#39586B">REST / JSON · multipart</text>
+  <path d="M1175 324H1400" stroke="#527184" stroke-width="2" marker-end="url(#tip)" />
+  <text x="1287.5" y="314" text-anchor="middle" font-size="15" fill="#39586B">PostgreSQL wire protocol</text>
+  <path d="M1175 470H1400" stroke="#527184" stroke-width="2" marker-end="url(#tip)" />
+  <text x="1287.5" y="460" text-anchor="middle" font-size="15" fill="#39586B">HTTPS / S3-compatible API</text>
+  <path d="M1175 631H1400" stroke="#527184" stroke-width="2" marker-end="url(#tip)" />
+  <text x="1287.5" y="621" text-anchor="middle" font-size="15" fill="#39586B">HTTP(S) / route JSON</text>
+  <path d="M1175 776H1400" stroke="#527184" stroke-width="2" marker-end="url(#tip)" />
+  <text x="1287.5" y="766" text-anchor="middle" font-size="15" fill="#39586B">HTTPS / GeoJSON</text>
+  <text x="56" y="903.45" text-anchor="start" font-size="17" font-weight="400" fill="#516B7B">¹ Client code confirms the AI interfaces. The Python server implementation and models could not be verified from either repository.</text>
+  <text x="56" y="937.45" text-anchor="start" font-size="17" font-weight="400" fill="#516B7B">Staff confirm payments in SMGS. No external payment gateway integration was found in the backend.</text>
+</svg>

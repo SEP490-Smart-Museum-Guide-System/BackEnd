@@ -10,10 +10,14 @@ public class OutdoorNavigationService(IMuseumRepository museums, IOutdoorRouting
     public async Task<ResponseDto<OutdoorRouteResponseDto>> GetRouteAsync(OutdoorRouteRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        if (request.MuseumId < 1 || request.TravelMode != "DRIVE" || request.Origin?.IsValid() != true)
+        if (request.TravelMode != "DRIVE" || request.Origin?.IsValid() != true)
             return ResponseDto<OutdoorRouteResponseDto>.Fail("Chỉ hỗ trợ DRIVE và tọa độ xuất phát hợp lệ.");
         cancellationToken.ThrowIfCancellationRequested();
-        var museum = await museums.GetByIdAsync(request.MuseumId, cancellationToken);
+        if (request.MuseumId is null && request.Destination?.IsValid() == true)
+            return await routing.GetRouteAsync(request.Origin, request.Destination, cancellationToken);
+        if (request.MuseumId is not int id || id < 1 || request.Destination != null)
+            return ResponseDto<OutdoorRouteResponseDto>.Fail("Điểm đến không hợp lệ.");
+        var museum = await museums.GetByIdAsync(id, cancellationToken);
         if (museum is null || !museum.IsActive)
             return ResponseDto<OutdoorRouteResponseDto>.Fail("Không tìm thấy bảo tàng.", 404);
         var destination = new CoordinateDto

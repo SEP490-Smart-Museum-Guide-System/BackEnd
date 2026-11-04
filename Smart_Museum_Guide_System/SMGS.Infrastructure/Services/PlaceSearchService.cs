@@ -14,13 +14,19 @@ public class PlaceSearchService(HttpClient client)
             return ResponseDto<List<PlaceResponseDto>>.Fail("Nhập từ 3 đến 200 ký tự.");
         try
         {
-            using var response = await client.GetAsync($"api/?q={Uri.EscapeDataString(query)}&limit=6", cancellationToken);
+            var region = System.Text.RegularExpressions.Regex.Match(query,
+                @"^(?:bảo tàng|bao tang)\s+(?:ở|tại|o|tai)\s+(.+)$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var path = region.Success
+                ? $"api/?q={Uri.EscapeDataString(region.Groups[1].Value)}&osm_tag=tourism:museum&limit=50"
+                : $"api/?q={Uri.EscapeDataString(query)}&limit=6";
+            using var response = await client.GetAsync(path, cancellationToken);
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
                 return ResponseDto<List<PlaceResponseDto>>.Fail("Dịch vụ tìm kiếm đang bận. Vui lòng thử lại sau.", 429);
             response.EnsureSuccessStatusCode();
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
             var places = new List<PlaceResponseDto>();
-            foreach (var feature in json.RootElement.GetProperty("features").EnumerateArray().Take(6))
+            foreach (var feature in json.RootElement.GetProperty("features").EnumerateArray())
             {
                 var geometry = feature.GetProperty("geometry");
                 if (geometry.GetProperty("type").GetString() != "Point") continue;

@@ -1,7 +1,7 @@
 // =====================================================
 // Smart Museum Guide System (SMGS) - DBML cho dbdiagram.io
 // Dựa trên SMGS_Project_Context v1.2 (15/10/2026)
-// Đây là đề xuất thiết kế, chưa phải ERD đã chốt.
+// Các bảng EF Core dùng tên vật lý và cấu trúc của BE. Các bảng đề xuất chưa có trong model được giữ lại.
 // =====================================================
 
 Project SMGS {
@@ -115,27 +115,51 @@ Enum detail_level {
 }
 
 // =====================================================
-// 1. IDENTITY (chỉ dùng 3 bảng có sẵn)
+// 1. IDENTITY
 // =====================================================
 
-Table Users [note: 'AspNetUsers - Identity có sẵn. Chỉ liệt kê cột chính, giữ nguyên các cột mặc định của Identity']
-{
-  Id uuid [pk]
-  UserName varchar
-  Email varchar
-  PasswordHash varchar
+Table Users {
+  Id uuid [pk, not null]
+  FullName varchar(200) [not null]
+  IsActive boolean [not null, default: true]
+  CreatedAt timestamptz [not null]
+  UserName varchar(256)
+  NormalizedUserName varchar(256)
+  Email varchar(256)
+  NormalizedEmail varchar(256)
+  EmailConfirmed boolean [not null]
+  PasswordHash text
+  SecurityStamp text
+  ConcurrencyStamp text
+  PhoneNumber text
+  PhoneNumberConfirmed boolean [not null]
+  TwoFactorEnabled boolean [not null]
+  LockoutEnd timestamptz
+  LockoutEnabled boolean [not null]
+  AccessFailedCount integer [not null]
+  indexes {
+    NormalizedEmail [unique, name: 'EmailIndex']
+    NormalizedUserName [unique, name: 'UserNameIndex']
+  }
 }
 
-Table Roles [note: 'AspNetRoles - Admin, SystemStaff, MuseumStaff, Curator, Visitor']
-{
-  Id uuid [pk]
-  Name varchar
+Table Roles {
+  Id uuid [pk, not null]
+  Name varchar(256)
+  NormalizedName varchar(256)
+  ConcurrencyStamp text
+  indexes {
+    NormalizedName [unique, name: 'RoleNameIndex']
+  }
 }
 
-Table UserRoles [note: 'AspNetUserRoles - Quy tắc hiện tại: 1 tài khoản 1 role (có thể thêm unique UserId)']
-{
-  UserId uuid [pk, ref: > Users.Id]
-  RoleId uuid [pk, ref: > Roles.Id]
+Table UserRoles {
+  UserId uuid [not null]
+  RoleId uuid [not null]
+  indexes {
+    (UserId, RoleId) [pk]
+    RoleId [name: 'IX_UserRoles_RoleId']
+  }
 }
 
 // Hồ sơ mở rộng, tránh sửa bảng Identity
@@ -153,57 +177,70 @@ Table user_profiles {
 // =====================================================
 
 Table cities {
-  Code varchar(2) [pk, note: 'Mã tỉnh/thành theo QĐ 19/2025/QĐ-TTg']
+  Code varchar(2) [pk, not null]
   Name varchar(100) [not null]
 }
 
 Table museums {
-  indoor_layout varchar [not null, default: 'unknown', note: 'unknown | single | floors; không tự tạo tầng']
-  id int [pk, increment]
-  name varchar [not null]
-  description text
-  address varchar
-  CityCode varchar(2) [ref: > cities.Code, note: 'Nullable cho dữ liệu cũ; EF giữ tên cột PascalCase']
-  latitude decimal(9,6) [note: 'Dùng cho chỉ đường từ nhà đến bảo tàng']
-  longitude decimal(9,6)
-  opening_hours varchar
-  cover_image_url varchar
-  is_active boolean [default: true]
-  created_at timestamptz
+  Id integer [pk, not null, increment]
+  IndoorLayout varchar(20) [not null, default: 'unknown']
+  Name varchar(200) [not null]
+  Description text
+  Address varchar(500)
+  CityCode varchar(2)
+  Latitude numeric(9,6)
+  Longitude numeric(9,6)
+  OpeningHours varchar(500)
+  CoverImageUrl varchar(1000)
+  IsActive boolean [not null, default: true]
+  CreatedAt timestamptz [not null]
+  indexes {
+    CityCode [name: 'IX_museums_CityCode']
+  }
 }
 
 Table buildings {
-  id int [pk, increment]
-  museum_id int [not null, ref: > museums.id]
-  name varchar [not null]
+  Id integer [pk, not null, increment]
+  MuseumId integer [not null]
+  Name varchar(200) [not null]
+  indexes {
+    MuseumId [name: 'IX_buildings_MuseumId']
+  }
 }
 
 Table floors {
-  id int [pk, increment]
-  building_id int [not null, ref: > buildings.id]
-  level_no int [not null]
-  name varchar
-  map_image_url varchar [note: 'Ảnh/bản vẽ mặt bằng tầng']
+  Id integer [pk, not null, increment]
+  BuildingId integer [not null]
+  LevelNo integer [not null]
+  Name varchar(200)
+  MapImageUrl varchar(1000)
+  indexes {
+    (BuildingId, LevelNo) [unique, name: 'IX_floors_BuildingId_LevelNo']
+  }
 }
 
 Table galleries {
-  id int [pk, increment]
-  floor_id int [not null, ref: > floors.id]
-  name varchar [not null]
-  description text
+  Id integer [pk, not null, increment]
+  FloorId integer [not null]
+  Name varchar(300) [not null]
+  Description text
+  indexes {
+    FloorId [name: 'IX_galleries_FloorId']
+  }
 }
 
-Table staff_assignments [note: 'Nhân sự (Museum Staff/Curator) thuộc bảo tàng, có thể phân công theo phòng hoặc hiện vật']
-{
-  id int [pk, increment]
-  user_id uuid [not null, ref: > Users.Id]
-  museum_id int [not null, ref: > museums.id]
-  gallery_id int [ref: > galleries.id]
-  artifact_id int [ref: > artifacts.id]
-  assigned_at timestamptz
-
+Table staff_assignments {
+  Id integer [pk, not null, increment]
+  UserId uuid [not null]
+  MuseumId integer [not null]
+  GalleryId integer
+  ArtifactId integer
+  AssignedAt timestamptz [not null]
+  // CREATE UNIQUE INDEX "IX_staff_assignments_UserId_MuseumId" ON staff_assignments ("UserId", "MuseumId") WHERE "GalleryId" IS NULL AND "ArtifactId" IS NULL;
   indexes {
-    (user_id, museum_id)
+    ArtifactId [name: 'IX_staff_assignments_ArtifactId']
+    GalleryId [name: 'IX_staff_assignments_GalleryId']
+    MuseumId [name: 'IX_staff_assignments_MuseumId']
   }
 }
 
@@ -212,38 +249,54 @@ Table staff_assignments [note: 'Nhân sự (Museum Staff/Curator) thuộc bảo 
 // =====================================================
 
 Table artifacts {
-  id int [pk, increment]
-  museum_id int [not null, ref: > museums.id]
-  gallery_id int [ref: > galleries.id, note: 'Không bắt buộc']
-  code varchar [note: 'Mã nội bộ']
-  name varchar [not null, note: 'Tên gốc/trung tính']
-  qr_code varchar [unique, note: 'Mã QR hiện vật (khác QR kiểm vé)']
-  map_node_id int [note: 'Legacy, không liên kết map_nodes UUID mới; vị trí indoor đọc từ snapshot xuất bản']
-  map_x float [note: 'Vị trí trên mặt bằng tầng']
-  map_y float
-  map_icon varchar
-  access_level access_level [default: 'free']
-  is_active boolean [default: true]
-  created_at timestamptz
+  Id integer [pk, not null, increment]
+  MuseumId integer [not null]
+  GalleryId integer
+  Code varchar(100)
+  Name varchar(300) [not null]
+  QrCode varchar(200)
+  MapNodeId integer
+  MapX real
+  MapY real
+  MapIcon varchar(500)
+  AccessLevel varchar(20) [not null, default: 'free']
+  IsActive boolean [not null, default: true]
+  CreatedAt timestamptz [not null]
+  // CREATE UNIQUE INDEX "IX_artifacts_QrCode" ON artifacts ("QrCode") WHERE "QrCode" IS NOT NULL;
+  indexes {
+    GalleryId [name: 'IX_artifacts_GalleryId']
+    MuseumId [name: 'IX_artifacts_MuseumId']
+  }
 }
 
 Table artifact_reference_images [note: 'Ảnh tham chiếu để AI nhận diện']
 {
   id int [pk, increment]
-  artifact_id int [not null, ref: > artifacts.id]
+  artifact_id int [not null, ref: > artifacts.Id]
   image_url varchar [not null]
   embedding_ref varchar [note: 'Tham chiếu vector/đặc trưng phía AI nếu có']
 }
 
-Table themes {
-  id int [pk, increment]
-  museum_id int [ref: > museums.id]
-  name varchar [not null]
+Table topics {
+  Id integer [pk, not null, increment]
+  MuseumId integer [not null]
+  Name varchar(200) [not null]
+  Description varchar(2000)
+  IsActive boolean [not null, default: true]
+  CreatedAt timestamptz [not null]
+  indexes {
+    (MuseumId, Name) [unique, name: 'IX_topics_MuseumId_Name']
+  }
 }
 
-Table artifact_themes {
-  artifact_id int [pk, ref: > artifacts.id]
-  theme_id int [pk, ref: > themes.id]
+Table artifact_topics {
+  ArtifactId integer [not null]
+  TopicId integer [not null]
+  AssignedAt timestamptz [not null]
+  indexes {
+    (ArtifactId, TopicId) [pk]
+    TopicId [name: 'IX_artifact_topics_TopicId']
+  }
 }
 
 // =====================================================
@@ -257,83 +310,58 @@ Table languages {
   is_active boolean [default: true]
 }
 
-Table artifact_contents [note: 'Thông tin hiện vật theo ngôn ngữ']
-{
-  id int [pk, increment]
-  artifact_id int [not null, ref: > artifacts.id]
-  language_id int [not null, ref: > languages.id]
-
+// BE quản lý thuyết minh theo ngôn ngữ, cùng văn bản và audio trong phiên bản nội dung.
+Table artifact_contents {
+  Id integer [pk, not null, increment]
+  ArtifactId integer [not null]
+  LanguageCode varchar(35) [not null]
+  Revision uuid [not null]
   indexes {
-    (artifact_id, language_id) [unique]
+    (ArtifactId, LanguageCode) [unique, name: 'IX_artifact_contents_ArtifactId_LanguageCode']
   }
 }
 
 Table artifact_content_versions {
-  id int [pk, increment]
-  artifact_content_id int [not null, ref: > artifact_contents.id]
-  version_no int [not null]
-  title varchar
-  description text
-  status content_status [default: 'draft']
-  is_current boolean [default: false, note: 'Bản đang xuất bản']
-  created_by uuid [ref: > Users.Id]
-  reviewed_by uuid [ref: > Users.Id]
-  reviewed_at timestamptz
-  review_note text
-  published_at timestamptz
-  created_at timestamptz
-
+  Id integer [pk, not null, increment]
+  ArtifactContentId integer [not null]
+  VersionNo integer [not null]
+  Title varchar(300) [not null]
+  Description text [not null]
+  NarrationText text
+  AudioUrl varchar(1000)
+  IsAiGenerated boolean [not null]
+  Status varchar(30) [not null]
+  IsCurrent boolean [not null]
+  CreatedBy uuid [not null]
+  ReviewedBy uuid
+  ReviewedAt timestamptz
+  ReviewNote varchar(2000)
+  PublishedAt timestamptz
+  CreatedAt timestamptz [not null]
+  // CREATE UNIQUE INDEX "IX_artifact_content_versions_ArtifactContentId" ON artifact_content_versions ("ArtifactContentId") WHERE "IsCurrent" = TRUE;
   indexes {
-    (artifact_content_id, version_no) [unique]
+    (ArtifactContentId, VersionNo) [unique, name: 'IX_artifact_content_versions_ArtifactContentId_VersionNo']
+    CreatedBy [name: 'IX_artifact_content_versions_CreatedBy']
+    ReviewedBy [name: 'IX_artifact_content_versions_ReviewedBy']
   }
 }
 
-Table narrations [note: 'Bài thuyết minh theo hiện vật + ngôn ngữ + độ dài + mức chi tiết']
-{
-  id int [pk, increment]
-  artifact_id int [not null, ref: > artifacts.id]
-  language_id int [not null, ref: > languages.id]
-  length_level length_level
-  detail_level detail_level
-  access_level access_level [default: 'free']
-
+Table artifact_medias {
+  Id integer [pk, not null, increment]
+  ArtifactId integer [not null]
+  MediaType varchar(30) [not null]
+  Title varchar(300) [not null]
+  LanguageCode varchar(35)
+  FileName varchar(300) [not null]
+  StorageKey varchar(200) [not null]
+  ContentType varchar(100) [not null]
+  FileSize bigint [not null]
+  SortOrder integer [not null]
+  CreatedBy uuid [not null]
+  CreatedAt timestamptz [not null]
   indexes {
-    (artifact_id, language_id, length_level, detail_level) [unique]
+    ArtifactId [name: 'IX_artifact_medias_ArtifactId']
   }
-}
-
-Table narration_versions {
-  id int [pk, increment]
-  narration_id int [not null, ref: > narrations.id]
-  version_no int [not null]
-  script text
-  audio_url varchar [note: 'Audio tạo sẵn hoặc TTS (chưa chốt)']
-  is_ai_generated boolean [default: false]
-  status content_status [default: 'draft']
-  is_current boolean [default: false]
-  created_by uuid [ref: > Users.Id]
-  reviewed_by uuid [ref: > Users.Id]
-  reviewed_at timestamptz
-  review_note text
-  published_at timestamptz
-  created_at timestamptz
-
-  indexes {
-    (narration_id, version_no) [unique]
-  }
-}
-
-Table media [note: 'Ảnh/video/audio']
-{
-  id int [pk, increment]
-  museum_id int [not null, ref: > museums.id]
-  artifact_id int [ref: > artifacts.id]
-  narration_id int [ref: > narrations.id]
-  media_type varchar [note: 'image | video | audio']
-  url varchar [not null]
-  caption varchar
-  uploaded_by uuid [ref: > Users.Id]
-  created_at timestamptz
 }
 
 // =====================================================
@@ -343,8 +371,8 @@ Table media [note: 'Ảnh/video/audio']
 Table source_documents [note: 'Tài liệu nguồn làm cơ sở cho chatbot']
 {
   id int [pk, increment]
-  museum_id int [not null, ref: > museums.id]
-  artifact_id int [ref: > artifacts.id]
+  museum_id int [not null, ref: > museums.Id]
+  artifact_id int [ref: > artifacts.Id]
   title varchar [not null]
   file_url varchar
   content text
@@ -358,7 +386,7 @@ Table source_documents [note: 'Tài liệu nguồn làm cơ sở cho chatbot']
 Table conversations {
   id int [pk, increment]
   user_id uuid [not null, ref: > Users.Id]
-  museum_id int [ref: > museums.id]
+  museum_id int [ref: > museums.Id]
   language_id int [ref: > languages.id]
   title varchar
   created_at timestamptz
@@ -367,7 +395,7 @@ Table conversations {
 Table conversation_artifacts [note: 'Một hội thoại có thể nói về nhiều hiện vật']
 {
   conversation_id int [pk, ref: > conversations.id]
-  artifact_id int [pk, ref: > artifacts.id]
+  artifact_id int [pk, ref: > artifacts.Id]
 }
 
 Table messages {
@@ -389,127 +417,147 @@ Table message_sources [note: 'Căn cứ trả lời của chatbot']
 // =====================================================
 
 Table indoor_maps {
-  id int [pk, increment]
-  museum_id int [not null, ref: > museums.id]
-  floor_id int [ref: > floors.id, note: 'NULL chỉ khi museum dùng mặt bằng chung; tầng phải thuộc museum']
-  name varchar(200) [not null]
-  revision int [not null, default: 1]
-  image_key varchar [note: 'Tên file PNG riêng tư; không lưu bytes trong DB']
-  image_width int [not null]
-  image_height int [not null]
-  published_json jsonb [note: 'Snapshot bất biến của ảnh và đồ thị khi xuất bản']
-  published_at timestamptz
-  Note: 'Unique từng floor_id khác NULL; unique museum_id khi floor_id NULL. Chỉnh bản nháp tăng revision.'
+  Id integer [pk, not null, increment]
+  MuseumId integer [not null]
+  FloorId integer
+  Name varchar(200) [not null]
+  Revision integer [not null]
+  ImageKey text
+  ImageWidth integer [not null]
+  ImageHeight integer [not null]
+  PublishedJson jsonb
+  PublishedAt timestamptz
+  // CREATE UNIQUE INDEX "IX_indoor_maps_FloorId" ON indoor_maps ("FloorId") WHERE "FloorId" IS NOT NULL;
+  // CREATE UNIQUE INDEX "IX_indoor_maps_MuseumId" ON indoor_maps ("MuseumId") WHERE "FloorId" IS NULL;
 }
 
 Table map_nodes {
-  id uuid [pk]
-  indoor_map_id int [not null, ref: > indoor_maps.id]
-  type varchar(30) [not null, note: 'corridor | intersection | door | entrance | stair | elevator | qr']
-  x double [not null, note: '0..1']
-  y double [not null, note: '0..1']
-  label varchar(200) [not null]
-  indexes { (indoor_map_id, id) [unique] }
+  Id uuid [pk, not null]
+  IndoorMapId integer [not null]
+  Label varchar(200) [not null]
+  Type varchar(30) [not null]
+  X float8 [not null]
+  Y float8 [not null]
+  indexes {
+    (IndoorMapId, Id) [unique]
+  }
+  checks {
+    `"X" BETWEEN 0 AND 1 AND "Y" BETWEEN 0 AND 1` [name: 'CK_map_nodes_xy']
+  }
 }
 
 Table map_markers {
-  id uuid [pk, note: 'QR chỉ lấy từ hiện vật được liên kết; không sinh QR riêng theo marker']
-  indoor_map_id int [not null, ref: > indoor_maps.id]
-  label varchar(200) [not null]
-  type varchar(30) [not null]
-  x double [not null, note: '0..1']
-  y double [not null, note: '0..1']
-  artifact_id int [ref: > artifacts.id]
-  gallery_id int [ref: > galleries.id]
-  node_id uuid
-  is_destination bool [not null]
-  is_active bool [not null, default: true]
+  Id uuid [pk, not null]
+  IndoorMapId integer [not null]
+  Label varchar(200) [not null]
+  Type varchar(30) [not null]
+  X float8 [not null]
+  Y float8 [not null]
+  ArtifactId integer
+  GalleryId integer
+  NodeId uuid
+  IsDestination boolean [not null]
+  IsActive boolean [not null]
+  indexes {
+    ArtifactId [name: 'IX_map_markers_ArtifactId']
+    GalleryId [name: 'IX_map_markers_GalleryId']
+    (IndoorMapId, NodeId) [name: 'IX_map_markers_IndoorMapId_NodeId']
+  }
+  checks {
+    `"X" BETWEEN 0 AND 1 AND "Y" BETWEEN 0 AND 1` [name: 'CK_map_markers_xy']
+  }
 }
-Ref: map_markers.(indoor_map_id, node_id) > map_nodes.(indoor_map_id, id)
 
 Table map_edges {
-  id uuid [pk]
-  indoor_map_id int [not null, ref: > indoor_maps.id]
-  from_node_id uuid [not null]
-  to_node_id uuid [not null]
-  bidirectional bool [not null, default: true]
-  is_accessible bool [not null, default: true]
-  indexes { (indoor_map_id, from_node_id, to_node_id) [unique] }
-  Note: 'Hai đầu khác nhau, cùng sơ đồ. Trọng số tính theo tỷ lệ ảnh, không phải mét. Chưa nối xuyên tầng.'
+  Id uuid [pk, not null]
+  IndoorMapId integer [not null]
+  FromNodeId uuid [not null]
+  ToNodeId uuid [not null]
+  Bidirectional boolean [not null]
+  IsAccessible boolean [not null]
+  indexes {
+    (IndoorMapId, FromNodeId, ToNodeId) [unique, name: 'IX_map_edges_IndoorMapId_FromNodeId_ToNodeId']
+    (IndoorMapId, ToNodeId) [name: 'IX_map_edges_IndoorMapId_ToNodeId']
+  }
+  checks {
+    `"FromNodeId" <> "ToNodeId"` [name: 'CK_map_edges_distinct']
+  }
 }
-Ref: map_edges.(indoor_map_id, from_node_id) > map_nodes.(indoor_map_id, id)
-Ref: map_edges.(indoor_map_id, to_node_id) > map_nodes.(indoor_map_id, id)
 
 // =====================================================
 // 7. TOUR VÀ LƯỢT THAM QUAN
 // =====================================================
 
 Table tours {
-  id int [pk, increment]
-  museum_id int [not null, ref: > museums.id]
-  tour_type tour_type [not null, note: 'template: nhân viên tạo; ai: AI gợi ý']
-  owner_user_id uuid [ref: > Users.Id, note: 'Chủ tour AI cá nhân']
-  created_by uuid [ref: > Users.Id]
-  title varchar
-  description text
-  estimated_minutes int
-  access_level access_level [default: 'free']
-  status content_status [default: 'draft']
-  created_at timestamptz
-}
-
-Table tour_items [note: 'Danh sách hiện vật có thứ tự']
-{
-  id int [pk, increment]
-  tour_id int [not null, ref: > tours.id]
-  artifact_id int [not null, ref: > artifacts.id]
-  order_no int [not null]
-
+  Id integer [pk, not null, increment]
+  MuseumId integer [not null]
+  CreatedBy uuid [not null]
+  Title varchar(200) [not null]
+  Description varchar(4000) [not null]
+  EstimatedMinutes integer [not null]
+  Status varchar(20) [not null]
+  Revision integer [not null]
+  CreatedAt timestamptz [not null]
   indexes {
-    (tour_id, order_no) [unique]
+    CreatedBy [name: 'IX_tours_CreatedBy']
+    MuseumId [name: 'IX_tours_MuseumId']
   }
 }
 
-Table visits [note: 'Một lần thực hiện tour (tách khỏi tour)']
-{
-  id int [pk, increment]
-  user_id uuid [not null, ref: > Users.Id]
-  museum_id int [not null, ref: > museums.id]
-  tour_id int [ref: > tours.id, note: 'NULL nếu tự khám phá (chưa chốt)']
-  status visit_status [default: 'in_progress']
-  available_minutes int [note: 'Thời gian có sẵn của lượt này']
-  started_at timestamptz
-  ended_at timestamptz
-}
-
-Table visit_items [note: 'Tiến độ: hiện vật đã tham quan, chỉ giữ lần gần nhất']
-{
-  id int [pk, increment]
-  visit_id int [not null, ref: > visits.id]
-  artifact_id int [not null, ref: > artifacts.id]
-  tour_item_id int [ref: > tour_items.id]
-  last_visited_at timestamptz
-
+Table tour_items {
+  Id integer [pk, not null, increment]
+  TourId integer [not null]
+  ArtifactId integer [not null]
+  OrderNo integer [not null]
   indexes {
-    (visit_id, artifact_id) [unique]
+    ArtifactId [name: 'IX_tour_items_ArtifactId']
+    (TourId, ArtifactId) [unique, name: 'IX_tour_items_TourId_ArtifactId']
+    (TourId, OrderNo) [unique, name: 'IX_tour_items_TourId_OrderNo']
   }
 }
 
-Table recognition_history [note: 'Lịch sử QR/nhận diện ảnh. Vị trí khách = bản ghi thành công gần nhất']
-{
-  id bigint [pk, increment]
-  user_id uuid [not null, ref: > Users.Id]
-  visit_id int [ref: > visits.id]
-  artifact_id int [ref: > artifacts.id, note: 'NULL nếu nhận diện thất bại']
-  method recognition_method [not null]
-  is_success boolean [not null]
-  confidence float
-  image_url varchar
-  recognized_at timestamptz [not null]
-
+Table visits {
+  Id integer [pk, not null, increment]
+  VisitorId uuid [not null]
+  TourId integer
+  MuseumId integer [not null]
+  StartedAt timestamptz [not null]
+  CompletedAt timestamptz
+  Status varchar(20) [not null]
   indexes {
-    (user_id, recognized_at)
-    (user_id, artifact_id)
+    MuseumId [name: 'IX_visits_MuseumId']
+    TourId [name: 'IX_visits_TourId']
+    (VisitorId, MuseumId, Status) [name: 'IX_visits_VisitorId_MuseumId_Status']
+  }
+}
+
+Table visit_items {
+  Id integer [pk, not null, increment]
+  VisitId integer [not null]
+  ArtifactId integer [not null]
+  TourItemId integer
+  LastVisitedAt timestamptz [not null]
+  indexes {
+    ArtifactId [name: 'IX_visit_items_ArtifactId']
+    TourItemId [name: 'IX_visit_items_TourItemId']
+    (VisitId, ArtifactId) [unique, name: 'IX_visit_items_VisitId_ArtifactId']
+  }
+}
+
+Table recognition_history {
+  Id bigint [pk, not null, increment]
+  UserId uuid [not null]
+  VisitId integer
+  ArtifactId integer
+  Method varchar(20) [not null]
+  IsSuccess boolean [not null]
+  RecognizedAt timestamptz [not null]
+  RequestId uuid [not null]
+  indexes {
+    ArtifactId [name: 'IX_recognition_history_ArtifactId']
+    (UserId, RecognizedAt) [name: 'IX_recognition_history_UserId_RecognizedAt']
+    (UserId, RequestId) [unique, name: 'IX_recognition_history_UserId_RequestId']
+    VisitId [name: 'IX_recognition_history_VisitId']
   }
 }
 
@@ -517,194 +565,236 @@ Table recognition_history [note: 'Lịch sử QR/nhận diện ảnh. Vị trí 
 // 8. QUIZ
 // =====================================================
 
-Table questions [note: 'Ngân hàng câu hỏi - AI tạo, Curator duyệt']
-{
-  id int [pk, increment]
-  artifact_id int [not null, ref: > artifacts.id]
-  language_id int [ref: > languages.id]
-  content text [not null]
-  explanation text
-  is_ai_generated boolean [default: false]
-  status content_status [default: 'draft']
-  created_by uuid [ref: > Users.Id]
-  reviewed_by uuid [ref: > Users.Id]
-  reviewed_at timestamptz
-  created_at timestamptz
+Table questions {
+  Id integer [pk, not null, increment]
+  ArtifactId integer [not null]
+  LanguageCode varchar(35) [not null]
+  Content varchar(4000) [not null]
+  Explanation varchar(4000) [not null]
+  Status varchar(20) [not null]
+  CreatedBy uuid [not null]
+  ReviewedBy uuid
+  ReviewedAt timestamptz
+  ReviewNote varchar(1000)
+  CreatedAt timestamptz [not null]
+  indexes {
+    ArtifactId [name: 'IX_questions_ArtifactId']
+    CreatedBy [name: 'IX_questions_CreatedBy']
+    ReviewedBy [name: 'IX_questions_ReviewedBy']
+  }
 }
 
 Table question_options {
-  id int [pk, increment]
-  question_id int [not null, ref: > questions.id]
-  content varchar [not null]
-  is_correct boolean [not null, default: false]
-  order_no int
-}
-
-Table quizzes [note: 'Mỗi quiz thuộc đúng 1 hiện vật']
-{
-  id int [pk, increment]
-  artifact_id int [not null, ref: > artifacts.id]
-  title varchar
-  status content_status [default: 'draft']
-  created_by uuid [ref: > Users.Id]
-  reviewed_by uuid [ref: > Users.Id]
-  created_at timestamptz
-}
-
-Table quiz_questions [note: 'Một câu hỏi dùng được trong nhiều quiz']
-{
-  quiz_id int [pk, ref: > quizzes.id]
-  question_id int [pk, ref: > questions.id]
-}
-
-Table daily_quiz_entries [note: 'Quiz tích lũy trong ngày theo hiện vật đã quét QR/nhận diện ảnh']
-{
-  id bigint [pk, increment]
-  user_id uuid [not null, ref: > Users.Id]
-  quiz_id int [not null, ref: > quizzes.id]
-  artifact_id int [not null, ref: > artifacts.id]
-  recognition_id bigint [ref: > recognition_history.id, note: 'Lần nhận diện làm phát sinh mục này']
-  visit_id int [ref: > visits.id]
-  entry_date date [not null, note: 'Ngày tích lũy (múi giờ/mốc cuối ngày chưa chốt)']
-  status quiz_entry_status [default: 'pending']
-  created_at timestamptz
-
+  Id integer [pk, not null, increment]
+  QuestionId integer [not null]
+  Content varchar(1000) [not null]
+  IsCorrect boolean [not null]
+  OrderNo integer [not null]
   indexes {
-    (user_id, entry_date)
-    (user_id, quiz_id, entry_date) [unique, note: 'Chống tạo mục trùng khi quét lặp (đề xuất)']
+    QuestionId [name: 'IX_question_options_QuestionId']
+  }
+}
+
+Table quizzes {
+  Id integer [pk, not null, increment]
+  ArtifactId integer [not null]
+  Title varchar(200) [not null]
+  Status varchar(20) [not null]
+  CreatedBy uuid [not null]
+  QuestionsPerAttempt integer [not null]
+  CreatedAt timestamptz [not null]
+  indexes {
+    ArtifactId [name: 'IX_quizzes_ArtifactId']
+    CreatedBy [name: 'IX_quizzes_CreatedBy']
+  }
+}
+
+Table quiz_questions {
+  QuizId integer [not null]
+  QuestionId integer [not null]
+  indexes {
+    (QuizId, QuestionId) [pk]
+    QuestionId [name: 'IX_quiz_questions_QuestionId']
+  }
+}
+
+Table daily_quiz_entries {
+  Id bigint [pk, not null, increment]
+  UserId uuid [not null]
+  QuizId integer [not null]
+  ArtifactId integer [not null]
+  RecognitionId bigint [not null]
+  VisitId integer
+  EntryDate date [not null]
+  Status varchar(20) [not null]
+  CreatedAt timestamptz [not null]
+  indexes {
+    ArtifactId [name: 'IX_daily_quiz_entries_ArtifactId']
+    QuizId [name: 'IX_daily_quiz_entries_QuizId']
+    RecognitionId [name: 'IX_daily_quiz_entries_RecognitionId']
+    (UserId, QuizId, EntryDate) [unique, name: 'IX_daily_quiz_entries_UserId_QuizId_EntryDate']
+    VisitId [name: 'IX_daily_quiz_entries_VisitId']
   }
 }
 
 Table quiz_attempts {
-  id bigint [pk, increment]
-  user_id uuid [not null, ref: > Users.Id]
-  quiz_id int [not null, ref: > quizzes.id]
-  daily_entry_id bigint [ref: > daily_quiz_entries.id]
-  mode attempt_mode [note: 'immediate: làm ngay sau khi đọc; later: làm sau']
-  total_questions int
-  correct_count int
-  score int [default: 0]
-  started_at timestamptz
-  completed_at timestamptz
+  Id bigint [pk, not null, increment]
+  UserId uuid [not null]
+  QuizId integer [not null]
+  DailyEntryId bigint [not null]
+  Mode varchar(20) [not null]
+  Status varchar(20) [not null]
+  TotalQuestions integer [not null]
+  CorrectCount integer [not null]
+  Score integer [not null]
+  StartedAt timestamptz [not null]
+  CompletedAt timestamptz
+  // CREATE UNIQUE INDEX "IX_quiz_attempts_DailyEntryId" ON quiz_attempts ("DailyEntryId") WHERE "Status" = 'in_progress';
+  indexes {
+    QuizId [name: 'IX_quiz_attempts_QuizId']
+    UserId [name: 'IX_quiz_attempts_UserId']
+  }
 }
 
 Table quiz_attempt_answers {
-  id bigint [pk, increment]
-  attempt_id bigint [not null, ref: > quiz_attempts.id]
-  question_id int [not null, ref: > questions.id]
-  selected_option_id int [ref: > question_options.id]
-  is_correct boolean
-  points int [default: 0]
-  answered_at timestamptz
+  Id bigint [pk, not null, increment]
+  AttemptId bigint [not null]
+  QuestionId integer [not null]
+  SelectedOptionId integer
+  IsCorrect boolean [not null]
+  Points integer [not null]
+  AnsweredAt timestamptz
+  OrderNo integer [not null]
+  indexes {
+    (AttemptId, QuestionId) [unique, name: 'IX_quiz_attempt_answers_AttemptId_QuestionId']
+    QuestionId [name: 'IX_quiz_attempt_answers_QuestionId']
+    SelectedOptionId [name: 'IX_quiz_attempt_answers_SelectedOptionId']
+  }
 }
 
 // =====================================================
 // 9. ĐIỂM VÀ HUY HIỆU
 // =====================================================
 
-Table point_transactions [note: 'Sổ điểm (đề xuất) - cộng vào user_profiles.total_points']
-{
-  id bigint [pk, increment]
-  user_id uuid [not null, ref: > Users.Id]
-  points int [not null]
-  reason varchar [note: 'scan_artifact | quiz_correct | badge ...']
-  ref_type varchar
-  ref_id bigint
-  created_at timestamptz
+Table point_transactions {
+  Id bigint [pk, not null, increment]
+  UserId uuid [not null]
+  Points integer [not null]
+  Reason varchar(50) [not null]
+  RefType varchar(50) [not null]
+  RefId bigint [not null]
+  CreatedAt timestamptz [not null]
+  indexes {
+    (UserId, Reason, RefType, RefId) [unique, name: 'IX_point_transactions_UserId_Reason_RefType_RefId']
+  }
 }
 
 Table badges {
-  id int [pk, increment]
-  museum_id int [ref: > museums.id, note: 'NULL = toàn hệ thống (chưa chốt)']
-  code varchar [unique]
-  name varchar [not null]
-  description text
-  icon_url varchar
-  rule_json jsonb [note: 'Ví dụ: quét đủ 10 hiện vật']
+  Id integer [pk, not null, increment]
+  MuseumId integer
+  Code varchar(50) [not null]
+  Name varchar(200) [not null]
+  RuleJson jsonb [not null]
+  indexes {
+    Code [unique, name: 'IX_badges_Code']
+    MuseumId [name: 'IX_badges_MuseumId']
+  }
 }
 
-Table user_badges [note: 'Mỗi huy hiệu chỉ nhận 1 lần']
-{
-  user_id uuid [pk, ref: > Users.Id]
-  badge_id int [pk, ref: > badges.id]
-  awarded_at timestamptz
+Table user_badges {
+  UserId uuid [not null]
+  BadgeId integer [not null]
+  AwardedAt timestamptz [not null]
+  indexes {
+    (UserId, BadgeId) [pk]
+    BadgeId [name: 'IX_user_badges_BadgeId']
+  }
 }
 
 // =====================================================
 // 10. THƯƠNG MẠI: VÉ / DỊCH VỤ SỐ / COMBO / THANH TOÁN
 // =====================================================
 
-Table products [note: 'Vé bảo tàng, dịch vụ số, combo']
-{
-  id int [pk, increment]
-  museum_id int [ref: > museums.id, note: 'Phạm vi sản phẩm chưa chốt, có thể NULL']
-  product_type product_type [not null]
-  name varchar [not null]
-  description text
-  price decimal(12,2) [not null]
-  currency varchar [default: 'VND']
-  valid_days int [note: 'Hiệu lực (ngày) - chưa chốt']
-  is_active boolean [default: true]
-  created_at timestamptz
+// Thành phần combo nằm trong ResourceIdsJson. Mỗi đơn lưu một sản phẩm và giá tại thời điểm mua.
+Table commerce_products {
+  Id integer [pk, not null, increment]
+  MuseumId integer [not null]
+  Name varchar(200) [not null]
+  Kind varchar(20) [not null]
+  Price numeric(18,2) [not null]
+  Currency varchar(3) [not null]
+  Seats integer [not null]
+  ValidityHours integer
+  ValidityStartsAt text
+  ResourceIdsJson text [not null]
+  IsActive boolean [not null]
+  indexes {
+    MuseumId [name: 'IX_commerce_products_MuseumId']
+  }
 }
 
-Table combo_items [note: 'Thành phần của combo']
-{
-  combo_product_id int [pk, ref: > products.id]
-  component_product_id int [pk, ref: > products.id]
-  quantity int [default: 1]
+Table purchase_orders {
+  Id uuid [pk, not null]
+  BuyerId uuid [not null]
+  MuseumId integer [not null]
+  ProductId integer [not null]
+  ProductName text [not null]
+  ProductKind text [not null]
+  Amount numeric(18,2) [not null]
+  Currency varchar(3) [not null]
+  Seats integer [not null]
+  ValidityHours integer [not null]
+  ValidityStartsAt text [not null]
+  ResourceIdsJson text [not null]
+  BuyerName text [not null]
+  BuyerDetailsJson text [not null]
+  Status text [not null]
+  CreatedAt timestamptz [not null]
+  PaidAt timestamptz
+  ExpiresAt timestamptz
+  GroupKeyHash varchar(64)
+  indexes {
+    (BuyerId, CreatedAt) [name: 'IX_purchase_orders_BuyerId_CreatedAt']
+    GroupKeyHash [unique, name: 'IX_purchase_orders_GroupKeyHash']
+    (MuseumId, PaidAt) [name: 'IX_purchase_orders_MuseumId_PaidAt']
+    ProductId [name: 'IX_purchase_orders_ProductId']
+  }
 }
 
-Table orders {
-  id bigint [pk, increment]
-  user_id uuid [not null, ref: > Users.Id]
-  total_amount decimal(12,2)
-  currency varchar [default: 'VND']
-  status order_status [default: 'pending']
-  created_at timestamptz
+Table payment_attempts {
+  Id uuid [pk, not null]
+  OrderId uuid [not null]
+  Status text [not null]
+  Reference text
+  FailureReason text
+  ConfirmedBy uuid
+  CreatedAt timestamptz [not null]
+  CompletedAt timestamptz
+  // CREATE UNIQUE INDEX "IX_payment_attempts_pending" ON payment_attempts ("OrderId") WHERE "Status" = 'pending';
+  // CREATE UNIQUE INDEX "IX_payment_attempts_Reference" ON payment_attempts ("Reference") WHERE "Reference" IS NOT NULL;
+  // CREATE UNIQUE INDEX "IX_payment_attempts_success" ON payment_attempts ("OrderId") WHERE "Status" = 'succeeded';
+  indexes {
+    ConfirmedBy [name: 'IX_payment_attempts_ConfirmedBy']
+  }
 }
 
-Table order_items {
-  id bigint [pk, increment]
-  order_id bigint [not null, ref: > orders.id]
-  product_id int [not null, ref: > products.id]
-  quantity int [default: 1]
-  unit_price decimal(12,2)
-  visit_date date [note: 'Ngày dùng vé/dịch vụ nếu có']
-}
-
-Table payment_transactions [note: 'Lưu mọi lần thanh toán, kể cả thất bại']
-{
-  id bigint [pk, increment]
-  order_id bigint [not null, ref: > orders.id]
-  provider varchar [note: 'VNPay, MoMo, ... (chưa chốt)']
-  provider_txn_id varchar
-  amount decimal(12,2)
-  status payment_status [default: 'pending']
-  raw_response jsonb [note: 'Không lưu dữ liệu thẻ/ngân hàng thô']
-  created_at timestamptz
-}
-
-Table access_rights [note: 'Quyền vào cửa / quyền dùng dịch vụ số, tách khỏi đơn hàng']
-{
-  id bigint [pk, increment]
-  user_id uuid [not null, ref: > Users.Id]
-  order_item_id bigint [ref: > order_items.id]
-  product_id int [not null, ref: > products.id]
-  museum_id int [ref: > museums.id]
-  right_type right_type [not null]
-  status right_status [default: 'inactive']
-  ticket_code varchar [unique, note: 'Mã kiểm vé (khác QR hiện vật)']
-  valid_from timestamptz
-  valid_to timestamptz
-  used_at timestamptz
+Table museum_passes {
+  Id uuid [pk, not null]
+  OrderId uuid [not null]
+  UserId uuid [not null]
+  ClaimedAt timestamptz [not null]
+  RevokedAt timestamptz
+  indexes {
+    (OrderId, UserId) [unique, name: 'IX_museum_passes_OrderId_UserId']
+    UserId [name: 'IX_museum_passes_UserId']
+  }
 }
 
 Table refunds [note: 'Hoàn tiền theo tỷ lệ %']
 {
   id bigint [pk, increment]
-  order_id bigint [not null, ref: > orders.id]
-  order_item_id bigint [ref: > order_items.id, note: 'Hoàn từng phần của combo (chưa chốt)']
+  order_id uuid [not null, ref: > purchase_orders.Id]
+  order_item_id bigint [note: 'Đề xuất cho hoàn tiền từng phần. BE chưa có dòng đơn hàng riêng.']
   percent decimal(5,2)
   amount decimal(12,2)
   status refund_status [default: 'requested']
@@ -714,56 +804,80 @@ Table refunds [note: 'Hoàn tiền theo tỷ lệ %']
   processed_at timestamptz
 }
 
-Table invoices {
-  id bigint [pk, increment]
-  order_id bigint [unique, not null, ref: - orders.id]
-  invoice_no varchar [unique]
-  buyer_name varchar
-  buyer_email varchar
-  buyer_tax_code varchar
-  buyer_address varchar
-  total_amount decimal(12,2)
-  issued_at timestamptz
+Table purchase_invoices {
+  Id uuid [pk, not null]
+  OrderId uuid [not null]
+  Number text [not null]
+  BuyerName text [not null]
+  BuyerDetailsJson text [not null]
+  ProductName text [not null]
+  ProductKind text [not null]
+  Seats integer [not null]
+  Amount numeric(18,2) [not null]
+  Currency text [not null]
+  IssuedAt timestamptz [not null]
+  indexes {
+    Number [unique, name: 'IX_purchase_invoices_Number']
+    OrderId [unique, name: 'IX_purchase_invoices_OrderId']
+  }
 }
 
 // =====================================================
 // 11. ĐÁNH GIÁ - PHẢN HỒI - KHIẾU NẠI
 // =====================================================
 
-Table feedbacks [note: 'Chỉ đánh giá sau khi hoàn thành tour']
-{
-  id bigint [pk, increment]
-  user_id uuid [not null, ref: > Users.Id]
-  visit_id int [not null, ref: > visits.id]
-  museum_id int [not null, ref: > museums.id]
-  target feedback_target [not null]
-  rating int
-  comment text
-  status feedback_status [default: 'visible']
-  moderated_by uuid [ref: > Users.Id, note: 'System Staff kiểm duyệt']
-  created_at timestamptz
+Table visit_feedbacks {
+  Id integer [pk, not null, increment]
+  VisitId integer [not null]
+  OverallRating integer [not null]
+  ContentRating integer
+  TourRating integer
+  ChatbotRating integer
+  Comment varchar(2000)
+  ModerationStatus varchar(20) [not null, default: 'Visible']
+  ModerationNote varchar(1000)
+  CreatedAt timestamptz [not null]
+  UpdatedAt timestamptz
+  indexes {
+    VisitId [unique, name: 'IX_visit_feedbacks_VisitId']
+  }
+  checks {
+    `"ChatbotRating" IS NULL OR "ChatbotRating" BETWEEN 1 AND 5` [name: 'CK_visit_feedbacks_chatbot']
+    `"ContentRating" IS NULL OR "ContentRating" BETWEEN 1 AND 5` [name: 'CK_visit_feedbacks_content']
+    `"OverallRating" BETWEEN 1 AND 5` [name: 'CK_visit_feedbacks_overall']
+    `"TourRating" IS NULL OR "TourRating" BETWEEN 1 AND 5` [name: 'CK_visit_feedbacks_tour']
+  }
 }
 
-Table feedback_responses [note: 'Phản hồi của nhân viên']
-{
-  id bigint [pk, increment]
-  feedback_id bigint [not null, ref: > feedbacks.id]
-  staff_user_id uuid [not null, ref: > Users.Id]
-  content text [not null]
-  created_at timestamptz
+Table staff_responses {
+  Id integer [pk, not null, increment]
+  FeedbackId integer [not null]
+  RespondedBy uuid [not null]
+  Content varchar(2000) [not null]
+  CreatedAt timestamptz [not null]
+  UpdatedAt timestamptz
+  indexes {
+    FeedbackId [unique, name: 'IX_staff_responses_FeedbackId']
+    RespondedBy [name: 'IX_staff_responses_RespondedBy']
+  }
 }
 
-Table complaints [note: 'Khiếu nại/hỗ trợ - System Staff xử lý']
-{
-  id bigint [pk, increment]
-  user_id uuid [not null, ref: > Users.Id]
-  order_id bigint [ref: > orders.id]
-  content text [not null]
-  status complaint_status [default: 'open']
-  handled_by uuid [ref: > Users.Id]
-  resolution text
-  created_at timestamptz
-  resolved_at timestamptz
+Table complaints {
+  Id integer [pk, not null, increment]
+  VisitorId uuid [not null]
+  Subject varchar(300) [not null]
+  Body varchar(5000) [not null]
+  Status varchar(20) [not null, default: 'New']
+  AssignedTo uuid
+  ResolutionNote varchar(2000)
+  CreatedAt timestamptz [not null]
+  UpdatedAt timestamptz
+  ResolvedAt timestamptz
+  indexes {
+    AssignedTo [name: 'IX_complaints_AssignedTo']
+    Status [name: 'IX_complaints_Status']
+    VisitorId [name: 'IX_complaints_VisitorId']
+  }
 }
 
 // =====================================================
@@ -774,7 +888,7 @@ Table audit_logs [note: 'Audit các thao tác quan trọng']
 {
   id bigint [pk, increment]
   user_id uuid [ref: > Users.Id]
-  museum_id int [ref: > museums.id]
+  museum_id int [ref: > museums.Id]
   action varchar [not null]
   entity_type varchar
   entity_id varchar
@@ -799,3 +913,170 @@ Table ai_quality_logs [note: 'Theo dõi lỗi và chất lượng AI (đề xu�
   detail text
   created_at timestamptz
 }
+
+// Bảng đã có trong BE, bổ sung theo tên vật lý
+
+Table RoleClaims {
+  Id integer [pk, not null, increment]
+  RoleId uuid [not null]
+  ClaimType text
+  ClaimValue text
+  indexes {
+    RoleId [name: 'IX_RoleClaims_RoleId']
+  }
+}
+
+Table UserClaims {
+  Id integer [pk, not null, increment]
+  UserId uuid [not null]
+  ClaimType text
+  ClaimValue text
+  indexes {
+    UserId [name: 'IX_UserClaims_UserId']
+  }
+}
+
+Table UserLogins {
+  LoginProvider text [not null]
+  ProviderKey text [not null]
+  ProviderDisplayName text
+  UserId uuid [not null]
+  indexes {
+    (LoginProvider, ProviderKey) [pk]
+    UserId [name: 'IX_UserLogins_UserId']
+  }
+}
+
+Table UserTokens {
+  UserId uuid [not null]
+  LoginProvider text [not null]
+  Name text [not null]
+  Value text
+  indexes {
+    (UserId, LoginProvider, Name) [pk]
+  }
+}
+
+Table artifact_3d_models {
+  Id integer [pk, not null, increment]
+  ArtifactId integer [not null]
+  Name varchar(300) [not null]
+  FileName varchar(300) [not null]
+  StorageKey varchar(200) [not null]
+  FileFormat varchar(20) [not null]
+  ContentType varchar(100) [not null]
+  FileSize bigint [not null]
+  PosterUrl varchar(1000)
+  AutoRotate boolean [not null]
+  CameraOrbit varchar(100)
+  FieldOfView varchar(50)
+  Scale numeric(10,4) [not null, default: 1.0]
+  UpdatedBy uuid [not null]
+  UpdatedAt timestamptz [not null]
+  indexes {
+    ArtifactId [unique, name: 'IX_artifact_3d_models_ArtifactId']
+  }
+}
+
+Table commerce_resources {
+  Id integer [pk, not null, increment]
+  MuseumId integer [not null]
+  Name varchar(200) [not null]
+  Kind varchar(20) [not null]
+  AccessLevel varchar(20) [not null]
+  ArtifactId integer
+  ScopeReference varchar(200)
+  indexes {
+    ArtifactId [unique, name: 'IX_commerce_resources_ArtifactId']
+    MuseumId [name: 'IX_commerce_resources_MuseumId']
+  }
+}
+
+// Khóa ngoại trong model EF Core
+Ref: cities.Code < museums.CityCode [delete: restrict]
+Ref: Roles.Id < RoleClaims.RoleId [delete: cascade]
+Ref: Users.Id < complaints.AssignedTo [delete: restrict]
+Ref: Users.Id < complaints.VisitorId [delete: restrict]
+Ref: Users.Id < point_transactions.UserId [delete: restrict]
+Ref: Users.Id < UserClaims.UserId [delete: cascade]
+Ref: Users.Id < UserLogins.UserId [delete: cascade]
+Ref: Roles.Id < UserRoles.RoleId [delete: cascade]
+Ref: Users.Id < UserRoles.UserId [delete: cascade]
+Ref: Users.Id < UserTokens.UserId [delete: cascade]
+Ref: museums.Id < badges.MuseumId [delete: restrict]
+Ref: museums.Id < buildings.MuseumId [delete: restrict]
+Ref: museums.Id < commerce_products.MuseumId [delete: restrict]
+Ref: museums.Id < topics.MuseumId [delete: cascade]
+Ref: Users.Id < tours.CreatedBy [delete: restrict]
+Ref: museums.Id < tours.MuseumId [delete: restrict]
+Ref: Users.Id < user_badges.UserId [delete: restrict]
+Ref: badges.Id < user_badges.BadgeId [delete: restrict]
+Ref: buildings.Id < floors.BuildingId [delete: restrict]
+Ref: Users.Id < purchase_orders.BuyerId [delete: restrict]
+Ref: commerce_products.Id < purchase_orders.ProductId [delete: restrict]
+Ref: museums.Id < purchase_orders.MuseumId [delete: restrict]
+Ref: Users.Id < visits.VisitorId [delete: restrict]
+Ref: museums.Id < visits.MuseumId [delete: restrict]
+Ref: tours.Id < visits.TourId [delete: restrict]
+Ref: floors.Id < galleries.FloorId [delete: cascade]
+Ref: floors.Id < indoor_maps.FloorId [delete: restrict]
+Ref: museums.Id < indoor_maps.MuseumId [delete: restrict]
+Ref: Users.Id < museum_passes.UserId [delete: restrict]
+Ref: purchase_orders.Id < museum_passes.OrderId [delete: restrict]
+Ref: Users.Id < payment_attempts.ConfirmedBy [delete: restrict]
+Ref: purchase_orders.Id < payment_attempts.OrderId [delete: restrict]
+Ref: purchase_orders.Id - purchase_invoices.OrderId [delete: restrict]
+Ref: visits.Id - visit_feedbacks.VisitId [delete: cascade]
+Ref: galleries.Id < artifacts.GalleryId [delete: set null]
+Ref: museums.Id < artifacts.MuseumId [delete: cascade]
+Ref: indoor_maps.Id < map_nodes.IndoorMapId [delete: cascade]
+Ref: Users.Id < staff_responses.RespondedBy [delete: restrict]
+Ref: visit_feedbacks.Id - staff_responses.FeedbackId [delete: cascade]
+Ref: artifacts.Id - artifact_3d_models.ArtifactId [delete: cascade]
+Ref: artifacts.Id < artifact_contents.ArtifactId [delete: restrict]
+Ref: artifacts.Id < artifact_medias.ArtifactId [delete: cascade]
+Ref: artifacts.Id < artifact_topics.ArtifactId [delete: cascade]
+Ref: topics.Id < artifact_topics.TopicId [delete: cascade]
+Ref: artifacts.Id - commerce_resources.ArtifactId [delete: restrict]
+Ref: museums.Id < commerce_resources.MuseumId [delete: restrict]
+Ref: Users.Id < questions.CreatedBy [delete: restrict]
+Ref: Users.Id < questions.ReviewedBy [delete: restrict]
+Ref: artifacts.Id < questions.ArtifactId [delete: restrict]
+Ref: Users.Id < quizzes.CreatedBy [delete: restrict]
+Ref: artifacts.Id < quizzes.ArtifactId [delete: restrict]
+Ref: Users.Id < recognition_history.UserId [delete: restrict]
+Ref: artifacts.Id < recognition_history.ArtifactId [delete: restrict]
+Ref: visits.Id < recognition_history.VisitId [delete: restrict]
+Ref: Users.Id < staff_assignments.UserId [delete: restrict]
+Ref: artifacts.Id < staff_assignments.ArtifactId [delete: restrict]
+Ref: galleries.Id < staff_assignments.GalleryId [delete: restrict]
+Ref: museums.Id < staff_assignments.MuseumId [delete: restrict]
+Ref: artifacts.Id < tour_items.ArtifactId [delete: restrict]
+Ref: tours.Id < tour_items.TourId [delete: cascade]
+Ref: indoor_maps.Id < map_edges.IndoorMapId [delete: cascade]
+Ref: map_nodes.(IndoorMapId, Id) < map_edges.(IndoorMapId, FromNodeId) [delete: restrict]
+Ref: map_nodes.(IndoorMapId, Id) < map_edges.(IndoorMapId, ToNodeId) [delete: restrict]
+Ref: artifacts.Id < map_markers.ArtifactId [delete: restrict]
+Ref: galleries.Id < map_markers.GalleryId [delete: restrict]
+Ref: indoor_maps.Id < map_markers.IndoorMapId [delete: cascade]
+Ref: map_nodes.(IndoorMapId, Id) < map_markers.(IndoorMapId, NodeId) [delete: restrict]
+Ref: Users.Id < artifact_content_versions.CreatedBy [delete: restrict]
+Ref: Users.Id < artifact_content_versions.ReviewedBy [delete: restrict]
+Ref: artifact_contents.Id < artifact_content_versions.ArtifactContentId [delete: restrict]
+Ref: questions.Id < question_options.QuestionId [delete: cascade]
+Ref: questions.Id < quiz_questions.QuestionId [delete: restrict]
+Ref: quizzes.Id < quiz_questions.QuizId [delete: cascade]
+Ref: Users.Id < daily_quiz_entries.UserId [delete: restrict]
+Ref: artifacts.Id < daily_quiz_entries.ArtifactId [delete: restrict]
+Ref: quizzes.Id < daily_quiz_entries.QuizId [delete: restrict]
+Ref: recognition_history.Id < daily_quiz_entries.RecognitionId [delete: restrict]
+Ref: visits.Id < daily_quiz_entries.VisitId [delete: restrict]
+Ref: artifacts.Id < visit_items.ArtifactId [delete: restrict]
+Ref: tour_items.Id < visit_items.TourItemId [delete: restrict]
+Ref: visits.Id < visit_items.VisitId [delete: restrict]
+Ref: Users.Id < quiz_attempts.UserId [delete: restrict]
+Ref: daily_quiz_entries.Id < quiz_attempts.DailyEntryId [delete: restrict]
+Ref: quizzes.Id < quiz_attempts.QuizId [delete: restrict]
+Ref: question_options.Id < quiz_attempt_answers.SelectedOptionId [delete: restrict]
+Ref: questions.Id < quiz_attempt_answers.QuestionId [delete: restrict]
+Ref: quiz_attempts.Id < quiz_attempt_answers.AttemptId [delete: restrict]
