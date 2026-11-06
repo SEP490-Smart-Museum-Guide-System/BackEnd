@@ -254,6 +254,33 @@ public class CommerceService(ApplicationDbContext db) : ICommerceService
                 totals.FirstOrDefault(x => x.Currency == c)?.Total ?? 0, failures.FirstOrDefault(x => x.Currency == c)?.Count ?? 0)).ToList();
     }
 
+    public async Task<VisitReportResponse> VisitReport(int museumId, DateTime fromUtc, DateTime toUtc, Guid staff, bool admin)
+    {
+        await StaffAccess(museumId, staff, admin);
+        if (fromUtc.Kind != DateTimeKind.Utc || toUtc.Kind != DateTimeKind.Utc || toUtc <= fromUtc || toUtc - fromUtc > TimeSpan.FromDays(366))
+            throw new CommerceException("Chọn khoảng thời gian UTC hợp lệ, tối đa 366 ngày (từ bao gồm, đến không bao gồm).");
+
+        // Cohort by visit start time: all metrics share the same set of visits.
+        var visits = db.Visits.AsNoTracking().Where(v => v.MuseumId == museumId && v.StartedAt >= fromUtc && v.StartedAt < toUtc);
+        var totals = await visits.GroupBy(_ => 1).Select(g => new {
+            Total = g.Count(), Visitors = g.Select(v => v.VisitorId).Distinct().Count(),
+            Guided = g.Count(v => v.TourId != null), Completed = g.Count(v => v.Status == VisitStatus.Completed)
+        }).SingleOrDefaultAsync();
+        var views = await (from item in db.Set<VisitItem>().AsNoTracking()
+                           join visit in visits on item.VisitId equals visit.Id
+                           group item by new { item.ArtifactId, item.VisitId } into perVisit
+                           select perVisit.Key).CountAsync();
+        var popular = await (from item in db.Set<VisitItem>().AsNoTracking()
+                             join visit in visits on item.VisitId equals visit.Id
+                             join artifact in db.Artifacts.AsNoTracking() on item.ArtifactId equals artifact.Id
+                             group item by new { item.ArtifactId, artifact.Name } into g
+                             orderby g.Count() descending, g.Key.ArtifactId
+                             select new PopularArtifactResponse(g.Key.ArtifactId, g.Key.Name, g.Count()))
+                            .Take(10).ToListAsync();
+        return new VisitReportResponse(totals?.Total ?? 0, totals?.Visitors ?? 0, totals?.Guided ?? 0,
+            totals?.Completed ?? 0, views, popular);
+    }
+
     public async Task<AccessResponse> Access(int resourceId, Guid? user)
     {
         var r = await db.CommerceResources.AsNoTracking().SingleOrDefaultAsync(r => r.Id == resourceId)

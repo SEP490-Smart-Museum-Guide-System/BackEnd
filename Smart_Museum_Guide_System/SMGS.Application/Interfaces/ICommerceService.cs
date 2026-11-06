@@ -23,6 +23,7 @@ public interface ICommerceService
     Task RevokePass(Guid passId, Guid staff, bool admin);
     Task<PurchaseInvoice> Invoice(Guid orderId, Guid buyer);
     Task<IReadOnlyList<RevenueResponse>> Revenue(int museumId, DateTime from, DateTime to, Guid staff, bool admin);
+    Task<VisitReportResponse> VisitReport(int museumId, DateTime from, DateTime to, Guid staff, bool admin);
     Task<AccessResponse> Access(int resourceId, Guid? user);
     Task<bool> CanReadArtifact(int artifactId, Guid? user);
 }

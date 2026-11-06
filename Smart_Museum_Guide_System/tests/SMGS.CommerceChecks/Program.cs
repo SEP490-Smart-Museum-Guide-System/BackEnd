@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,8 @@ using SMGS.Infrastructure.Data;
 using SMGS.Infrastructure.Identity;
 using SMGS.Infrastructure.Services;
 
+CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+
 static void Check(bool condition, string message)
 {
     if (!condition) throw new Exception("FAIL: " + message);
@@ -21,7 +24,7 @@ Check(!Valid(new ProductRequest { Name = "Test", Price = -1, ResourceIds = [1] }
 Check(!Valid(new ProductRequest { Name = "Test", Price = 10, Seats = 0, ResourceIds = [1] }), "Reject zero seats.");
 Check(!Valid(new ProductRequest { Name = "Test", Price = 10, Kind = "subscription", ResourceIds = [1] }), "Reject subscription product kind.");
 Check(!Valid(new RedeemKeyRequest { Key = "guess" }), "Reject short keys.");
-foreach (var name in new[] { "ConfirmPayment", "CreateResource", "UpdateResource", "CreateProduct", "UpdateProduct", "Revoke", "Revenue", "ManageOrder" })
+foreach (var name in new[] { "ConfirmPayment", "CreateResource", "UpdateResource", "CreateProduct", "UpdateProduct", "Revoke", "Revenue", "VisitReport", "ManageOrder" })
 {
     var auth = typeof(CommerceController).GetMethod(name)!.GetCustomAttribute<AuthorizeAttribute>();
     Check(auth?.Roles == RoleNames.Admin + "," + RoleNames.MuseumStaff, name + " requires museum managers.");
@@ -109,6 +112,21 @@ try
     await Fails(async () => await Run(s => s.Redeem(key.Key, member)), 403);
     var report = await Run(s => s.Revenue(museum.Id, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), staff, false));
     Check(report.Single() is { Revenue: 100, PaidOrders: 1, FailedAttempts: 1 }, "Revenue counts successful orders once and retains failures.");
+    var otherMuseum = new Museum { Name = "Other museum" }; setup.Museums.Add(otherMuseum);
+    await setup.SaveChangesAsync();
+    var visitStart = DateTime.UtcNow.AddHours(-2);
+    var completedVisit = new Visit { VisitorId = owner, MuseumId = museum.Id, StartedAt = visitStart, Status = VisitStatus.Completed, CompletedAt = visitStart.AddHours(1) };
+    var activeVisit = new Visit { VisitorId = owner, MuseumId = museum.Id, StartedAt = visitStart.AddMinutes(5), Status = VisitStatus.InProgress };
+    var otherVisit = new Visit { VisitorId = stranger, MuseumId = otherMuseum.Id, StartedAt = visitStart, Status = VisitStatus.Completed, CompletedAt = visitStart.AddMinutes(40) };
+    setup.Visits.AddRange(completedVisit, activeVisit, otherVisit); await setup.SaveChangesAsync();
+    setup.Set<VisitItem>().AddRange(new VisitItem { VisitId = completedVisit.Id, ArtifactId = artifact.Id, LastVisitedAt = visitStart.AddMinutes(10) },
+        new VisitItem { VisitId = activeVisit.Id, ArtifactId = artifact.Id, LastVisitedAt = visitStart.AddMinutes(15) });
+    await setup.SaveChangesAsync();
+    var visitReport = await Run(s => s.VisitReport(museum.Id, visitStart.AddMinutes(-1), visitStart.AddHours(3), staff, false));
+    Check(visitReport is { TotalVisits: 2, UniqueVisitors: 1, GuidedVisits: 0, CompletedVisits: 1, ArtifactViews: 2 }, "Visit report uses museum-scoped start-time cohort.");
+    Check(visitReport.PopularArtifacts.Single() is { ArtifactId: var popularId, VisitCount: 2 } && popularId == artifact.Id,
+        "Popular artifact counts visit items in selected museum.");
+    await Fails(async () => await Run(s => s.VisitReport(otherMuseum.Id, visitStart.AddMinutes(-1), visitStart.AddHours(3), staff, false)), 403);
     await using (var db = Open())
     {
         var o = await db.PurchaseOrders.SingleAsync(o => o.Id == order.Id); o.ExpiresAt = DateTime.UtcNow.AddSeconds(-1); await db.SaveChangesAsync();

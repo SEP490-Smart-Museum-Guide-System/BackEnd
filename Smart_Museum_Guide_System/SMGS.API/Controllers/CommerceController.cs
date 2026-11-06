@@ -110,6 +110,10 @@ public class CommerceController(ICommerceService service) : ControllerBase
     public async Task<IActionResult> Revenue(int museumId, DateTime from, DateTime to) =>
         Result(await service.Revenue(museumId, from, to, UserId, Admin));
 
+    [Authorize(Roles = Managers), HttpGet("museums/{museumId:int}/visits/report")]
+    public async Task<IActionResult> VisitReport(int museumId, DateTime from, DateTime to) =>
+        Result(await service.VisitReport(museumId, from, to, UserId, Admin));
+
     [AllowAnonymous, HttpGet("resources/{resourceId:int}/access")]
     public async Task<IActionResult> Access(int resourceId) => Result(await service.Access(resourceId,
         Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null));

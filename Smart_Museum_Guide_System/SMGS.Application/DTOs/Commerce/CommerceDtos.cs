@@ -52,6 +52,9 @@ public record OrderResponse(Guid Id, int MuseumId, string ProductName, string Pr
     Dictionary<string, string> BuyerDetails, string Status, DateTime CreatedAt, DateTime? PaidAt, DateTime? ExpiresAt);
 public record GroupKeyResponse(string Key, int RemainingClaims);
 public record RevenueResponse(string Currency, int PaidOrders, decimal Revenue, int FailedAttempts);
+public record PopularArtifactResponse(int ArtifactId, string ArtifactName, int VisitCount);
+public record VisitReportResponse(int TotalVisits, int UniqueVisitors, int GuidedVisits, int CompletedVisits,
+    int ArtifactViews, IReadOnlyList<PopularArtifactResponse> PopularArtifacts);
 public record AccessResponse(bool Allowed, string AccessLevel);
 public record PassResponse(Guid Id, Guid OrderId, int MuseumId, string ProductName, int[] ResourceIds,
     DateTime ClaimedAt, DateTime? ExpiresAt, DateTime? RevokedAt, bool IsValid);
