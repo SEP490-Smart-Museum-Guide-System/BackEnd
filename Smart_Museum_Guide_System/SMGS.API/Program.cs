@@ -49,6 +49,12 @@ builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
 }));
 builder.Services.AddRateLimiter(options =>
 {
+    options.AddPolicy("artifact-guide", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true
+        }));
     // shortcut: instance-wide demo quota; use a shared limiter when running multiple instances.
     options.AddFixedWindowLimiter("place-search", limiter =>
     {
@@ -96,8 +102,8 @@ if (app.Environment.IsDevelopment())
 if (!app.Environment.IsDevelopment()) app.UseHttpsRedirection();
 app.UseRouting();
 app.UseCors("Frontend");
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();

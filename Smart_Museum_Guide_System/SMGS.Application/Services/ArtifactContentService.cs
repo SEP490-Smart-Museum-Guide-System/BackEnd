@@ -31,7 +31,7 @@ public class ArtifactContentService(IArtifactContentRepository repository, IArti
     {
         if (string.IsNullOrWhiteSpace(languageCode)) return ResponseDto<ArtifactContentResponseDto>.Fail("Mã ngôn ngữ không hợp lệ.");
         var artifact = await artifacts.GetByIdAsync(artifactId);
-        if (artifact == null || !artifact.IsActive) return Missing();
+        if (artifact == null || !artifact.IsActive || artifact.Museum?.IsActive == false) return Missing();
         var allowed = commerce != null ? await commerce.CanReadArtifact(artifactId, userId) : artifact.AccessLevel == "free";
         if (!allowed) return ResponseDto<ArtifactContentResponseDto>.Fail("Cần pass còn hiệu lực cho nội dung premium này.", 403);
         var version = await repository.GetPublishedAsync(artifactId, languageCode.Trim().ToLowerInvariant());
@@ -40,7 +40,7 @@ public class ArtifactContentService(IArtifactContentRepository repository, IArti
     public async Task<ResponseDto<List<ArtifactContentResponseDto>>> GetAllPublishedByArtifactAsync(int artifactId, Guid? userId = null)
     {
         var artifact = await artifacts.GetByIdAsync(artifactId);
-        if (artifact == null || !artifact.IsActive)
+        if (artifact == null || !artifact.IsActive || artifact.Museum?.IsActive == false)
             return ResponseDto<List<ArtifactContentResponseDto>>.Fail("Không tìm thấy hiện vật.", 404);
         var allowed = commerce != null ? await commerce.CanReadArtifact(artifactId, userId) : artifact.AccessLevel == "free";
         if (!allowed)

@@ -93,6 +93,13 @@ public static class DependencyInjection
         services.AddSingleton<IndoorImageStore>();
         services.AddScoped<IArtifactContentRepository, ArtifactContentRepository>();
         services.AddScoped<IArtifactContentService, ArtifactContentService>();
+        services.AddOptions<GuideModelOptions>().Bind(configuration.GetSection(GuideModelOptions.SectionName));
+        services.AddHttpClient<IArtifactGuideModel, LocalArtifactGuideModel>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(55);
+            client.MaxResponseContentBufferSize = 256 * 1024;
+        }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+        services.AddScoped<IArtifactGuideService, ArtifactGuideService>();
         services.AddSingleton<IQrCodeService, QrCodeService>();
         services.AddScoped<IVisitRepository, VisitRepository>();
         services.AddScoped<IFeedbackRepository, FeedbackRepository>();
