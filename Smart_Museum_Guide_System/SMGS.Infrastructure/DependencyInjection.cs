@@ -100,6 +100,19 @@ public static class DependencyInjection
             client.MaxResponseContentBufferSize = 256 * 1024;
         }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddScoped<IArtifactGuideService, ArtifactGuideService>();
+        services.AddScoped<IStaffAiSource, StaffAiSourceReader>();
+        services.AddScoped<IStaffAiService, StaffAiService>();
+        services.AddOptions<ArtifactSpeechOptions>().Bind(configuration.GetSection(ArtifactSpeechOptions.SectionName));
+        services.AddHttpClient<IArtifactSpeech, LocalArtifactSpeech>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(65);
+            client.MaxResponseContentBufferSize = 32 * 1024 * 1024;
+        }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+        services.AddHttpClient<IStaffAiModel, LocalStaffAiModel>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(105);
+            client.MaxResponseContentBufferSize = 256 * 1024;
+        }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddSingleton<IQrCodeService, QrCodeService>();
         services.AddScoped<IVisitRepository, VisitRepository>();
         services.AddScoped<IFeedbackRepository, FeedbackRepository>();

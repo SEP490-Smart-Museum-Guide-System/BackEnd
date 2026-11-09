@@ -23,6 +23,10 @@ internal static class HttpChecks {
         builder.Logging.ClearProviders(); builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.Services.AddControllers().AddApplicationPart(typeof(ArtifactGuideController).Assembly);
         builder.Services.AddSingleton<IArtifactGuideService, GuideFixture>();
+        builder.Services.AddSingleton<IStaffAiService, StudioFixture>();
+        var speech = new SpeechFixture();
+        builder.Services.AddSingleton<IArtifactSpeech>(speech);
+        builder.Services.AddSingleton<IStaffAiSource, SpeechSourceFixture>();
         // Isolated authentication fixture; existing auth suites verify actual JWT issuance/validation.
         builder.Services.AddAuthentication("fixture").AddScheme<AuthenticationSchemeOptions, FixtureAuth>("fixture", _ => {});
         builder.Services.AddAuthorization();
@@ -46,6 +50,26 @@ internal static class HttpChecks {
             await CheckStatus(HttpStatusCode.BadRequest, new { question = new string('x', 1001) });
             await CheckStatus(HttpStatusCode.BadRequest, new { question = "Hỏi", history = new[] { new { role = "system", text = "A" } } });
             await CheckStatus(HttpStatusCode.OK, new { question = "Hỏi", history = Array.Empty<object>() });
+            const string studio = "/api/artifacts/17/ai/drafts";
+            foreach (var role in new[] { RoleNames.Visitor, RoleNames.Curator, RoleNames.Staff, RoleNames.Admin, RoleNames.MuseumStaff })
+            {
+                http.DefaultRequestHeaders.Remove("X-Test-Role"); http.DefaultRequestHeaders.Add("X-Test-Role", role);
+                var status = (await http.PostAsJsonAsync(studio, new { mode = "quiz", sourceText = "Tư liệu kiểm thử từ bảo tàng." })).StatusCode;
+                if (status != (role is RoleNames.Admin or RoleNames.MuseumStaff ? HttpStatusCode.OK : HttpStatusCode.Forbidden)) throw new Exception("Studio role boundary failed.");
+            }
+            if ((await http.PostAsJsonAsync(studio, new { mode = "multilingual", sourceText = "Tư liệu" })).StatusCode != HttpStatusCode.BadRequest) throw new Exception("Unsupported generation mode accepted.");
+            const string preview = "/api/artifacts/17/ai/speech-preview";
+            http.DefaultRequestHeaders.Remove("X-Test-Role");
+            if ((await http.PostAsJsonAsync(preview, new { text = "Bản đọc" })).StatusCode != HttpStatusCode.Unauthorized) throw new Exception("Anonymous preview accepted.");
+            foreach (var role in new[] { RoleNames.Visitor, RoleNames.Curator, RoleNames.Staff, RoleNames.Admin, RoleNames.MuseumStaff }) {
+                http.DefaultRequestHeaders.Remove("X-Test-Role"); http.DefaultRequestHeaders.Add("X-Test-Role", role);
+                var response = await http.PostAsJsonAsync(preview, new { text = " Bản đọc đã hiệu đính. " });
+                if (response.StatusCode != (role is RoleNames.Admin or RoleNames.MuseumStaff ? HttpStatusCode.OK : HttpStatusCode.Forbidden)) throw new Exception("Speech role boundary failed.");
+                if (response.IsSuccessStatusCode && (response.Content.Headers.ContentType?.MediaType != "audio/wav" || speech.Text != "Bản đọc đã hiệu đính.")) throw new Exception("Edited narration did not reach speech provider.");
+            }
+            var calls = speech.Calls;
+            if ((await http.PostAsJsonAsync("/api/artifacts/18/ai/speech-preview", new { text = "Bản đọc" })).StatusCode != HttpStatusCode.Forbidden || speech.Calls != calls) throw new Exception("Cross-museum speech accepted.");
+            if ((await http.PostAsJsonAsync(preview, new { text = " " })).StatusCode != HttpStatusCode.BadRequest || speech.Calls != calls) throw new Exception("Empty preview reached model.");
         } finally { await app.StopAsync(); }
     }
 }
@@ -61,4 +85,22 @@ class FixtureAuth(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerF
 class GuideFixture : IArtifactGuideService {
     public Task<ResponseDto<GuideAnswer>> AskAsync(int artifactId, Guid userId, GuideMessageRequest request, CancellationToken cancellationToken = default)
         => Task.FromResult(ResponseDto<GuideAnswer>.Success(new(artifactId, "Nội dung kiểm thử.", false, [])));
+}
+class StudioFixture : IStaffAiService {
+    public Task<ResponseDto<StaffAiResult>> GenerateAsync(int artifactId, Guid user, bool admin, StaffAiRequest request, CancellationToken token = default)
+        => Task.FromResult(ResponseDto<StaffAiResult>.Fail("Fixture không ghi dữ liệu.", 200));
+}
+class SpeechSourceFixture : IStaffAiSource {
+    public Task<StaffAiSource> GetAsync(int artifactId, Guid user, bool admin, CancellationToken cancellationToken = default) {
+        if (artifactId != 17) throw new SMGS.Application.DTOs.Experience.ExperienceException("Ngoài phạm vi.", 403);
+        return Task.FromResult(new StaffAiSource(17, "Hiện vật", null, null, ""));
+    }
+}
+class SpeechFixture : IArtifactSpeech {
+    public string? Text; public int Calls;
+    public Task<SpeechAudio> GenerateAsync(string text, CancellationToken cancellationToken = default) {
+        Calls++; Text = text;
+        var bytes = new byte[46]; "RIFF"u8.CopyTo(bytes); "WAVE"u8.CopyTo(bytes.AsSpan(8));
+        return Task.FromResult(new SpeechAudio(bytes));
+    }
 }
