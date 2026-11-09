@@ -91,8 +91,15 @@ public class MuseumRepository(ApplicationDbContext db) : IMuseumRepository
 
     public async Task<Museum> CreateAsync(Museum museum)
     {
+        await using var transaction = await db.Database.BeginTransactionAsync();
         db.Museums.Add(museum);
         await db.SaveChangesAsync();
+        var building = new Building { MuseumId = museum.Id, Name = "Tòa nhà chính" };
+        db.Buildings.Add(building);
+        await db.SaveChangesAsync();
+        db.Floors.Add(new Floor { BuildingId = building.Id, LevelNo = 0, Name = "Tầng trệt" });
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
         return museum;
     }
 
