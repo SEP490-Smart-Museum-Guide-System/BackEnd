@@ -84,6 +84,14 @@ if (args.Contains("--seed"))
     Console.WriteLine("Development accounts initialized successfully.");
     return;
 }
+if (args.Contains("--seed-data"))
+{
+    if (!app.Environment.IsDevelopment())
+        throw new InvalidOperationException("--seed-data is only available in Development.");
+    await DataSeeder.SeedDevelopmentDataAsync(app.Services);
+    Console.WriteLine("Development museum, artifacts, and chatbot content seeded successfully.");
+    return;
+}
 if (args.Contains("--create-user"))
 {
     if (!app.Environment.IsDevelopment())

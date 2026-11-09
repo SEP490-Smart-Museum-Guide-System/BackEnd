@@ -134,7 +134,7 @@ public static class DataSeeder
             db.Topics.AddRange(topicNational, topicDongSon, topicCeramics);
             await db.SaveChangesAsync();
 
-            // 5. Hiện vật mẫu
+            // 5. Hiện vật mẫu (Đa dạng hiện vật Free & Premium cho Chatbot và Nhận diện QR/AI Vision)
             var artifact1 = new Artifact
             {
                 MuseumId = museum.Id,
@@ -157,7 +157,73 @@ public static class DataSeeder
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
-            db.Artifacts.AddRange(artifact1, artifact2);
+            var artifact3 = new Artifact
+            {
+                MuseumId = museum.Id,
+                GalleryId = gallery1.Id,
+                Code = "HV-003",
+                Name = "Tượng đồng người cõng nhau thổi khèn",
+                QrCode = "SMGS-TUONGDONG003",
+                AccessLevel = "free",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+            var artifact4 = new Artifact
+            {
+                MuseumId = museum.Id,
+                GalleryId = gallery1.Id,
+                Code = "HV-004",
+                Name = "Đèn đồng hình người quỳ",
+                QrCode = "SMGS-DENDONG004",
+                AccessLevel = "free",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+            var artifact5 = new Artifact
+            {
+                MuseumId = museum.Id,
+                GalleryId = gallery2.Id,
+                Code = "HV-005",
+                Name = "Đầu rồng đất nung thời Lý",
+                QrCode = "SMGS-DAURONG005",
+                AccessLevel = "free",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+            var artifact6 = new Artifact
+            {
+                MuseumId = museum.Id,
+                GalleryId = gallery2.Id,
+                Code = "HV-006",
+                Name = "Thạp gốm hoa nâu thời Trần",
+                QrCode = "SMGS-THAPGOM006",
+                AccessLevel = "free",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+            var artifact7 = new Artifact
+            {
+                MuseumId = museum.Id,
+                GalleryId = gallery2.Id,
+                Code = "HV-007",
+                Name = "Chuông đồng Vân Bản",
+                QrCode = "SMGS-CHUONGVANBAN007",
+                AccessLevel = "premium",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+            var artifact8 = new Artifact
+            {
+                MuseumId = museum.Id,
+                GalleryId = gallery2.Id,
+                Code = "HV-008",
+                Name = "Ấn vàng Sắc mệnh chi bảo",
+                QrCode = "SMGS-ANVANG008",
+                AccessLevel = "premium",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+            db.Artifacts.AddRange(artifact1, artifact2, artifact3, artifact4, artifact5, artifact6, artifact7, artifact8);
             await db.SaveChangesAsync();
 
             // Gán chủ đề cho hiện vật
@@ -165,25 +231,38 @@ public static class DataSeeder
                 new ArtifactTopic { ArtifactId = artifact1.Id, TopicId = topicNational.Id },
                 new ArtifactTopic { ArtifactId = artifact1.Id, TopicId = topicDongSon.Id },
                 new ArtifactTopic { ArtifactId = artifact2.Id, TopicId = topicNational.Id },
-                new ArtifactTopic { ArtifactId = artifact2.Id, TopicId = topicDongSon.Id }
+                new ArtifactTopic { ArtifactId = artifact2.Id, TopicId = topicDongSon.Id },
+                new ArtifactTopic { ArtifactId = artifact3.Id, TopicId = topicDongSon.Id },
+                new ArtifactTopic { ArtifactId = artifact4.Id, TopicId = topicNational.Id },
+                new ArtifactTopic { ArtifactId = artifact4.Id, TopicId = topicDongSon.Id },
+                new ArtifactTopic { ArtifactId = artifact5.Id, TopicId = topicCeramics.Id },
+                new ArtifactTopic { ArtifactId = artifact6.Id, TopicId = topicCeramics.Id },
+                new ArtifactTopic { ArtifactId = artifact7.Id, TopicId = topicNational.Id },
+                new ArtifactTopic { ArtifactId = artifact8.Id, TopicId = topicNational.Id }
             );
 
-            // 6. Nội dung đa ngôn ngữ & Narration mẫu (CD-06A)
-            var contentVi = new ArtifactContent { ArtifactId = artifact1.Id, LanguageCode = "vi" };
-            var contentEn = new ArtifactContent { ArtifactId = artifact1.Id, LanguageCode = "en" };
-            var contentPending = new ArtifactContent { ArtifactId = artifact2.Id, LanguageCode = "vi" };
-            db.ArtifactContents.AddRange(contentVi, contentEn, contentPending);
+            // 6. Nội dung đa ngôn ngữ & Narration mẫu giàu chi tiết phục vụ Chatbot hỏi đáp (CD-06A)
+            var contentVi1 = new ArtifactContent { ArtifactId = artifact1.Id, LanguageCode = "vi" };
+            var contentEn1 = new ArtifactContent { ArtifactId = artifact1.Id, LanguageCode = "en" };
+            var contentVi2 = new ArtifactContent { ArtifactId = artifact2.Id, LanguageCode = "vi" };
+            var contentVi3 = new ArtifactContent { ArtifactId = artifact3.Id, LanguageCode = "vi" };
+            var contentVi4 = new ArtifactContent { ArtifactId = artifact4.Id, LanguageCode = "vi" };
+            var contentVi5 = new ArtifactContent { ArtifactId = artifact5.Id, LanguageCode = "vi" };
+            var contentVi6 = new ArtifactContent { ArtifactId = artifact6.Id, LanguageCode = "vi" };
+            var contentVi7 = new ArtifactContent { ArtifactId = artifact7.Id, LanguageCode = "vi" };
+            var contentVi8 = new ArtifactContent { ArtifactId = artifact8.Id, LanguageCode = "vi" };
+            db.ArtifactContents.AddRange(contentVi1, contentEn1, contentVi2, contentVi3, contentVi4, contentVi5, contentVi6, contentVi7, contentVi8);
             await db.SaveChangesAsync();
 
             var now = DateTime.UtcNow;
             db.ArtifactContentVersions.AddRange(
                 new ArtifactContentVersion
                 {
-                    ArtifactContentId = contentVi.Id,
+                    ArtifactContentId = contentVi1.Id,
                     VersionNo = 1,
-                    Title = "Trống đồng Ngọc Lũ",
-                    Description = "Trống đồng Ngọc Lũ là một trong những chiếc trống đồng Đông Sơn có kích thước lớn, hình dáng cổ kính và hoa văn trang trí hoàn mỹ nhất hiện nay.",
-                    NarrationText = "Xin chào quý khách. Trước mắt quý khách là Trống đồng Ngọc Lũ, biểu tượng đỉnh cao của nghệ thuật đúc đồng thời kỳ Văn hóa Đông Sơn cách đây hơn 2.500 năm.",
+                    Title = "Trống đồng Ngọc Lũ - Bảo vật Quốc gia thời kỳ Đông Sơn",
+                    Description = "Trống đồng Ngọc Lũ thuộc nền Văn hóa Đông Sơn, có niên đại khoảng 2.500 năm cách ngày nay (thế kỷ VII - VI trước Công nguyên). Hiện vật được chế tác bằng chất liệu đồng thau, có đường kính mặt trống 79 cm, chiều cao 63 cm và nặng 86 kg. Trống được phát hiện vào năm 1893 tại xã Như Trác, huyện Nam Xang (nay thuộc huyện Bình Lục, tỉnh Hà Nam) và được công nhận là Bảo vật Quốc gia đợt 1 năm 2012. Trống gồm ba phần rõ rệt: tang trống phình rộng, thân trống hình trụ thẳng và chân trống loe hình nón cụt, có bốn đôi quai kép trang trí văn bện thừng.",
+                    NarrationText = "Xin chào quý khách. Trước mắt quý khách là Trống đồng Ngọc Lũ, biểu tượng đỉnh cao của nghệ thuật đúc đồng thời kỳ Văn hóa Đông Sơn cách đây khoảng 2.500 năm. Chính giữa mặt trống là hình ngôi sao nổi 14 cánh tượng trưng cho mặt trời. Xung quanh ngôi sao là 16 vòng hoa văn đồng tâm, nổi bật với cảnh sinh hoạt của cư dân Việt cổ như giã gạo, múa hóa trang lông chim, đánh trống đồng, đua thuyền, cùng hình đàn hươu và chim Lạc bay ngược chiều kim đồng hồ. Trống đồng Ngọc Lũ được dùng làm nhạc khí trong các nghi lễ cầu mùa, lễ hội cộng đồng và là biểu tượng quyền lực của thủ lĩnh bộ lạc thời Hùng Vương dựng nước.",
                     IsAiGenerated = false,
                     Status = ContentStatuses.Published,
                     IsCurrent = true,
@@ -196,11 +275,11 @@ public static class DataSeeder
                 },
                 new ArtifactContentVersion
                 {
-                    ArtifactContentId = contentEn.Id,
+                    ArtifactContentId = contentEn1.Id,
                     VersionNo = 1,
                     Title = "Ngoc Lu Bronze Drum",
-                    Description = "The Ngoc Lu bronze drum is one of the most important and intricately decorated artifacts of the Dong Son culture in Vietnam.",
-                    NarrationText = "Welcome to the exhibit. Before you stands the Ngoc Lu Bronze Drum, a masterpiece of bronze casting from the Dong Son civilization over 2,500 years ago.",
+                    Description = "The Ngoc Lu bronze drum is one of the most important and intricately decorated artifacts of the Dong Son culture in Vietnam, dating back approximately 2,500 years (7th - 6th century BCE). Discovered in 1893 in Ha Nam province, it measures 79 cm in diameter, 63 cm in height, and weighs 86 kg.",
+                    NarrationText = "Welcome to the exhibit. Before you stands the Ngoc Lu Bronze Drum, a masterpiece of bronze casting from the Dong Son civilization over 2,500 years ago. The tympanum features a 14-pointed central star surrounded by concentric bands depicting ancient Viet rituals, rice pounding, feathered dancers, deer, and Lac birds.",
                     IsAiGenerated = false,
                     Status = ContentStatuses.Published,
                     IsCurrent = true,
@@ -213,15 +292,134 @@ public static class DataSeeder
                 },
                 new ArtifactContentVersion
                 {
-                    ArtifactContentId = contentPending.Id,
+                    ArtifactContentId = contentVi2.Id,
                     VersionNo = 1,
-                    Title = "Thạp đồng Đào Thịnh (Bản chờ duyệt)",
-                    Description = "Thạp đồng Đào Thịnh có kích thước lớn nhất trong các thạp đồng Đông Sơn đã được phát hiện.",
-                    NarrationText = "Xin mời quý khách chiêm ngưỡng Thạp đồng Đào Thịnh, bảo vật quốc gia nổi tiếng với nghệ thuật tạo hình độc đáo trên nắp thạp.",
+                    Title = "Thạp đồng Đào Thịnh - Bảo vật Quốc gia Văn hóa Đông Sơn",
+                    Description = "Thạp đồng Đào Thịnh thuộc nền Văn hóa Đông Sơn, có niên đại khoảng 2.500 - 2.000 năm cách ngày nay (thế kỷ V - III trước Công nguyên). Hiện vật làm bằng đồng thau, có kích thước lớn nhất trong các thạp đồng Đông Sơn từng được tìm thấy với chiều cao 98 cm, đường kính miệng 61 cm, đường kính đáy 60 cm và nặng 74 kg. Thạp được người dân phát hiện vào ngày 14 tháng 9 năm 1961 bên bờ sông Hồng thuộc xã Đào Thịnh, huyện Trấn Yên, tỉnh Yên Bái. Hiện vật được công nhận là Bảo vật Quốc gia đợt 1 năm 2012.",
+                    NarrationText = "Xin mời quý khách chiêm ngưỡng Thạp đồng Đào Thịnh. Điểm độc đáo nhất của chiếc thạp nằm ở phần nắp: chính giữa là ngôi sao 12 cánh, xung quanh rìa nắp đúc nổi bốn cặp tượng nam nữ trong tư thế giao phối, thể hiện tín ngưỡng phồn thực cầu mong sự sinh sôi nảy nở của cư dân nông nghiệp trồng lúa nước. Trên thân thạp khắc họa 6 chiếc thuyền nối đuôi nhau cùng hình chim Lạc và vũ công hóa trang lông chim. Thạp ban đầu dùng để đựng lương thực, thóc giống hoặc rượu trong nghi lễ, và khi phát hiện có chứa di cốt cùng một thạp nhỏ bên trong, cho thấy nó còn được dùng làm quan tài táng người quyền quý.",
+                    IsAiGenerated = false,
+                    Status = ContentStatuses.Published,
+                    IsCurrent = true,
+                    CreatedBy = museumStaff.Id,
+                    ReviewedBy = curator.Id,
+                    ReviewedAt = now,
+                    PublishedAt = now,
+                    ReviewNote = "Đã duyệt nội dung Thạp đồng Đào Thịnh.",
+                    CreatedAt = now
+                },
+                new ArtifactContentVersion
+                {
+                    ArtifactContentId = contentVi2.Id,
+                    VersionNo = 2,
+                    Title = "Thạp đồng Đào Thịnh (Bản chờ duyệt bổ sung)",
+                    Description = "Bản cập nhật bổ sung thông tin bảo quản Thạp đồng Đào Thịnh.",
+                    NarrationText = "Bản nháp thuyết minh bổ sung đang chờ Curator phê duyệt.",
                     IsAiGenerated = false,
                     Status = ContentStatuses.PendingReview,
                     IsCurrent = false,
                     CreatedBy = museumStaff.Id,
+                    CreatedAt = now
+                },
+                new ArtifactContentVersion
+                {
+                    ArtifactContentId = contentVi3.Id,
+                    VersionNo = 1,
+                    Title = "Tượng đồng người cõng nhau thổi khèn",
+                    Description = "Tượng đồng người cõng nhau thổi khèn là hiện vật điêu khắc tròn thuộc nền Văn hóa Đông Sơn, có niên đại khoảng 2.500 - 2.000 năm cách ngày nay. Tượng được chế tác bằng đồng thau với chiều cao khoảng 9,5 cm, được tìm thấy tại di chỉ khảo cổ Đông Sơn (tỉnh Thanh Hóa). Hiện vật mô tả sinh động hình ảnh hai người đàn ông mặc khố, đầu vấn khăn: người dưới khỏe mạnh cõng người trên lưng và bước đi nhịp nhàng theo điệu múa, trong khi người ngồi trên ngả lưng ra sau và hai tay nâng cây khèn bầu lên miệng thổi.",
+                    NarrationText = "Tượng đồng người cõng nhau thổi khèn là minh chứng sống động cho đời sống tinh thần và nghệ thuật âm nhạc phong phú của người Việt cổ thời Đông Sơn. Cây khèn bầu trên tay nhân vật có cấu tạo giống với khèn của nhiều dân tộc vùng núi phía Bắc và Tây Nguyên ngày nay. Tác phẩm thường được gắn làm phần trang trí trên cán dao găm hoặc đồ dùng nghi lễ của tầng lớp quý tộc, thể hiện không khí lễ hội vui tươi sau mùa thu hoạch.",
+                    IsAiGenerated = false,
+                    Status = ContentStatuses.Published,
+                    IsCurrent = true,
+                    CreatedBy = museumStaff.Id,
+                    ReviewedBy = curator.Id,
+                    ReviewedAt = now,
+                    PublishedAt = now,
+                    ReviewNote = "Đã duyệt.",
+                    CreatedAt = now
+                },
+                new ArtifactContentVersion
+                {
+                    ArtifactContentId = contentVi4.Id,
+                    VersionNo = 1,
+                    Title = "Đèn đồng hình người quỳ - Bảo vật Quốc gia Lạch Trường",
+                    Description = "Đèn đồng hình người quỳ (còn gọi là cây đèn hình người quỳ Lạch Trường) có niên đại khoảng 2.000 - 1.700 năm cách ngày nay (thế kỷ I - III sau Công nguyên), thuộc giai đoạn muộn của Văn hóa Đông Sơn tiếp xúc văn hóa Hán. Đèn được làm bằng chất liệu đồng thau, cao 40 cm, rộng 27 cm, nặng khoảng 1,8 kg. Hiện vật được nhà khảo cổ Olov Janse phát hiện năm 1935 trong ngôi mộ gạch số 3 tại Lạch Trường, huyện Hoằng Hóa, tỉnh Thanh Hóa và được công nhận là Bảo vật Quốc gia năm 2012.",
+                    NarrationText = "Trước mắt quý khách là cây Đèn đồng hình người quỳ nổi tiếng. Phần thân đèn là tượng một người đàn ông cởi trần, đóng khố, quỳ hai gối trên đế vuông, trên lưng và hai vai có gắn ba nhánh đèn hình chữ S đỡ các đĩa đựng dầu thắp sáng. Trên các nhánh đèn có đúc nổi hình 10 nhạc công đang thổi sáo và 4 con linh thú có cánh. Hiện vật dùng để thắp sáng trong không gian nghi lễ và tùy táng trong mộ quý tộc, thể hiện kỹ thuật đúc đồng ghép khối vô cùng tinh xảo.",
+                    IsAiGenerated = false,
+                    Status = ContentStatuses.Published,
+                    IsCurrent = true,
+                    CreatedBy = museumStaff.Id,
+                    ReviewedBy = curator.Id,
+                    ReviewedAt = now,
+                    PublishedAt = now,
+                    ReviewNote = "Đã duyệt.",
+                    CreatedAt = now
+                },
+                new ArtifactContentVersion
+                {
+                    ArtifactContentId = contentVi5.Id,
+                    VersionNo = 1,
+                    Title = "Đầu rồng đất nung thời Lý - Kiến trúc Hoàng thành Thăng Long",
+                    Description = "Đầu rồng đất nung thời Lý có niên đại thế kỷ XI - XII (triều đại nhà Lý, từ năm 1009 đến năm 1225). Hiện vật được chế tác bằng chất liệu đất nung màu đỏ gạch độ bền cao, chiều cao khoảng 55 cm, chiều rộng 38 cm, được tìm thấy tại khu di tích Hoàng thành Thăng Long (Hà Nội). Đầu rồng là cấu kiện trang trí kiến trúc gắn trên bờ nóc và góc mái của các cung điện, chùa tháp thời Lý.",
+                    NarrationText = "Đầu rồng đất nung thời Lý mang đầy đủ những nét đặc trưng nhất của hình tượng rồng thời Lý: thân uốn lượn mềm mại, đầu ngẩng cao, bờm bay ngược ra sau như những làn sóng, miệng há rộng ngậm viên ngọc quý (minh châu), mào lửa vươn cao trên mũi và trán có khắc chữ Vương. Khác với vẻ dữ tợn của rồng phong kiến phương Bắc, rồng thời Lý có nét thanh thoát, hiền hòa, gắn liền với tín ngưỡng cầu mưa của cư dân nông nghiệp và tinh thần từ bi của Phật giáo thời Lý.",
+                    IsAiGenerated = false,
+                    Status = ContentStatuses.Published,
+                    IsCurrent = true,
+                    CreatedBy = museumStaff.Id,
+                    ReviewedBy = curator.Id,
+                    ReviewedAt = now,
+                    PublishedAt = now,
+                    ReviewNote = "Đã duyệt.",
+                    CreatedAt = now
+                },
+                new ArtifactContentVersion
+                {
+                    ArtifactContentId = contentVi6.Id,
+                    VersionNo = 1,
+                    Title = "Thạp gốm hoa nâu thời Trần",
+                    Description = "Thạp gốm hoa nâu thời Trần có niên đại thế kỷ XIII - XIV (triều đại nhà Trần, từ năm 1225 đến năm 1400). Hiện vật được chế tác bằng gốm sành phủ men trắng ngà và vẽ hoa văn màu nâu sắt (oxit sắt), chiều cao 64 cm, đường kính miệng 34 cm, được phát hiện tại khu vực Nam Định - quê hương của vương triều Trần. Gốm hoa nâu là dòng gốm độc đáo chỉ có ở Việt Nam vào thời Lý - Trần.",
+                    NarrationText = "Thạp gốm hoa nâu thời Trần có dáng hình trụ khỏe khoắn, vai phình nhẹ với 6 tai gắn ngang trên vai. Nghệ nhân thời Trần đã dùng kỹ thuật khắc chìm đường viền rồi tô màu nâu sắt lên nền men trắng trước khi nung ở nhiệt độ khoảng 1.200 độ C. Hoa văn trên thân thạp thể hiện hình các chiến binh cầm giáo và khiên tập võ nghệ xen kẽ họa tiết hoa sen dây cách điệu, phản ánh hào khí Đông A thượng võ của dân tộc Đại Việt trong ba lần kháng chiến chống quân Nguyên Mông. Thạp được dùng để đựng nước sạch, rượu quý hoặc vật phẩm trong cung đình và chùa chiền.",
+                    IsAiGenerated = false,
+                    Status = ContentStatuses.Published,
+                    IsCurrent = true,
+                    CreatedBy = museumStaff.Id,
+                    ReviewedBy = curator.Id,
+                    ReviewedAt = now,
+                    PublishedAt = now,
+                    ReviewNote = "Đã duyệt.",
+                    CreatedAt = now
+                },
+                new ArtifactContentVersion
+                {
+                    ArtifactContentId = contentVi7.Id,
+                    VersionNo = 1,
+                    Title = "Chuông đồng Vân Bản - Bảo vật Quốc gia thời Trần",
+                    Description = "Chuông đồng Vân Bản (còn gọi là chuông chùa Vân Bản) có niên đại từ thời nhà Trần (thế kỷ XIII - XIV). Chuông được đúc bằng đồng thau, cao 125 cm, đường kính miệng 80 cm và nặng khoảng 300 kg. Hiện vật được ngư dân phát hiện năm 1958 dưới bãi biển Đồ Sơn (thành phố Hải Phòng), nơi xưa kia từng có tháp Tường Long và chùa Vân Bản, và được công nhận là Bảo vật Quốc gia năm 2013.",
+                    NarrationText = "Đây là nội dung thuyết minh chuyên sâu (Premium) về Chuông đồng Vân Bản. Quai chuông được tạo hình đôi rồng đấu lưng vào nhau (lưỡng long) với thân mập khỏe, chân có bốn móng sắc nhọn đặc trưng mỹ thuật thời Trần. Trên thân chuông chia làm bốn ô lớn, khắc bài minh văn chữ Hán và các băng hoa văn cánh sen kép tinh xảo. Chuông Vân Bản không chỉ là pháp khí Phật giáo quan trọng của vùng biển Đông Bắc thời Trần mà còn là tư liệu quý giá về nghệ thuật đúc đồng và lịch sử Phật giáo Trúc Lâm Yên Tử.",
+                    IsAiGenerated = false,
+                    Status = ContentStatuses.Published,
+                    IsCurrent = true,
+                    CreatedBy = museumStaff.Id,
+                    ReviewedBy = curator.Id,
+                    ReviewedAt = now,
+                    PublishedAt = now,
+                    ReviewNote = "Đã duyệt nội dung Premium.",
+                    CreatedAt = now
+                },
+                new ArtifactContentVersion
+                {
+                    ArtifactContentId = contentVi8.Id,
+                    VersionNo = 1,
+                    Title = "Ấn vàng Sắc mệnh chi bảo - Bảo vật Quốc gia triều Nguyễn",
+                    Description = "Ấn vàng Sắc mệnh chi bảo được đúc vào tháng 10 năm Minh Mạng thứ 8 (năm 1827) dưới triều đại nhà Nguyễn. Ấn được chế tác bằng vàng ròng nguyên chất (vàng 10 tuổi), có chiều cao 11 cm, mặt ấn hình vuông kích thước 14 cm x 14 cm, dày 2,5 cm và nặng 8,3 kg (tương đương khoảng 221 lượng vàng), trở thành chiếc kim bảo lớn nhất và nặng nhất của vương triều Nguyễn. Hiện vật được công nhận là Bảo vật Quốc gia năm 2015.",
+                    NarrationText = "Chào mừng quý khách đến với nội dung thuyết minh chuyên sâu (Premium) về Ấn vàng Sắc mệnh chi bảo. Quai ấn được đúc thành hình rồng uốn khúc năm móng đầu ngẩng cao uy nghiêm, đuôi xòe 9 dải lửa. Mặt dưới của ấn khắc nổi bốn chữ Hán 'Sắc mệnh chi bảo', còn mặt lưng khắc năm đúc 1827 cùng trọng lượng của ấn. Chiếc bảo ấn này được các hoàng đế triều Nguyễn sử dụng để đóng trên các đạo sắc phong thần, phong tước cho các bậc công thần, tướng lĩnh văn võ và ban cấp sắc mệnh trọng đại của quốc gia.",
+                    IsAiGenerated = false,
+                    Status = ContentStatuses.Published,
+                    IsCurrent = true,
+                    CreatedBy = museumStaff.Id,
+                    ReviewedBy = curator.Id,
+                    ReviewedAt = now,
+                    PublishedAt = now,
+                    ReviewNote = "Đã duyệt nội dung Premium.",
                     CreatedAt = now
                 }
             );
