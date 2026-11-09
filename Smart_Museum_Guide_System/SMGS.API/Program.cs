@@ -78,10 +78,10 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
-if (app.Environment.IsDevelopment()) await DataSeeder.SeedDevelopmentDataAsync(app.Services);
+if (app.Environment.IsDevelopment()) await DataSeeder.SeedDevelopmentAccountsAsync(app.Services);
 if (args.Contains("--seed"))
 {
-    Console.WriteLine("Development seed data initialized successfully.");
+    Console.WriteLine("Development accounts initialized successfully.");
     return;
 }
 if (args.Contains("--create-user"))

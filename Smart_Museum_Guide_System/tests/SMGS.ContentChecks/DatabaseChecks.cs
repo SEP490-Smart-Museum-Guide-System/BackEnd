@@ -63,6 +63,13 @@ internal static class DatabaseChecks
             services.AddInfrastructure(testConfig);
             await using var provider = services.BuildServiceProvider();
 
+            await DataSeeder.SeedDevelopmentAccountsAsync(provider);
+            await DataSeeder.SeedDevelopmentAccountsAsync(provider);
+            await using (var accountsOnly = Open())
+            {
+                Check(await accountsOnly.Users.CountAsync() == 5, "Startup must preserve the five default accounts without duplicates.");
+                Check(!await accountsOnly.Museums.AnyAsync() && !await accountsOnly.Artifacts.AnyAsync(), "Startup must not recreate demo museum data.");
+            }
             await DataSeeder.SeedDevelopmentDataAsync(provider);
 
             using var scope = provider.CreateScope();
