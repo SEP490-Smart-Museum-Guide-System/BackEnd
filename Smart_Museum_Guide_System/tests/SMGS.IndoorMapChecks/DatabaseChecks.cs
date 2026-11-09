@@ -38,6 +38,15 @@ internal static class DatabaseChecks
             await setup.Database.ExecuteSqlRawAsync(migrator.GenerateScript("20261021025653_InitialCreate", "20261026002857_AddIndoorMaps"));
             setup.ChangeTracker.Clear();
             Check(await setup.Museums.CountAsync() == 2 && await setup.Cities.CountAsync() == 34, "migration preserves museums and cities");
+            await using (var creationDb = new ApplicationDbContext(options))
+            {
+                var created = await new SMGS.Infrastructure.Repositories.MuseumRepository(creationDb)
+                    .CreateAsync(new Museum { Name = "Default structure museum" });
+                var building = await setup.Buildings.SingleAsync(b => b.MuseumId == created.Id);
+                var floor = await setup.Floors.SingleAsync(f => f.BuildingId == building.Id);
+                Check(building.Name == "Tòa nhà chính" && floor.Name == "Tầng trệt" && floor.LevelNo == 0,
+                    "new museum gets its default building and ground floor");
+            }
             var staff = Guid.NewGuid(); var outsider = Guid.NewGuid();
             setup.Users.Add(new ApplicationUser { Id = staff, UserName = "indoor-fixture", NormalizedUserName = "INDOOR-FIXTURE", Email = "indoor-fixture@example.invalid", NormalizedEmail = "INDOOR-FIXTURE@EXAMPLE.INVALID" });
             var role = await setup.Roles.SingleAsync(r => r.Name == RoleNames.MuseumStaff);

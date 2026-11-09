@@ -36,6 +36,15 @@ public static class DataSeeder
         }
     }
 
+    public static async Task SeedDevelopmentAccountsAsync(IServiceProvider services)
+    {
+        await EnsureRolesAsync(services);
+        using var scope = services.CreateScope();
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        await AccountSeeder.SeedAsync(users);
+        await AccountSeeder.EnsureUserAsync(users, "visitor@museum.vn", "Khách tham quan Mẫu", "Visitor123", RoleNames.Visitor);
+    }
+
     public static async Task SeedDevelopmentDataAsync(IServiceProvider services)
     {
         await EnsureRolesAsync(services);
