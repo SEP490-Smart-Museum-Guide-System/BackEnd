@@ -40,7 +40,8 @@ jobs:
             SMGS.DiscoveryChecks \
             SMGS.FeedbackChecks \
             SMGS.IndoorMapChecks \
-            SMGS.MediaChecks; do
+            SMGS.MediaChecks \
+            SMGS.TourChecks; do
             echo "Running ${project}"
             dotnet run --no-build --configuration Release --project "${tests_dir}/${project}/${project}.csproj"
           done

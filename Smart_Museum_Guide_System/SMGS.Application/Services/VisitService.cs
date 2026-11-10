@@ -94,6 +94,7 @@ public class VisitService(IVisitRepository visitRepo, IMuseumRepository museumRe
         VisitorId = v.VisitorId,
         MuseumId = v.MuseumId,
         TourId = v.TourId,
+        TourVersionId = v.TourVersionId,
         Status = v.Status,
         StartedAt = v.StartedAt,
         CompletedAt = v.CompletedAt,

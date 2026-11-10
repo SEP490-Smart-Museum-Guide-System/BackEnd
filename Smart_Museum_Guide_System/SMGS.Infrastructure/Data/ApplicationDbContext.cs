@@ -27,6 +27,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Artifact3DModel> Artifact3DModels => Set<Artifact3DModel>();
     public DbSet<Gallery> Galleries => Set<Gallery>();
     public DbSet<Floor> Floors => Set<Floor>();
+    public DbSet<Tour> Tours => Set<Tour>();
+    public DbSet<TourVersion> TourVersions => Set<TourVersion>();
+    public DbSet<TourVersionItem> TourVersionItems => Set<TourVersionItem>();
+    public DbSet<SavedRoute> SavedRoutes => Set<SavedRoute>();
     public DbSet<Visit> Visits => Set<Visit>();
     public DbSet<VisitFeedback> VisitFeedbacks => Set<VisitFeedback>();
     public DbSet<StaffResponse> StaffResponses => Set<StaffResponse>();

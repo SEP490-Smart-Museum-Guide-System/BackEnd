@@ -77,12 +77,19 @@ public static class DataSeeder
             await db.SaveChangesAsync();
 
             // 2. Phân công nhân viên bảo tàng (CD-01)
-            db.StaffAssignments.Add(new StaffAssignment
-            {
-                UserId = museumStaff.Id,
-                MuseumId = museum.Id,
-                AssignedAt = DateTime.UtcNow
-            });
+            db.StaffAssignments.AddRange(
+                new StaffAssignment
+                {
+                    UserId = museumStaff.Id,
+                    MuseumId = museum.Id,
+                    AssignedAt = DateTime.UtcNow
+                },
+                new StaffAssignment
+                {
+                    UserId = curator.Id,
+                    MuseumId = museum.Id,
+                    AssignedAt = DateTime.UtcNow
+                });
 
             // 3. Cấu trúc bảo tàng: Building -> Floor -> Gallery (CD-02)
             var building = new Building { MuseumId = museum.Id, Name = "Tòa nhà Trưng bày Chính" };
@@ -424,6 +431,111 @@ public static class DataSeeder
                 }
             );
 
+            await db.SaveChangesAsync();
+
+            // 6b. Seed sẵn các Tour & TourVersion mẫu cho WF-02 (F04, F05, F06) phục vụ Demo DS-02a / DS-02b
+            var tourDongSon = new Tour
+            {
+                MuseumId = museum.Id,
+                CreatedBy = museumStaff.Id,
+                Title = "Tinh hoa Văn hóa Đông Sơn",
+                Description = "Khám phá các Bảo vật Quốc gia thời đại đồ đồng Đông Sơn.",
+                EstimatedMinutes = 45,
+                Status = "published",
+                CreatedAt = now,
+                Items =
+                [
+                    new TourItem { ArtifactId = artifact1.Id, OrderNo = 1 },
+                    new TourItem { ArtifactId = artifact2.Id, OrderNo = 2 },
+                    new TourItem { ArtifactId = artifact3.Id, OrderNo = 3 }
+                ],
+                Versions =
+                [
+                    new TourVersion
+                    {
+                        VersionNo = 1,
+                        Title = "Tinh hoa Văn hóa Đông Sơn (v1)",
+                        Description = "Phiên bản v1 gồm 3 hiện vật tiêu biểu thời Đông Sơn.",
+                        EstimatedMinutes = 45,
+                        Status = TourVersionStatuses.Approved,
+                        PublicAt = now.AddHours(-1),
+                        CreatedBy = museumStaff.Id,
+                        CreatedAt = now.AddHours(-2),
+                        SubmittedBy = museumStaff.Id,
+                        SubmittedAt = now.AddHours(-1).AddMinutes(-30),
+                        ReviewedBy = curator.Id,
+                        ReviewedAt = now.AddHours(-1),
+                        ReviewNote = "Đã duyệt v1 công bố cho khách tham quan.",
+                        Items =
+                        [
+                            new TourVersionItem { ArtifactId = artifact1.Id, OrderNo = 1 },
+                            new TourVersionItem { ArtifactId = artifact2.Id, OrderNo = 2 },
+                            new TourVersionItem { ArtifactId = artifact3.Id, OrderNo = 3 }
+                        ]
+                    },
+                    new TourVersion
+                    {
+                        VersionNo = 2,
+                        Title = "Tinh hoa Văn hóa Đông Sơn (v2 - Chờ duyệt)",
+                        Description = "Phiên bản v2 mở rộng thêm Đèn đồng hình người quỳ (4 điểm dừng).",
+                        EstimatedMinutes = 60,
+                        Status = TourVersionStatuses.Submitted,
+                        CreatedBy = museumStaff.Id,
+                        CreatedAt = now,
+                        SubmittedBy = museumStaff.Id,
+                        SubmittedAt = now,
+                        Items =
+                        [
+                            new TourVersionItem { ArtifactId = artifact1.Id, OrderNo = 1 },
+                            new TourVersionItem { ArtifactId = artifact2.Id, OrderNo = 2 },
+                            new TourVersionItem { ArtifactId = artifact3.Id, OrderNo = 3 },
+                            new TourVersionItem { ArtifactId = artifact4.Id, OrderNo = 4 }
+                        ]
+                    }
+                ]
+            };
+
+            var tourCeramics = new Tour
+            {
+                MuseumId = museum.Id,
+                CreatedBy = museumStaff.Id,
+                Title = "Gốm cổ & Kiến trúc Lý - Trần",
+                Description = "Hành trình ngắn thưởng lãm gốm hoa nâu và kiến trúc Hoàng thành.",
+                EstimatedMinutes = 30,
+                Status = "published",
+                CreatedAt = now,
+                Items =
+                [
+                    new TourItem { ArtifactId = artifact5.Id, OrderNo = 1 },
+                    new TourItem { ArtifactId = artifact6.Id, OrderNo = 2 }
+                ],
+                Versions =
+                [
+                    new TourVersion
+                    {
+                        VersionNo = 1,
+                        Title = "Gốm cổ & Kiến trúc Lý - Trần (v1)",
+                        Description = "Hành trình 30 phút khám phá nghệ thuật đất nung và gốm hoa nâu.",
+                        EstimatedMinutes = 30,
+                        Status = TourVersionStatuses.Approved,
+                        PublicAt = now.AddHours(-1),
+                        CreatedBy = museumStaff.Id,
+                        CreatedAt = now.AddHours(-2),
+                        SubmittedBy = museumStaff.Id,
+                        SubmittedAt = now.AddHours(-1).AddMinutes(-15),
+                        ReviewedBy = curator.Id,
+                        ReviewedAt = now.AddHours(-1),
+                        ReviewNote = "Đã duyệt tour chuyên đề Gốm sứ.",
+                        Items =
+                        [
+                            new TourVersionItem { ArtifactId = artifact5.Id, OrderNo = 1 },
+                            new TourVersionItem { ArtifactId = artifact6.Id, OrderNo = 2 }
+                        ]
+                    }
+                ]
+            };
+
+            db.Tours.AddRange(tourDongSon, tourCeramics);
             await db.SaveChangesAsync();
         }
 

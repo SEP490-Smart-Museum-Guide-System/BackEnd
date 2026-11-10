@@ -12,6 +12,7 @@ public class Tour
     public int Revision { get; set; } = 1;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public ICollection<TourItem> Items { get; set; } = new List<TourItem>();
+    public ICollection<TourVersion> Versions { get; set; } = new List<TourVersion>();
 }
 public class TourItem
 {
@@ -26,6 +27,7 @@ public class VisitItem
     public int VisitId { get; set; }
     public int ArtifactId { get; set; }
     public int? TourItemId { get; set; }
+    public int? TourVersionItemId { get; set; }
     public DateTime LastVisitedAt { get; set; }
 }
 public class RecognitionHistory

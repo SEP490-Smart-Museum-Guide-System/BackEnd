@@ -16,6 +16,13 @@ public class Visit
     /// </summary>
     public int? TourId { get; set; }
 
+    /// <summary>
+    /// FK tới đúng phiên bản công khai của Tour tại thời điểm khách bắt đầu tham quan (WF-02: F06).
+    /// Khi phiên bản mới (v2) được xuất bản, các lượt tham quan đang diễn ra hoặc đã hoàn thành ở v1
+    /// vẫn giữ nguyên <see cref="TourVersionId"/> và lịch sử tiến độ của v1.
+    /// </summary>
+    public int? TourVersionId { get; set; }
+
     /// <summary>Bảo tàng đang tham quan.</summary>
     public int MuseumId { get; set; }
 

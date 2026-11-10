@@ -14,19 +14,51 @@ public static class VisitorExperienceConfiguration
             e.HasOne<Museum>().WithMany().HasForeignKey(x => x.MuseumId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.CreatedBy).OnDelete(DeleteBehavior.Restrict);
             e.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.TourId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Versions).WithOne().HasForeignKey(x => x.TourId).OnDelete(DeleteBehavior.Cascade);
         });
         b.Entity<TourItem>(e => {
             e.ToTable("tour_items"); e.HasIndex(x => new { x.TourId, x.OrderNo }).IsUnique();
             e.HasIndex(x => new { x.TourId, x.ArtifactId }).IsUnique();
             e.HasOne<Artifact>().WithMany().HasForeignKey(x => x.ArtifactId).OnDelete(DeleteBehavior.Restrict);
         });
+        b.Entity<TourVersion>(e => {
+            e.ToTable("tour_versions");
+            e.Property(x => x.Title).IsRequired().HasMaxLength(200);
+            e.Property(x => x.Description).HasMaxLength(4000);
+            e.Property(x => x.Status).IsRequired().HasMaxLength(20);
+            e.Property(x => x.ReviewNote).HasMaxLength(1000);
+            e.HasIndex(x => new { x.TourId, x.VersionNo }).IsUnique();
+            e.HasIndex(x => new { x.TourId, x.Status, x.PublicAt });
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.CreatedBy).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.SubmittedBy).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.ReviewedBy).OnDelete(DeleteBehavior.Restrict);
+            e.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.TourVersionId).OnDelete(DeleteBehavior.Cascade);
+        });
+        b.Entity<TourVersionItem>(e => {
+            e.ToTable("tour_version_items");
+            e.HasIndex(x => new { x.TourVersionId, x.OrderNo }).IsUnique();
+            e.HasIndex(x => new { x.TourVersionId, x.ArtifactId }).IsUnique();
+            e.HasOne<Artifact>().WithMany().HasForeignKey(x => x.ArtifactId).OnDelete(DeleteBehavior.Restrict);
+        });
+        b.Entity<SavedRoute>(e => {
+            e.ToTable("saved_routes");
+            e.Property(x => x.TopicIdsJson).IsRequired().HasMaxLength(1000);
+            e.Property(x => x.Explanation).HasMaxLength(1000);
+            e.HasIndex(x => new { x.VisitorId, x.MuseumId, x.SavedAt });
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.VisitorId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Museum>().WithMany().HasForeignKey(x => x.MuseumId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Tour>().WithMany().HasForeignKey(x => x.TourId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<TourVersion>().WithMany().HasForeignKey(x => x.TourVersionId).OnDelete(DeleteBehavior.Restrict);
+        });
         // Legacy Visit.TourId values have never been enforced; a migration must reconcile these before adding the FK.
         b.Entity<Visit>().HasOne<Tour>().WithMany().HasForeignKey(x => x.TourId).OnDelete(DeleteBehavior.Restrict);
+        b.Entity<Visit>().HasOne<TourVersion>().WithMany().HasForeignKey(x => x.TourVersionId).OnDelete(DeleteBehavior.Restrict);
         b.Entity<VisitItem>(e => {
             e.ToTable("visit_items"); e.HasIndex(x => new { x.VisitId, x.ArtifactId }).IsUnique();
             e.HasOne<Visit>().WithMany().HasForeignKey(x => x.VisitId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Artifact>().WithMany().HasForeignKey(x => x.ArtifactId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<TourItem>().WithMany().HasForeignKey(x => x.TourItemId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<TourVersionItem>().WithMany().HasForeignKey(x => x.TourVersionItemId).OnDelete(DeleteBehavior.Restrict);
         });
         b.Entity<RecognitionHistory>(e => {
             e.ToTable("recognition_history"); e.Property(x => x.Method).HasMaxLength(20);

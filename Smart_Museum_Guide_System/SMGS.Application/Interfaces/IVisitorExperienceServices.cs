@@ -11,6 +11,21 @@ public interface ITourService
     Task<Tour> PublishAsync(int id, int revision, Guid user, bool admin);
     Task<Tour> GetAsync(int id, Guid? user, bool admin);
     Task<IReadOnlyList<Tour>> ListAsync(int museumId, bool drafts, Guid? user, bool admin, int page, int pageSize);
+
+    // WF-02 (F04): Quản lý phiên bản tour (TourVersion), gửi duyệt, Curator duyệt/từ chối và hẹn giờ công bố PublicAt.
+    Task<TourVersion> CreateVersionDraftAsync(int tourId, CreateTourVersionRequest request, Guid user, bool admin);
+    Task<TourVersion> UpdateVersionDraftAsync(int versionId, TourRequest request, Guid user, bool admin);
+    Task<TourVersion> SubmitVersionAsync(int versionId, Guid user, bool admin);
+    Task<TourVersion> ApproveVersionAsync(int versionId, ApproveTourVersionRequest request, Guid curator, bool admin);
+    Task<TourVersion> RejectVersionAsync(int versionId, RejectTourVersionRequest request, Guid curator, bool admin);
+    Task<TourVersion> GetPublicTourVersionAsync(int tourId);
+    Task<IReadOnlyList<TourVersion>> ListVersionsAsync(int tourId, Guid user, bool admin);
+
+    // WF-02 (F05): Gợi ý tour theo sở thích + thời gian rảnh, fallback có giải thích, và lưu lộ trình để mở lại.
+    Task<TourRecommendationResultDto> RecommendAsync(int museumId, TourRecommendRequest request, Guid? visitor);
+    Task<SavedRouteDto> SaveRouteAsync(Guid visitor, SaveRouteRequest request);
+    Task<IReadOnlyList<SavedRouteDto>> ListSavedRoutesAsync(Guid visitor, int? museumId);
+    Task<SavedRouteDto> GetSavedRouteAsync(Guid visitor, int savedRouteId);
 }
 public interface IRecognitionService
 {

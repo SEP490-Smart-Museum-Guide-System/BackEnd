@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.37628.2
@@ -26,6 +26,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SMGS.MuseumImageChecks", "tests\SMGS.MuseumImageChecks\SMGS.MuseumImageChecks.csproj", "{9AA4FD6C-F3C6-47AD-9E3A-F79FDFC7A757}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SMGS.GuideChecks", "tests\SMGS.GuideChecks\SMGS.GuideChecks.csproj", "{171F0EAF-1C19-4EB0-BD4D-7369B25F374C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SMGS.TourChecks", "tests\SMGS.TourChecks\SMGS.TourChecks.csproj", "{A8D24E19-7B34-4C91-9E12-45C8B91A02F4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -169,6 +171,18 @@ Global
 		{171F0EAF-1C19-4EB0-BD4D-7369B25F374C}.Release|x64.Build.0 = Release|Any CPU
 		{171F0EAF-1C19-4EB0-BD4D-7369B25F374C}.Release|x86.ActiveCfg = Release|Any CPU
 		{171F0EAF-1C19-4EB0-BD4D-7369B25F374C}.Release|x86.Build.0 = Release|Any CPU
+		{A8D24E19-7B34-4C91-9E12-45C8B91A02F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8D24E19-7B34-4C91-9E12-45C8B91A02F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8D24E19-7B34-4C91-9E12-45C8B91A02F4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A8D24E19-7B34-4C91-9E12-45C8B91A02F4}.Debug|x64.Build.0 = Debug|Any CPU
+		{A8D24E19-7B34-4C91-9E12-45C8B91A02F4}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A8D24E19-7B34-4C91-9E12-45C8B91A02F4}.Debug|x86.Build.0 = Debug|Any CPU
+		{A8D24E19-7B34-4C91-9E12-45C8B91A02F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8D24E19-7B34-4C91-9E12-45C8B91A02F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8D24E19-7B34-4C91-9E12-45C8B91A02F4}.Release|x64.ActiveCfg = Release|Any CPU
+		{A8D24E19-7B34-4C91-9E12-45C8B91A02F4}.Release|x64.Build.0 = Release|Any CPU
+		{A8D24E19-7B34-4C91-9E12-45C8B91A02F4}.Release|x86.ActiveCfg = Release|Any CPU
+		{A8D24E19-7B34-4C91-9E12-45C8B91A02F4}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -181,6 +195,7 @@ Global
 		{56706B86-DB23-40FE-8AE0-65A01390FBCE} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{9AA4FD6C-F3C6-47AD-9E3A-F79FDFC7A757} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{171F0EAF-1C19-4EB0-BD4D-7369B25F374C} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{A8D24E19-7B34-4C91-9E12-45C8B91A02F4} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FF988E12-EBDA-462D-9DB9-3D6AF20DBCC2}

@@ -52,6 +52,39 @@ public class TourController(ITourService service) : ExperienceControllerBase
     public async Task<IActionResult> Update(int id, UpdateTourRequest request) => Result(await service.UpdateStopsAsync(id, request, UserId, Admin));
     [HttpPost("{id:int}/publish"), Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff)]
     public async Task<IActionResult> Publish(int id, RevisionRequest request) => Result(await service.PublishAsync(id, request.Revision, UserId, Admin));
+
+    // WF-02 (F04): Phiên bản TourVersion (Draft -> Submitted -> Approved/Rejected + PublicAt)
+    [HttpGet("{tourId:int}/public-version"), AllowAnonymous]
+    public async Task<IActionResult> GetPublicVersion(int tourId) => Result(await service.GetPublicTourVersionAsync(tourId));
+    [HttpGet("{tourId:int}/versions"), Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff + "," + RoleNames.Curator)]
+    public async Task<IActionResult> ListVersions(int tourId) => Result(await service.ListVersionsAsync(tourId, UserId, Admin));
+    [HttpPost("{tourId:int}/versions"), Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff)]
+    public async Task<IActionResult> CreateVersionDraft(int tourId, CreateTourVersionRequest request) => Result(await service.CreateVersionDraftAsync(tourId, request, UserId, Admin), 201);
+    [HttpPut("versions/{versionId:int}"), Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff)]
+    public async Task<IActionResult> UpdateVersionDraft(int versionId, TourRequest request) => Result(await service.UpdateVersionDraftAsync(versionId, request, UserId, Admin));
+    [HttpPost("versions/{versionId:int}/submit"), Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff)]
+    public async Task<IActionResult> SubmitVersion(int versionId) => Result(await service.SubmitVersionAsync(versionId, UserId, Admin));
+    [HttpPost("versions/{versionId:int}/approve"), Authorize(Roles = RoleNames.Admin + "," + RoleNames.Curator)]
+    public async Task<IActionResult> ApproveVersion(int versionId, ApproveTourVersionRequest request) => Result(await service.ApproveVersionAsync(versionId, request, UserId, Admin));
+    [HttpPost("versions/{versionId:int}/reject"), Authorize(Roles = RoleNames.Admin + "," + RoleNames.Curator)]
+    public async Task<IActionResult> RejectVersion(int versionId, RejectTourVersionRequest request) => Result(await service.RejectVersionAsync(versionId, request, UserId, Admin));
+
+    // WF-02 (F05): Gợi ý tour theo sở thích + thời gian & lưu lộ trình (SavedRoute)
+    [HttpPost("recommendations"), AllowAnonymous]
+    public async Task<IActionResult> Recommend([FromQuery] int museumId, TourRecommendRequest request)
+    {
+        Guid? visitor = User.Identity?.IsAuthenticated == true && Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var uid)
+            ? uid
+            : null;
+        return Result(await service.RecommendAsync(museumId, request, visitor));
+    }
+
+    [HttpPost("saved-routes"), Authorize(Roles = RoleNames.Visitor)]
+    public async Task<IActionResult> SaveRoute(SaveRouteRequest request) => Result(await service.SaveRouteAsync(UserId, request), 201);
+    [HttpGet("saved-routes"), Authorize(Roles = RoleNames.Visitor)]
+    public async Task<IActionResult> ListSavedRoutes([FromQuery] int? museumId) => Result(await service.ListSavedRoutesAsync(UserId, museumId));
+    [HttpGet("saved-routes/{id:int}"), Authorize(Roles = RoleNames.Visitor)]
+    public async Task<IActionResult> GetSavedRoute(int id) => Result(await service.GetSavedRouteAsync(UserId, id));
 }
 [Route("api/recognitions"), Authorize(Roles = RoleNames.Visitor)]
 public class RecognitionController(IRecognitionService service) : ExperienceControllerBase
