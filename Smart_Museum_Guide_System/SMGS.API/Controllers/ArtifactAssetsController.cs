@@ -194,6 +194,22 @@ public class ArtifactAssetsController(IArtifactAssetService assetService) : Cont
         return StatusCode(response.StatusCode, response);
     }
 
+    [Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff)]
+    [HttpPut("model-3d/sketchfab")]
+    public async Task<IActionResult> LinkSketchfabModel(int artifactId, [FromBody] SketchfabModelLinkRequest request)
+    {
+        if (CurrentUserId is null)
+            return Unauthorized(ResponseDto<object>.Fail("Vui lòng đăng nhập.", 401));
+        var response = await assetService.LinkSketchfabModelAsync(artifactId, request.Url ?? "", CurrentUserId.Value, IsAdmin);
+        if (response.Data is not null) WithAbsoluteUrl(response.Data);
+        return StatusCode(response.StatusCode, response);
+    }
+
+    public sealed class SketchfabModelLinkRequest
+    {
+        public string? Url { get; set; }
+    }
+
     [AllowAnonymous]
     [HttpGet("model-3d/file")]
     public async Task<IActionResult> Get3DModelFile(int artifactId)
@@ -315,6 +331,15 @@ public class ArtifactAssetsController(IArtifactAssetService assetService) : Cont
                     const modelBox = document.getElementById('model-container');
                     if (viewerData.model3D) {
                         const m = viewerData.model3D;
+                        if (m.fileFormat === 'sketchfab' && /^https:\/\/sketchfab\.com\/models\/[0-9a-f]{32}\/embed$/i.test(m.modelUrl)) {
+                            const frame = document.createElement('iframe');
+                            frame.src = m.modelUrl;
+                            frame.title = 'Mô hình hiện vật 3D';
+                            frame.allow = 'autoplay; fullscreen; xr-spatial-tracking';
+                            frame.allowFullscreen = true;
+                            frame.style.cssText = 'width:100%;height:480px;border:0;border-radius:10px';
+                            modelBox.replaceChildren(frame);
+                        } else {
                         modelBox.innerHTML = `
                             <model-viewer src="${m.modelUrl}"
                                 ${m.posterUrl ? `poster="${m.posterUrl}"` : ''}
@@ -326,6 +351,7 @@ public class ArtifactAssetsController(IArtifactAssetService assetService) : Cont
                             <div style="margin-top:8px; font-size:13px; color:#94a3b8;">
                                 File: <b>${m.fileName}</b> (${m.fileFormat.toUpperCase()}, ${(m.fileSize / 1024).toFixed(1)} KB) • Scale: ${m.scale}x
                             </div>`;
+                        }
                     } else {
                         modelBox.innerHTML = `<div class="empty">Hiện vật này chưa upload mô hình 3D (.glb / .gltf). Hãy upload tại POST /api/artifacts/${artifactId}/model-3d rồi tải lại trang.</div>`;
                     }

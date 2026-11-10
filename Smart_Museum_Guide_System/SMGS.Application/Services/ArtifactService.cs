@@ -220,7 +220,7 @@ public class ArtifactService(
         FileFormat = m.FileFormat,
         ContentType = m.ContentType,
         FileSize = m.FileSize,
-        ModelUrl = $"/api/artifacts/{m.ArtifactId}/model-3d/file",
+        ModelUrl = m.FileFormat == "sketchfab" ? m.StorageKey : $"/api/artifacts/{m.ArtifactId}/model-3d/file",
         PosterUrl = m.PosterUrl,
         AutoRotate = m.AutoRotate,
         CameraOrbit = m.CameraOrbit,

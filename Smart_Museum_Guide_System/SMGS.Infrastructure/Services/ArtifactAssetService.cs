@@ -17,6 +17,7 @@ public class ArtifactAssetService(
 {
     private async Task DeleteUnreferenced(string key)
     {
+        if (key.StartsWith("https://sketchfab.com/models/", StringComparison.OrdinalIgnoreCase)) return;
         try {
             if (!await db.ArtifactMedias.AnyAsync(m => m.StorageKey == key) && !await db.Artifact3DModels.AnyAsync(m => m.StorageKey == key))
                 await store.DeleteIfExists(key);
@@ -72,7 +73,7 @@ public class ArtifactAssetService(
         FileFormat = m.FileFormat,
         ContentType = m.ContentType,
         FileSize = m.FileSize,
-        ModelUrl = $"/api/artifacts/{m.ArtifactId}/model-3d/file",
+        ModelUrl = m.FileFormat == "sketchfab" ? m.StorageKey : $"/api/artifacts/{m.ArtifactId}/model-3d/file",
         PosterUrl = m.PosterUrl,
         AutoRotate = m.AutoRotate,
         CameraOrbit = m.CameraOrbit,
@@ -315,6 +316,43 @@ public class ArtifactAssetService(
         }
     }
 
+    public async Task<ResponseDto<Artifact3DModelResponseDto>> LinkSketchfabModelAsync(
+        int artifactId, string url, Guid userId, bool isAdmin)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps ||
+            uri.Host != "sketchfab.com" || uri.Port != 443 || !string.IsNullOrEmpty(uri.Query) ||
+            !string.IsNullOrEmpty(uri.Fragment))
+            return ResponseDto<Artifact3DModelResponseDto>.Fail("Link Sketchfab không hợp lệ.", 400);
+        var parts = uri.AbsolutePath.Trim('/').Split('/');
+        var id = parts.Length == 3 && parts[0] == "models" && parts[2] == "embed" ? parts[1]
+            : parts.Length == 2 && parts[0] == "models" ? parts[1]
+            : parts.Length == 2 && parts[0] == "3d-models" ? parts[1].Split('-').Last() : "";
+        if (id.Length != 32 || !id.All(Uri.IsHexDigit))
+            return ResponseDto<Artifact3DModelResponseDto>.Fail("Link Sketchfab không hợp lệ.", 400);
+        var embedUrl = $"https://sketchfab.com/models/{id.ToLowerInvariant()}/embed";
+        var artifact = await db.Artifacts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == artifactId);
+        if (artifact is null) return ResponseDto<Artifact3DModelResponseDto>.Fail("Không tìm thấy hiện vật.", 404);
+        if (!await CanManageArtifactAsync(userId, isAdmin, artifact))
+            return ResponseDto<Artifact3DModelResponseDto>.Fail("Bạn không có quyền quản lý hiện vật này.", 403);
+        var model = await db.Artifact3DModels.FirstOrDefaultAsync(m => m.ArtifactId == artifactId);
+        var oldKey = model?.StorageKey;
+        if (model is null) {
+            model = new Artifact3DModel { ArtifactId = artifactId };
+            db.Artifact3DModels.Add(model);
+        }
+        model.Name = artifact.Name;
+        model.FileName = "";
+        model.StorageKey = embedUrl;
+        model.FileFormat = "sketchfab";
+        model.ContentType = "text/html";
+        model.FileSize = 0;
+        model.UpdatedBy = userId;
+        model.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        if (!string.IsNullOrEmpty(oldKey) && oldKey != embedUrl) await DeleteUnreferenced(oldKey);
+        return ResponseDto<Artifact3DModelResponseDto>.Success(Map3DModel(model));
+    }
+
     public async Task<ResponseDto<Artifact3DModelResponseDto>> Update3DModelSettingsAsync(
         int artifactId,
         Update3DModelSettingsRequestDto settings,
@@ -358,6 +396,9 @@ public class ArtifactAssetService(
 
         if (!await CanReadArtifactAssetsAsync(model.Artifact, userId))
             return ResponseDto<(Stream, string, string)>.Fail("Cần pass còn hiệu lực cho nội dung premium này.", 403);
+
+        if (model.FileFormat == "sketchfab")
+            return ResponseDto<(Stream, string, string)>.Fail("Mô hình Sketchfab chỉ xem qua link nhúng.", 404);
 
         try { return ResponseDto<(Stream, string, string)>.Success((await store.OpenReadAsync(model.StorageKey, cancellationToken), model.ContentType, model.FileName)); }
         catch (FileNotFoundException) { return ResponseDto<(Stream, string, string)>.Fail("Không tìm thấy file.", 404); }

@@ -38,6 +38,9 @@ public interface IArtifactAssetService
         Guid userId,
         bool isAdmin, CancellationToken cancellationToken = default);
 
+    Task<ResponseDto<Artifact3DModelResponseDto>> LinkSketchfabModelAsync(
+        int artifactId, string url, Guid userId, bool isAdmin);
+
     Task<ResponseDto<Artifact3DModelResponseDto>> Update3DModelSettingsAsync(
         int artifactId,
         Update3DModelSettingsRequestDto settings,
