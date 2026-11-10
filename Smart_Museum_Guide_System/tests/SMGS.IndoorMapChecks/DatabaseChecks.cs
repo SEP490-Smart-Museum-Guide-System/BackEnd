@@ -42,9 +42,9 @@ internal static class DatabaseChecks
             {
                 var created = await new SMGS.Infrastructure.Repositories.MuseumRepository(creationDb)
                     .CreateAsync(new Museum { Name = "Default structure museum" });
-                var building = await setup.Buildings.SingleAsync(b => b.MuseumId == created.Id);
-                var floor = await setup.Floors.SingleAsync(f => f.BuildingId == building.Id);
-                Check(building.Name == "Tòa nhà chính" && floor.Name == "Tầng trệt" && floor.LevelNo == 0,
+                var createdBuilding = await setup.Buildings.SingleAsync(b => b.MuseumId == created.Id);
+                var createdFloor = await setup.Floors.SingleAsync(f => f.BuildingId == createdBuilding.Id);
+                Check(createdBuilding.Name == "Tòa nhà chính" && createdFloor.Name == "Tầng trệt" && createdFloor.LevelNo == 0,
                     "new museum gets its default building and ground floor");
             }
             var staff = Guid.NewGuid(); var outsider = Guid.NewGuid();
@@ -127,3 +127,4 @@ internal static class DatabaseChecks
         throw new Exception($"Expected rejection {status}");
     }
 }
+

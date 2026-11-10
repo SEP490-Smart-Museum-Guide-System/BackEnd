@@ -61,6 +61,7 @@ public class ScopeAssignmentResponseDto
     public Guid UserId { get; set; }
     public string UserEmail { get; set; } = string.Empty;
     public string UserFullName { get; set; } = string.Empty;
+    public IList<string> UserRoles { get; set; } = [];
     public int MuseumId { get; set; }
     public string MuseumName { get; set; } = string.Empty;
     public int? GalleryId { get; set; }

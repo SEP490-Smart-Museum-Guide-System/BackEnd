@@ -300,12 +300,19 @@ public class AccountAdminService(
         if (artifactId.HasValue) query = query.Where(x => x.ArtifactId == artifactId.Value);
 
         var rows = await query.OrderByDescending(x => x.AssignedAt).ThenByDescending(x => x.Id).ToListAsync();
+        var userIds = rows.Select(x => x.UserId).Distinct().ToArray();
+        var rolePairs = await (from ur in db.UserRoles.AsNoTracking()
+                               join r in db.Roles.AsNoTracking() on ur.RoleId equals r.Id
+                               where userIds.Contains(ur.UserId) && r.Name != null
+                               select new { ur.UserId, RoleName = r.Name! }).ToListAsync();
+        var rolesByUser = rolePairs.ToLookup(x => x.UserId, x => x.RoleName);
         var items = rows.Select(x => new ScopeAssignmentResponseDto
         {
             Id = x.Id,
             UserId = x.UserId,
             UserEmail = x.UserEmail,
             UserFullName = x.UserFullName,
+            UserRoles = rolesByUser[x.UserId].OrderBy(r => r).ToList(),
             MuseumId = x.MuseumId,
             MuseumName = x.MuseumName,
             GalleryId = x.GalleryId,
@@ -394,6 +401,7 @@ public class AccountAdminService(
             UserId = user.Id,
             UserEmail = user.Email ?? string.Empty,
             UserFullName = user.FullName,
+            UserRoles = userRoles,
             MuseumId = museum.Id,
             MuseumName = museum.Name,
             GalleryId = galleryId,
@@ -511,6 +519,7 @@ public class AccountAdminService(
                     UserId = x.UserId,
                     UserEmail = userDict[x.UserId].Email ?? string.Empty,
                     UserFullName = userDict[x.UserId].FullName,
+                    UserRoles = rolesByUser.TryGetValue(x.UserId, out var assignedRoles) ? assignedRoles : [],
                     MuseumId = x.MuseumId,
                     MuseumName = x.MuseumName,
                     GalleryId = x.GalleryId,

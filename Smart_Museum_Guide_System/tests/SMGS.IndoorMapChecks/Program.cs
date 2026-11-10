@@ -67,6 +67,7 @@ catalogMap.Markers.Add(new MapMarker { Id = Guid.NewGuid(), ArtifactId = 11, Gal
 Check(!VisitorMapCatalog.HasDestination(catalogMap, 11, 3, 2), "ambiguous duplicate destinations are excluded");
 Console.WriteLine("PASS: visitor catalog links, room/floor isolation, missing nodes, inactive/ambiguous destinations and authentication.");
 Console.WriteLine("PASS: graph validation, directed/accessibility routing, aspect ratio, warnings, real image decode and authorization policies.");
+if (args.Contains("--assignments")) await AssignmentChecks.RunAsync();
 if (args.Contains("--database")) await DatabaseChecks.RunAsync();
 
 static void Check(bool valid, string message) { if (!valid) throw new Exception(message); }
