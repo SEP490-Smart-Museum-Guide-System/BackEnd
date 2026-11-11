@@ -48,7 +48,10 @@ public record SavedRouteDto(
 public record ScanQrRequest([Required, StringLength(200)] string QrCode, int? VisitId, Guid RequestId);
 public record ScanResult(long RecognitionId, int ArtifactId, int? VisitId, DateTime RecognizedAt);
 public record ProgressStop(int ArtifactId, int OrderNo, DateTime? LastVisitedAt);
-public record VisitProgress(int VisitId, int? TourId, string Status, IReadOnlyList<ProgressStop> Stops, int? NextArtifactId, int? TourVersionId = null, int? TourVersionNo = null);
+public record VisitProgress(int VisitId, int? TourId, string Status, IReadOnlyList<ProgressStop> Stops, int? NextArtifactId, int? TourVersionId = null, int? TourVersionNo = null)
+{
+    public Guid? PersonalizedTourId { get; init; }
+}
 public record VisitorLocation(long RecognitionId, int ArtifactId, DateTime RecognizedAt);
 public record VisitorRoute(int MapId, int Revision, int FromArtifactId, int ToArtifactId, RouteResult Route);
 public record QuestionOptionRequest([Required, StringLength(1000)] string Content, bool IsCorrect);

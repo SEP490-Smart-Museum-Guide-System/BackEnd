@@ -8,6 +8,15 @@ public static class VisitorExperienceConfiguration
 {
     public static void Configure(ModelBuilder b)
     {
+        b.Entity<PersonalizedTour>(e => {
+            e.ToTable("personalized_tours"); e.HasKey(x => x.Id);
+            e.Property(x => x.SnapshotJson).HasColumnType("jsonb");
+            e.HasIndex(x => new { x.OwnerId, x.CreatedAt });
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Museum>().WithMany().HasForeignKey(x => x.MuseumId).OnDelete(DeleteBehavior.Restrict);
+        });
+        b.Entity<Visit>().HasOne<PersonalizedTour>().WithMany().HasForeignKey(x => x.PersonalizedTourId).OnDelete(DeleteBehavior.Restrict);
+        b.Entity<Visit>().ToTable(t => t.HasCheckConstraint("CK_visits_one_itinerary", "\"TourId\" IS NULL OR \"PersonalizedTourId\" IS NULL"));
         b.Entity<Tour>(e => {
             e.ToTable("tours"); e.Property(x => x.Title).HasMaxLength(200); e.Property(x => x.Description).HasMaxLength(4000);
             e.Property(x => x.Status).HasMaxLength(20); e.Property(x => x.Revision).IsConcurrencyToken();

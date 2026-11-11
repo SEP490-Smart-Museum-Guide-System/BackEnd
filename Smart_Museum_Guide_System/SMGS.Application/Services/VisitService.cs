@@ -20,7 +20,7 @@ public class VisitService(IVisitRepository visitRepo, IMuseumRepository museumRe
             catch (ExperienceException e) { return ResponseDto<VisitResponseDto>.Fail(e.Message, e.StatusCode); }
         }
         // Repository-only construction is retained for existing isolated tests; tours always require the progress service.
-        if (dto.TourId is not null) return ResponseDto<VisitResponseDto>.Fail("Dịch vụ tour chưa được cấu hình.", 503);
+        if (dto.TourId is not null || dto.PersonalizedTourId is not null || dto.SavedRouteId is not null) return ResponseDto<VisitResponseDto>.Fail("Dịch vụ tour chưa được cấu hình.", 503);
         var museum = await museumRepo.GetByIdAsync(dto.MuseumId);
         if (museum is null || !museum.IsActive)
             return ResponseDto<VisitResponseDto>.Fail("Không tìm thấy bảo tàng.", 404);
@@ -52,7 +52,7 @@ public class VisitService(IVisitRepository visitRepo, IMuseumRepository museumRe
         if (visit is null || visit.VisitorId != visitorId)
             return ResponseDto<VisitResponseDto>.Fail("Không tìm thấy lượt tham quan.", 404);
 
-        if (visit.TourId is not null) return ResponseDto<VisitResponseDto>.Fail("Dịch vụ tour chưa được cấu hình.", 503);
+        if (visit.TourId is not null || visit.PersonalizedTourId is not null) return ResponseDto<VisitResponseDto>.Fail("Dịch vụ tour chưa được cấu hình.", 503);
 
         if (visit.Status != VisitStatus.InProgress)
             return ResponseDto<VisitResponseDto>.Fail("Lượt tham quan không ở trạng thái đang diễn ra.", 400);
@@ -95,6 +95,7 @@ public class VisitService(IVisitRepository visitRepo, IMuseumRepository museumRe
         MuseumId = v.MuseumId,
         TourId = v.TourId,
         TourVersionId = v.TourVersionId,
+        PersonalizedTourId = v.PersonalizedTourId,
         Status = v.Status,
         StartedAt = v.StartedAt,
         CompletedAt = v.CompletedAt,

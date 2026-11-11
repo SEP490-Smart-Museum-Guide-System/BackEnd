@@ -37,6 +37,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Complaint> Complaints => Set<Complaint>();
     public DbSet<Building> Buildings => Set<Building>();
     public DbSet<StaffAssignment> StaffAssignments => Set<StaffAssignment>();
+    public DbSet<PersonalizedTour> PersonalizedTours => Set<PersonalizedTour>();
     public DbSet<IndoorMap> IndoorMaps => Set<IndoorMap>();
     public DbSet<MapNode> MapNodes => Set<MapNode>();
     public DbSet<MapMarker> MapMarkers => Set<MapMarker>();

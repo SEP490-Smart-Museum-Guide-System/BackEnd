@@ -14,6 +14,7 @@ public class StartVisitRequestDto
     /// hệ thống sẽ gắn Visit vào đúng TourVersion đã lưu ở lộ trình đó.
     /// </summary>
     public int? SavedRouteId { get; set; }
+    public Guid? PersonalizedTourId { get; set; }
 }
 
 public class VisitResponseDto
@@ -24,6 +25,7 @@ public class VisitResponseDto
     public int? TourId { get; set; }
     public int? TourVersionId { get; set; }
     public int? TourVersionNo { get; set; }
+    public Guid? PersonalizedTourId { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }

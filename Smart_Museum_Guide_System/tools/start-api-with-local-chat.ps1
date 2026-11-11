@@ -6,13 +6,18 @@ if (!(Test-Path -LiteralPath $guideKeyFile)) { throw 'Chạy AI-System/tools/sta
 $guideBackendKey = [System.IO.File]::ReadAllText($guideKeyFile).Trim()
 if ($guideBackendKey.Length -lt 32) { throw 'Khóa chatbot local không hợp lệ.' }
 $guidePrevious = @{}
-foreach ($name in @('ArtifactGuide__Enabled', 'ArtifactGuide__BaseUrl', 'ArtifactGuide__ServiceKey', 'ArtifactSpeech__Enabled', 'ArtifactSpeech__BaseUrl', 'ArtifactSpeech__ServiceKey')) {
+foreach ($name in @('ArtifactGuide__Enabled', 'ArtifactGuide__BaseUrl', 'ArtifactGuide__ServiceKey', 'ArtifactSpeech__Enabled', 'ArtifactSpeech__BaseUrl', 'ArtifactSpeech__ServiceKey', 'PersonalizedTours__BaseUrl', 'PersonalizedTours__ServiceKey')) {
     $guidePrevious[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
 }
 try {
     $env:ArtifactGuide__Enabled = 'true'
     $env:ArtifactGuide__BaseUrl = $ChatBaseUrl
     $env:ArtifactGuide__ServiceKey = $guideBackendKey
+    $tourKeyFile = Join-Path $guideBackendRoot '..\..\AI-System\state\tour-service-key.txt'
+    if (Test-Path -LiteralPath $tourKeyFile) {
+        $env:PersonalizedTours__BaseUrl = 'http://127.0.0.1:8004/'
+        $env:PersonalizedTours__ServiceKey = [IO.File]::ReadAllText($tourKeyFile).Trim()
+    }
     $speechKeyFile = Join-Path $guideBackendRoot '..\..\AI-System\state\tts-service-key.txt'
     if (Test-Path -LiteralPath $speechKeyFile) {
         $env:ArtifactSpeech__Enabled = 'true'

@@ -14,12 +14,15 @@ namespace SMGS.Infrastructure.Services;
 /// vào phiên bản công khai hiện tại (hoặc phiên bản của SavedRoute).
 /// Việc xuất bản phiên bản mới (v2) tuyệt đối không làm thay đổi tiến độ hay lịch sử của lượt tham quan ở v1.
 /// </summary>
-public class VisitProgressService(ApplicationDbContext db, TimeProvider clock) : IVisitProgressService
+public class VisitProgressService(ApplicationDbContext db, TimeProvider clock, IPersonalizedTourService? personal = null) : IVisitProgressService
 {
     public async Task<VisitResponseDto> StartVisitAsync(Guid user, StartVisitRequestDto request)
     {
         await using var tx = await db.Database.BeginTransactionAsync();
         await ExperienceAccess.LockUser(db, user);
+
+        if (request.PersonalizedTourId is not null && (request.TourId is not null || request.SavedRouteId is not null))
+            throw new ExperienceException("Chỉ chọn một hành trình cho mỗi lượt tham quan.");
 
         if (!await db.Museums.AnyAsync(m => m.Id == request.MuseumId && m.IsActive))
         {
@@ -36,7 +39,12 @@ public class VisitProgressService(ApplicationDbContext db, TimeProvider clock) :
         int? pinnedVersionId = null;
         int? pinnedVersionNo = null;
 
-        if (request.SavedRouteId is int savedRouteId)
+        if (request.PersonalizedTourId is Guid personalId)
+        {
+            if (personal is null) throw new ExperienceException("Dịch vụ hành trình cá nhân chưa sẵn sàng.", 503);
+            await personal.ValidateForStart(personalId, request.MuseumId, user, default);
+        }
+        else if (request.SavedRouteId is int savedRouteId)
         {
             var saved = await db.Set<SavedRoute>()
                 .AsNoTracking()
@@ -107,6 +115,7 @@ public class VisitProgressService(ApplicationDbContext db, TimeProvider clock) :
             MuseumId = request.MuseumId,
             TourId = resolvedTourId,
             TourVersionId = pinnedVersionId,
+            PersonalizedTourId = request.PersonalizedTourId,
             Status = VisitStatus.InProgress,
             StartedAt = now
         };
@@ -199,6 +208,13 @@ public class VisitProgressService(ApplicationDbContext db, TimeProvider clock) :
                     visited.SingleOrDefault(v => v.ArtifactId == i.ArtifactId)?.LastVisitedAt))
                 .ToList();
         }
+        else if (visit.PersonalizedTourId is Guid personalId)
+        {
+            if (personal is null) throw new ExperienceException("Dịch vụ hành trình cá nhân chưa sẵn sàng.", 503);
+            var plan = await personal.Get(personalId, user, default);
+            stops = plan.Stops.Select(s => new ProgressStop(s.ArtifactId, s.OrderNo,
+                visited.SingleOrDefault(v => v.ArtifactId == s.ArtifactId)?.LastVisitedAt)).ToList();
+        }
         else
         {
             stops = visited
@@ -207,7 +223,7 @@ public class VisitProgressService(ApplicationDbContext db, TimeProvider clock) :
                 .ToList();
         }
 
-        var nextStop = visit.TourId is null && visit.TourVersionId is null
+        var nextStop = visit.TourId is null && visit.TourVersionId is null && visit.PersonalizedTourId is null
             ? null
             : stops.FirstOrDefault(x => x.LastVisitedAt is null)?.ArtifactId;
 
@@ -218,7 +234,7 @@ public class VisitProgressService(ApplicationDbContext db, TimeProvider clock) :
             stops,
             nextStop,
             visit.TourVersionId,
-            versionNo);
+            versionNo) { PersonalizedTourId = visit.PersonalizedTourId };
     }
 
     public async Task<VisitResponseDto> CompleteTourAsync(Guid user, int visitId)
@@ -262,6 +278,14 @@ public class VisitProgressService(ApplicationDbContext db, TimeProvider clock) :
             }
         }
 
+        if (visit.PersonalizedTourId is Guid personalId)
+        {
+            if (personal is null) throw new ExperienceException("Dịch vụ hành trình cá nhân chưa sẵn sàng.", 503);
+            var plan = await personal.Get(personalId, user, default);
+            var seen = await db.Set<VisitItem>().Where(v => v.VisitId == visitId).Select(v => v.ArtifactId).ToListAsync();
+            if (plan.Stops.Any(s => !seen.Contains(s.ArtifactId)))
+                throw new ExperienceException("Hãy quét đủ điểm dừng trước khi hoàn thành hành trình cá nhân.", 409);
+        }
         visit.Status = VisitStatus.Completed;
         visit.CompletedAt = clock.GetUtcNow().UtcDateTime;
         await db.SaveChangesAsync();
@@ -293,6 +317,7 @@ public class VisitProgressService(ApplicationDbContext db, TimeProvider clock) :
         TourId = v.TourId,
         TourVersionId = v.TourVersionId,
         TourVersionNo = versionNo,
+        PersonalizedTourId = v.PersonalizedTourId,
         Status = v.Status,
         StartedAt = v.StartedAt,
         CompletedAt = v.CompletedAt,

@@ -124,6 +124,10 @@ public static class DependencyInjection
                 try { TimeZoneInfo.FindSystemTimeZoneById(o.TimeZoneId); return true; } catch { return false; }
             }, "VisitorExperience:TimeZoneId is invalid.").ValidateOnStart();
         services.AddScoped<ITourService, TourService>();
+        services.AddMemoryCache();
+        services.Configure<PersonalizedTourOptions>(configuration.GetSection("PersonalizedTours"));
+        services.AddHttpClient<IPersonalizedTourModel, PersonalizedTourModel>(client => client.Timeout = TimeSpan.FromSeconds(12));
+        services.AddScoped<IPersonalizedTourService, PersonalizedTourService>();
         services.AddScoped<IVisitProgressService, VisitProgressService>();
         services.AddScoped<IRecognitionService, RecognitionService>();
         services.AddScoped<IVisitorNavigationService, VisitorNavigationService>();

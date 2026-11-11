@@ -219,6 +219,20 @@ BEGIN
             WHERE "Id" = v_artifact_id;
         END IF;
 
+        -- Gán chủ đề như DataSeeder.cs để cá nhân hóa có metadata nhất quán.
+        IF r.code IN ('HV-001', 'HV-002', 'HV-004', 'HV-007', 'HV-008') THEN
+            INSERT INTO artifact_topics ("ArtifactId", "TopicId", "AssignedAt")
+            VALUES (v_artifact_id, v_topic_national_id, NOW()) ON CONFLICT DO NOTHING;
+        END IF;
+        IF r.code IN ('HV-001', 'HV-002', 'HV-003', 'HV-004') THEN
+            INSERT INTO artifact_topics ("ArtifactId", "TopicId", "AssignedAt")
+            VALUES (v_artifact_id, v_topic_dongson_id, NOW()) ON CONFLICT DO NOTHING;
+        END IF;
+        IF r.code IN ('HV-005', 'HV-006') THEN
+            INSERT INTO artifact_topics ("ArtifactId", "TopicId", "AssignedAt")
+            VALUES (v_artifact_id, v_topic_ceramics_id, NOW()) ON CONFLICT DO NOTHING;
+        END IF;
+
         -- Đảm bảo bản ghi artifact_contents tiếng Việt ('vi') tồn tại
         SELECT "Id" INTO v_content_id FROM artifact_contents WHERE "ArtifactId" = v_artifact_id AND "LanguageCode" = 'vi' LIMIT 1;
         IF v_content_id IS NULL THEN

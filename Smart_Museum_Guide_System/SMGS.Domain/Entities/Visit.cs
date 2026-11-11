@@ -22,6 +22,7 @@ public class Visit
     /// vẫn giữ nguyên <see cref="TourVersionId"/> và lịch sử tiến độ của v1.
     /// </summary>
     public int? TourVersionId { get; set; }
+    public Guid? PersonalizedTourId { get; set; }
 
     /// <summary>Bảo tàng đang tham quan.</summary>
     public int MuseumId { get; set; }

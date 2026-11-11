@@ -1319,6 +1319,34 @@ namespace SMGS.Infrastructure.Migrations
                     b.ToTable("payment_attempts", (string)null);
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.PersonalizedTour", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MuseumId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MuseumId");
+
+                    b.HasIndex("OwnerId", "CreatedAt");
+
+                    b.ToTable("personalized_tours", (string)null);
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.PointTransaction", b =>
                 {
                     b.Property<long>("Id")
@@ -2152,6 +2180,9 @@ namespace SMGS.Infrastructure.Migrations
                     b.Property<int>("MuseumId")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("PersonalizedTourId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamptz");
 
@@ -2173,13 +2204,18 @@ namespace SMGS.Infrastructure.Migrations
 
                     b.HasIndex("MuseumId");
 
+                    b.HasIndex("PersonalizedTourId");
+
                     b.HasIndex("TourId");
 
                     b.HasIndex("TourVersionId");
 
                     b.HasIndex("VisitorId", "MuseumId", "Status");
 
-                    b.ToTable("visits", (string)null);
+                    b.ToTable("visits", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_visits_one_itinerary", "\"TourId\" IS NULL OR \"PersonalizedTourId\" IS NULL");
+                        });
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.VisitFeedback", b =>
@@ -2716,6 +2752,21 @@ namespace SMGS.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.PersonalizedTour", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Museum", null)
+                        .WithMany()
+                        .HasForeignKey("MuseumId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.PointTransaction", b =>
                 {
                     b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
@@ -3046,6 +3097,11 @@ namespace SMGS.Infrastructure.Migrations
                         .HasForeignKey("MuseumId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("SMGS.Domain.Entities.PersonalizedTour", null)
+                        .WithMany()
+                        .HasForeignKey("PersonalizedTourId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("SMGS.Domain.Entities.Tour", null)
                         .WithMany()
