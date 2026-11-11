@@ -9,7 +9,9 @@ using SMGS.Infrastructure.Data;
 
 namespace SMGS.Infrastructure.Services;
 
-public class CommerceService(ApplicationDbContext db) : ICommerceService
+public partial class CommerceService(ApplicationDbContext db,
+    Microsoft.Extensions.Options.IOptions<SePayOptions>? sepayOptions = null,
+    TimeProvider? timeProvider = null) : ICommerceService
 {
     public Task EnsureMuseumManagement(int museumId, Guid staff, bool admin) => StaffAccess(museumId, staff, admin);
     private async Task StaffAccess(int museum, Guid user, bool admin)
@@ -153,13 +155,18 @@ public class CommerceService(ApplicationDbContext db) : ICommerceService
         a.ConfirmedBy = staff; a.CompletedAt = DateTime.UtcNow;
         if (r.Succeeded)
         {
-            o.Status = "paid"; o.PaidAt = a.CompletedAt; o.ExpiresAt = a.CompletedAt.Value.AddHours(o.ValidityHours);
-            if (o.Seats == 1) db.MuseumPasses.Add(new MuseumPass { OrderId = o.Id, UserId = o.BuyerId });
-            db.PurchaseInvoices.Add(new PurchaseInvoice { OrderId = o.Id, Number = $"SMGS-{o.Id:N}", BuyerName = o.BuyerName,
-                BuyerDetailsJson = o.BuyerDetailsJson, ProductName = o.ProductName, ProductKind = o.ProductKind, Seats = o.Seats,
-                Amount = o.Amount, Currency = o.Currency });
+            CompleteOrder(o, a.CompletedAt.Value);
         }
         await db.SaveChangesAsync(); await tx.CommitAsync(); return a;
+    }
+
+    private void CompleteOrder(PurchaseOrder o, DateTime paidAt)
+    {
+        o.Status = "paid"; o.PaidAt = paidAt; o.ExpiresAt = paidAt.AddHours(o.ValidityHours);
+        if (o.Seats == 1) db.MuseumPasses.Add(new MuseumPass { OrderId = o.Id, UserId = o.BuyerId });
+        db.PurchaseInvoices.Add(new PurchaseInvoice { OrderId = o.Id, Number = $"SMGS-{o.Id:N}", BuyerName = o.BuyerName,
+            BuyerDetailsJson = o.BuyerDetailsJson, ProductName = o.ProductName, ProductKind = o.ProductKind, Seats = o.Seats,
+            Amount = o.Amount, Currency = o.Currency });
     }
 
     private static string Hash(string key) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));

@@ -1,6 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -33,6 +37,22 @@ foreach (var name in new[] { "Create", "Update", "Delete", "RegenerateQr" })
     Check(typeof(ArtifactsController).GetMethod(name)!.IsDefined(typeof(AuthorizeAttribute)) &&
         !typeof(ArtifactsController).GetMethod(name)!.IsDefined(typeof(AllowAnonymousAttribute)), "Artifact mutation cannot bypass premium configuration.");
 Console.WriteLine("Commerce validation and authorization checks passed.");
+var signingTime = DateTimeOffset.UtcNow;
+var signingTimestamp = signingTime.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+const string testSecret = "commerce-check-secret";
+string Sign(byte[] bytes, string timestamp) => "sha256=" + Convert.ToHexString(HMACSHA256.HashData(
+    Encoding.UTF8.GetBytes(testSecret), Encoding.UTF8.GetBytes(timestamp + ".").Concat(bytes).ToArray()));
+var signedBody = Encoding.UTF8.GetBytes("{\"content\":\"Thanh toán\"}");
+var signature = Sign(signedBody, signingTimestamp);
+Check(CommerceService.VerifySePaySignature(signedBody, signature, signingTimestamp, testSecret, signingTime), "Accept signed raw UTF-8 body.");
+Check(!CommerceService.VerifySePaySignature(Encoding.UTF8.GetBytes("{}"), signature, signingTimestamp, testSecret, signingTime), "Reject changed body.");
+Check(!CommerceService.VerifySePaySignature(signedBody, signature, signingTimestamp, "wrong", signingTime), "Reject wrong secret.");
+Check(!CommerceService.VerifySePaySignature(signedBody, signature, signingTimestamp, testSecret, signingTime.AddMinutes(6)), "Reject expired timestamp.");
+Check(!CommerceService.VerifySePaySignature(signedBody, signature, signingTimestamp, testSecret, signingTime.AddMinutes(-6)), "Reject future timestamp.");
+Check(!CommerceService.VerifySePaySignature(signedBody, "sha256=" + new string('Z', 64), signingTimestamp, testSecret, signingTime), "Reject malformed hex.");
+Check(!CommerceService.VerifySePaySignature(signedBody, signature, signingTimestamp, "", signingTime), "Reject missing secret.");
+Check(typeof(SePayController).GetMethod("Webhook")!.IsDefined(typeof(AllowAnonymousAttribute)), "SePay webhook authenticates with HMAC, not JWT.");
+Console.WriteLine("SePay signature and endpoint checks passed.");
 if (!args.Contains("--database")) return;
 
 var api = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../SMGS.API"));
@@ -134,7 +154,34 @@ try
     Check(!await Run(s => s.CanReadArtifact(artifact.Id, redeemed.Last(id => id != Guid.Empty))), "Expired group passes cannot read content.");
     await Run(s => s.ConfigureResource(museum.Id, digital.Id, new() { Name = "Now free", ArtifactId = artifact.Id, AccessLevel = "free" }, staff, false));
     Check(await Run(s => s.CanReadArtifact(artifact.Id, null)), "Free content works anonymously.");
-    Console.WriteLine("Commerce PostgreSQL checks passed: retry, snapshots, concurrent payment/key claims, access, revocation, expiry, invoices and revenue.");
+    async Task<T> SePayRun<T>(Func<CommerceService, Task<T>> action)
+    {
+        await using var db = Open();
+        return await action(new CommerceService(db, Options.Create(new SePayOptions { WebhookSecret = testSecret })));
+    }
+    var sepayOrder = await Run(s => s.CreateOrder(new() { ProductId = product.Id, BuyerName = "SePay buyer" }, owner));
+    var qr = await SePayRun(s => s.StartSePayPayment(sepayOrder.Id, owner));
+    Check(qr.Amount == sepayOrder.Amount && qr.QrUrl.Contains("amount=999") && qr.QrUrl.Contains("acc=11140845389"), "QR uses order amount and configured account.");
+    Check((await SePayRun(s => s.StartSePayPayment(sepayOrder.Id, owner))).Id == qr.Id, "Repeated QR requests reuse pending attempt.");
+    await Fails(async () => await SePayRun(s => s.StartSePayPayment(sepayOrder.Id, stranger)), 404);
+    byte[] Payload(long id, decimal amount, string account = "11140845389", string type = "in") => JsonSerializer.SerializeToUtf8Bytes(new
+    { id, gateway = "TPBank", accountNumber = account, transferType = type, transferAmount = amount, content = "Thanh toan " + qr.TransferContent });
+    Task<SePayWebhookResponse> Deliver(byte[] bytes) => SePayRun(s => s.SePayWebhook(bytes, Sign(bytes, signingTimestamp), signingTimestamp));
+    await Fails(async () => await SePayRun(s => s.SePayWebhook(Payload(90001, qr.Amount), "bad", signingTimestamp)), 401);
+    Check(!(await Deliver(Payload(90001, qr.Amount - 1))).Processed, "Reject wrong amount.");
+    Check(!(await Deliver(Payload(90001, qr.Amount, "other"))).Processed, "Ignore another receiving account.");
+    Check(!(await Deliver(Payload(90001, qr.Amount, type: "out"))).Processed, "Ignore outgoing transfers.");
+    var results = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => Deliver(Payload(90001, qr.Amount))));
+    Check(results.All(r => r.Success && r.Processed), "Concurrent duplicate webhooks acknowledge same payment.");
+    Check(!(await Deliver(Payload(90002, qr.Amount))).Processed, "A second transfer cannot settle a paid order twice.");
+    Check((await Run(s => s.Transactions(sepayOrder.Id, owner))).Single().Reference == "SEPAY:90001", "Persist SePay transaction id.");
+    Check((await Run(s => s.Invoice(sepayOrder.Id, owner))).Amount == qr.Amount, "Webhook creates invoice.");
+    await using (var verify = Open())
+    {
+        Check(await verify.PurchaseInvoices.CountAsync(i => i.OrderId == sepayOrder.Id) == 1, "Duplicate webhooks create one invoice.");
+        Check((await verify.PurchaseOrders.SingleAsync(o => o.Id == sepayOrder.Id)).Status == "paid", "Webhook marks order paid.");
+    }
+    Console.WriteLine("Commerce and SePay PostgreSQL checks passed.");
 }
 finally
 {

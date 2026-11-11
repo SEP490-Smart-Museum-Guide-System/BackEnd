@@ -22,6 +22,7 @@ public static class DependencyInjection
             throw new InvalidOperationException("Configure ConnectionStrings:DefaultConnection for Museum.");
 
         services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddOptions<SMGS.Application.DTOs.Commerce.SePayOptions>().Bind(configuration.GetSection("SePay"));
         services.AddIdentityCore<ApplicationUser>(options =>
         {
             options.User.RequireUniqueEmail = true;

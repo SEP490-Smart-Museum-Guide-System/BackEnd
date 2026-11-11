@@ -81,6 +81,9 @@ public class CommerceController(ICommerceService service) : ControllerBase
     [HttpPost("orders/{orderId:guid}/payments")]
     public async Task<IActionResult> StartPayment(Guid orderId) => Result(await service.StartPayment(orderId, UserId));
 
+    [HttpPost("orders/{orderId:guid}/payments/sepay")]
+    public async Task<IActionResult> StartSePayPayment(Guid orderId) => Result(await service.StartSePayPayment(orderId, UserId));
+
     [HttpGet("orders/{orderId:guid}/transactions")]
     public async Task<IActionResult> Transactions(Guid orderId) => Result(await service.Transactions(orderId, UserId));
 
