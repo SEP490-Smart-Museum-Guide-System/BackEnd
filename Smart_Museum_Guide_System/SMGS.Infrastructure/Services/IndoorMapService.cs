@@ -81,7 +81,7 @@ public class IndoorMapService(ApplicationDbContext db) : IIndoorMapService
         await using var tx = await db.Database.BeginTransactionAsync();
         var museum = await db.Museums.FromSqlInterpolated($"SELECT * FROM museums WHERE \"Id\" = {museumId} FOR UPDATE").SingleAsync();
         if (museum.IndoorLayout != layout && (await db.IndoorMaps.AnyAsync(m => m.MuseumId == museumId)
-            || await db.Buildings.AnyAsync(b => b.MuseumId == museumId)))
+            || (museum.IndoorLayout != "unknown" && await db.Buildings.AnyAsync(b => b.MuseumId == museumId))))
             throw new IndoorMapException("Đã có cấu trúc hoặc sơ đồ. Không thể đổi chế độ mặt bằng để tránh mất liên kết.", 409);
         museum.IndoorLayout = layout; await db.SaveChangesAsync(); await tx.CommitAsync();
     }
@@ -319,13 +319,14 @@ public class IndoorMapService(ApplicationDbContext db) : IIndoorMapService
         await Access(museumId, user, admin);
         await using var tx = await db.Database.BeginTransactionAsync();
         var museum = await db.Museums.FromSqlInterpolated($"SELECT * FROM museums WHERE \"Id\" = {museumId} FOR UPDATE").SingleAsync();
-        if (museum.IndoorLayout == "unknown") throw new IndoorMapException("Hãy xác định cấu trúc bảo tàng trước khi tạo sơ đồ.");
-        if ((museum.IndoorLayout == "single") != (request.FloorId is null)) throw new IndoorMapException("Tầng không phù hợp chế độ mặt bằng.");
+        if (request.FloorId is null && museum.IndoorLayout != "single")
+            throw new IndoorMapException("Hãy chọn tầng để tạo sơ đồ.");
         if (request.FloorId.HasValue && !await (from f in db.Floors join b in db.Buildings on f.BuildingId equals b.Id
                 where f.Id == request.FloorId && b.MuseumId == museumId select f).AnyAsync())
             throw new IndoorMapException("Tầng không thuộc bảo tàng.");
         if (await db.IndoorMaps.AnyAsync(m => m.MuseumId == museumId && m.FloorId == request.FloorId))
             throw new IndoorMapException("Mặt bằng này đã có sơ đồ.", 409);
+        if (request.FloorId.HasValue) museum.IndoorLayout = "floors";
         var map = new IndoorMap { MuseumId = museumId, FloorId = request.FloorId, Name = request.Name.Trim() };
         db.IndoorMaps.Add(map); await db.SaveChangesAsync(); await tx.CommitAsync(); return map.Id;
     }

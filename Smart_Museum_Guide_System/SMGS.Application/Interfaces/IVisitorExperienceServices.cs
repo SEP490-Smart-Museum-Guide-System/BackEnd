@@ -58,6 +58,7 @@ public interface IDailyQuizService
 {
     Task UnlockAsync(RecognitionHistory recognition);
     Task<IReadOnlyList<DailyQuizEntry>> GetTodayAsync(Guid user);
+    Task SetDeferredAsync(long id, bool deferred, Guid user);
 }
 public interface IQuizAttemptService
 {
@@ -71,7 +72,7 @@ public interface IGamificationService
 {
     Task AwardScanPointsAsync(Guid user, int artifactId);
     Task<int> AwardQuizPointsAsync(Guid user, int questionId);
-    Task EvaluateBadgesAsync(Guid user);
+    Task<IReadOnlyList<Badge>> EvaluateBadgesAsync(Guid user);
     Task<long> GetBalanceAsync(Guid user);
     Task<IReadOnlyList<PointTransaction>> GetTransactionsAsync(Guid user, int page, int pageSize);
     Task<IReadOnlyList<UserBadge>> GetBadgesAsync(Guid user);

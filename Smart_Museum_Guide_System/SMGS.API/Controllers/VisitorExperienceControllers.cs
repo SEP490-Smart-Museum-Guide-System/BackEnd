@@ -131,6 +131,12 @@ public class DailyQuizController(IDailyQuizService service) : ExperienceControll
 {
     [HttpGet("today")]
     public async Task<IActionResult> Today() => Result(await service.GetTodayAsync(UserId));
+    [HttpPut("{id:long}/deferred")]
+    public async Task<IActionResult> Defer(long id, [FromQuery] bool deferred = true)
+    {
+        await service.SetDeferredAsync(id, deferred, UserId);
+        return Result(new { Saved = deferred });
+    }
 }
 [Route("api/quiz-attempts"), Authorize(Roles = RoleNames.Visitor)]
 public class QuizAttemptController(IQuizAttemptService service) : ExperienceControllerBase

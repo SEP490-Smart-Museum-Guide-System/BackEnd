@@ -62,7 +62,11 @@ public class QuizAttemptService(ApplicationDbContext db, IGamificationService re
         if (attempt.Answers.All(a => a.AnsweredAt is not null)) {
             attempt.Status = "completed"; attempt.CompletedAt = clock.GetUtcNow().UtcDateTime; entry.Status = "completed";
         }
-        await db.SaveChangesAsync(); await rewards.EvaluateBadgesAsync(user); await db.SaveChangesAsync(); await tx.CommitAsync(); return await Project(attempt);
+        await db.SaveChangesAsync();
+        var badges = await rewards.EvaluateBadgesAsync(user);
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
+        return (await Project(attempt)) with { NewBadges = badges.Select(b => new EarnedBadge(b.Id, b.Name)).ToList() };
     }
     public async Task<AttemptResult> ResetAsync(long id, Guid user)
     {
@@ -99,6 +103,6 @@ public class QuizAttemptService(ApplicationDbContext db, IGamificationService re
                 var q = questions[answer.QuestionId];
                 return new AttemptQuestion(q.Id, q.Content, q.Options.OrderBy(o => o.OrderNo).Select(o => new PublicOption(o.Id, o.Content)).ToList(),
                     answer.SelectedOptionId, answer.AnsweredAt is null ? null : answer.IsCorrect, answer.AnsweredAt is null ? null : q.Explanation);
-            }).ToList());
+            }).ToList()) { PointsEarned = a.Answers.Sum(answer => answer.Points) };
     }
 }

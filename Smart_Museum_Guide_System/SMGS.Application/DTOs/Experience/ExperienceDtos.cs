@@ -46,7 +46,11 @@ public record SavedRouteDto(
     string Explanation,
     DateTime SavedAt);
 public record ScanQrRequest([Required, StringLength(200)] string QrCode, int? VisitId, Guid RequestId);
-public record ScanResult(long RecognitionId, int ArtifactId, int? VisitId, DateTime RecognizedAt);
+public record EarnedBadge(int Id, string Name);
+public record ScanResult(long RecognitionId, int ArtifactId, int? VisitId, DateTime RecognizedAt)
+{
+    public IReadOnlyList<EarnedBadge> NewBadges { get; init; } = [];
+}
 public record ProgressStop(int ArtifactId, int OrderNo, DateTime? LastVisitedAt);
 public record VisitProgress(int VisitId, int? TourId, string Status, IReadOnlyList<ProgressStop> Stops, int? NextArtifactId, int? TourVersionId = null, int? TourVersionNo = null)
 {
@@ -66,7 +70,11 @@ public record PublicOption(int Id, string Content);
 public record AttemptQuestion(int Id, string Content, IReadOnlyList<PublicOption> Options, int? SelectedOptionId,
     bool? IsCorrect, string? Explanation);
 public record AttemptResult(long Id, long DailyEntryId, string Status, int TotalQuestions, int CorrectCount, int Score,
-    DateTime StartedAt, DateTime? CompletedAt, IReadOnlyList<AttemptQuestion> Questions);
+    DateTime StartedAt, DateTime? CompletedAt, IReadOnlyList<AttemptQuestion> Questions)
+{
+    public int PointsEarned { get; init; }
+    public IReadOnlyList<EarnedBadge> NewBadges { get; init; } = [];
+}
 public record BadgeRequest([Required, StringLength(50)] string Code, [Required, StringLength(200)] string Name,
     int? MuseumId, [RegularExpression("^(scan_artifacts|quiz_correct)$")] string Metric, [Range(1, 100000)] int Threshold);
 public record BadgeRule(string Metric, int Threshold);
@@ -77,6 +85,6 @@ public class ExperienceException(string message, int statusCode = 400) : Excepti
 public class ExperienceOptions
 {
     [Range(0, 10000)] public int ScanPoints { get; set; }
-    [Range(0, 10000)] public int CorrectAnswerPoints { get; set; }
+    [Range(0, 10000)] public int CorrectAnswerPoints { get; set; } = 10;
     public string TimeZoneId { get; set; } = "Asia/Ho_Chi_Minh";
 }

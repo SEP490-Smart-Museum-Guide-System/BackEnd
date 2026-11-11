@@ -53,6 +53,8 @@ var dropSchema = $"DROP SCHEMA \"{schema}\" CASCADE";
 await setup.Database.ExecuteSqlRawAsync(createSchema);
 try {
     var migrator = setup.GetService<IMigrator>();
+    // Older migration histories support the legacy upgrade regression; squashed histories start at the current schema.
+    if (setup.Database.GetMigrations().Contains("20261028090549_ConfirmProductValidityPolicy")) {
     await migrator.MigrateAsync("20261028090549_ConfirmProductValidityPolicy");
     var legacyUser = new ApplicationUser { Id = Guid.NewGuid(), UserName = "legacy", NormalizedEmail = "LEGACY@TEST" };
     var legacyMuseum = new Museum { Name = "Legacy museum" };
@@ -65,6 +67,38 @@ try {
     // Only this isolated test fixture is reconciled; application data is never modified by the test.
     legacyVisit.TourId = null; await setup.SaveChangesAsync(); await migrator.MigrateAsync();
     Check(await setup.Visits.AnyAsync(v => v.Id == legacyVisit.Id), "Upgrade preserves visits");
+    } else {
+        await migrator.MigrateAsync();
+    }
+    await using (var creationDb = Open()) {
+        var repo = new SMGS.Infrastructure.Repositories.MuseumRepository(creationDb);
+        var standalone = await repo.CreateAsync(new Museum { Name = "Standalone creation" });
+        Check(await setup.Museums.AnyAsync(m => m.Id == standalone.Id), "Standalone museum creation commits");
+        var layouts = new IndoorMapService(creationDb);
+        await layouts.SetLayout(standalone.Id, "single", Guid.Empty, true);
+        Check((await layouts.Structure(standalone.Id, Guid.Empty, true)).Layout == "single", "Default structure allows initial single layout selection");
+        await layouts.SetLayout(standalone.Id, "single", Guid.Empty, true);
+        try {
+            await layouts.SetLayout(standalone.Id, "floors", Guid.Empty, true);
+            throw new Exception("Existing configured structure must prevent layout changes");
+        } catch (IndoorMapException e) when (e.StatusCode == 409) { }
+        var multi = await repo.CreateAsync(new Museum { Name = "Initial floors layout" });
+        var initialFloor = (await layouts.Structure(multi.Id, Guid.Empty, true)).Floors.Single();
+        var floorMapId = await layouts.Create(multi.Id, new(initialFloor.Id, "Ground floor"), Guid.Empty, true);
+        Check(await setup.IndoorMaps.AnyAsync(m => m.Id == floorMapId && m.FloorId == initialFloor.Id), "Create floor map without prior layout selection");
+        var structure = await layouts.Structure(multi.Id, Guid.Empty, true);
+        Check(structure.Layout == "floors" && structure.Floors.Count == 1, "Initial floors selection preserves default floor");
+        await using var outer = await creationDb.Database.BeginTransactionAsync();
+        var nested = await repo.CreateAsync(new Museum { Name = "Multipart transaction" });
+        var building = await creationDb.Buildings.SingleAsync(b => b.MuseumId == nested.Id);
+        var floor = await creationDb.Floors.SingleAsync(f => f.BuildingId == building.Id);
+        Check(creationDb.Database.CurrentTransaction == outer, "Repository preserves caller transaction");
+        Check(!await setup.Museums.AnyAsync(m => m.Id == nested.Id), "Repository does not commit caller transaction");
+        await outer.RollbackAsync();
+        Check(!await setup.Museums.AnyAsync(m => m.Id == nested.Id)
+            && !await setup.Buildings.AnyAsync(b => b.Id == building.Id)
+            && !await setup.Floors.AnyAsync(f => f.Id == floor.Id), "Caller rollback removes museum and default structure");
+    }
     var visitor = Guid.NewGuid(); var other = Guid.NewGuid(); var staff = Guid.NewGuid(); var curator = Guid.NewGuid();
     setup.Users.AddRange(new[] { visitor, other, staff, curator }.Select(id => new ApplicationUser { Id = id, UserName = id.ToString(), NormalizedEmail = id + "@TEST" }));
     var museum = new Museum { Name = "Experience test" }; var foreign = new Museum { Name = "Other museum" };
@@ -113,12 +147,20 @@ try {
     setup.Add(map); await setup.SaveChangesAsync();
     var route = await Run(db => new VisitorNavigationService(db, new VisitProgressService(db, clock)).RouteToArtifactAsync(visitor, visit.Id, map.Id, null, false));
     Check(route.Revision == 7 && route.Route.NodeIds.SequenceEqual(new[] { nodeA, nodeB }), "Route uses published snapshot, not empty draft graph");
-    await Run(db => Recognition(db).RecordQrAsync(new(b.QrCode!, visit.Id, Guid.NewGuid()), visitor));
+    var secondScan = await Run(db => Recognition(db).RecordQrAsync(new(b.QrCode!, visit.Id, Guid.NewGuid()), visitor));
+    Check(secondScan.NewBadges.Any(x => x.Id == badge.Id), "Scan returns newly awarded badge");
     Check((await Run(db => new VisitProgressService(db, clock).CompleteTourAsync(visitor, visit.Id))).Status == VisitStatus.Completed, "Tour completes after all stops");
     Check(await setup.Set<UserBadge>().CountAsync(x => x.UserId == visitor && x.BadgeId == badge.Id) == 1, "One badge grant");
     var entry = await setup.Set<DailyQuizEntry>().SingleAsync();
     await Reject(async () => await Run(db => Attempts(db).StartAsync(new(entry.Id), other)), 404);
+    await Reject(async () => await Run(async db => { await new DailyQuizService(db, clock, options).SetDeferredAsync(entry.Id, true, other); return true; }), 404);
+    await Run(async db => { await new DailyQuizService(db, clock, options).SetDeferredAsync(entry.Id, true, visitor); return true; });
+    await Run(async db => { await new DailyQuizService(db, clock, options).SetDeferredAsync(entry.Id, true, visitor); return true; });
+    Check((await Run(db => new DailyQuizService(db, clock, options).GetTodayAsync(visitor))).Single().Status == "deferred", "Deferred quiz persists and repeat save is safe");
+    await Run(async db => { await new DailyQuizService(db, clock, options).SetDeferredAsync(entry.Id, false, visitor); return true; });
+    Check((await Run(db => new DailyQuizService(db, clock, options).GetTodayAsync(visitor))).Single().Status == "pending", "Remove deferred flag");
     var attempt = await Run(db => Attempts(db).StartAsync(new(entry.Id), visitor));
+    await Reject(async () => await Run(async db => { await new DailyQuizService(db, clock, options).SetDeferredAsync(entry.Id, true, visitor); return true; }), 409);
     Check(attempt.Questions.All(q => q.IsCorrect is null && q.Explanation is null), "No answer leak before submission");
     var first = attempt.Questions[0]; var correct = await setup.Set<QuestionOption>().SingleAsync(o => o.QuestionId == first.Id && o.IsCorrect);
     var foreignOption = await setup.Set<QuestionOption>().FirstAsync(o => o.QuestionId != first.Id);
@@ -129,6 +171,7 @@ try {
     await Reject(async () => await Run(db => Attempts(db).AnswerAsync(attempt.Id, new(first.Id, wrong.Id), visitor)), 409);
     var second = attempt.Questions[1]; var correct2 = await setup.Set<QuestionOption>().SingleAsync(o => o.QuestionId == second.Id && o.IsCorrect);
     var done = await Run(db => Attempts(db).AnswerAsync(attempt.Id, new(second.Id, correct2.Id), visitor));
+    Check(done.PointsEarned == 10, "Returns awarded points for both correct answers");
     Check(done.Status == "completed" && done.Score == 100, "Complete and score attempt");
     var reset = await Run(db => Attempts(db).ResetAsync(attempt.Id, visitor));
     Check(!reset.Questions.Select(q => q.Id).Intersect(attempt.Questions.Select(q => q.Id)).Any(), "Reset selects new questions");

@@ -91,7 +91,10 @@ public class MuseumRepository(ApplicationDbContext db) : IMuseumRepository
 
     public async Task<Museum> CreateAsync(Museum museum)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync();
+        // The multipart controller owns the transaction when saving a cover image.
+        await using var transaction = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync()
+            : null;
         db.Museums.Add(museum);
         await db.SaveChangesAsync();
         var building = new Building { MuseumId = museum.Id, Name = "Tòa nhà chính" };
@@ -99,7 +102,7 @@ public class MuseumRepository(ApplicationDbContext db) : IMuseumRepository
         await db.SaveChangesAsync();
         db.Floors.Add(new Floor { BuildingId = building.Id, LevelNo = 0, Name = "Tầng trệt" });
         await db.SaveChangesAsync();
-        await transaction.CommitAsync();
+        if (transaction is not null) await transaction.CommitAsync();
         return museum;
     }
 

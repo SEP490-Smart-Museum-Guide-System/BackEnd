@@ -28,8 +28,8 @@ public class RecognitionService(ApplicationDbContext db, IVisitProgressService p
             IsSuccess = true, RequestId = request.RequestId };
         db.Add(history); await db.SaveChangesAsync();
         await daily.UnlockAsync(history); await rewards.AwardScanPointsAsync(user, artifact.Id);
-        await db.SaveChangesAsync(); await rewards.EvaluateBadgesAsync(user); await db.SaveChangesAsync(); await tx.CommitAsync();
-        return new(history.Id, artifact.Id, history.VisitId, now);
+        await db.SaveChangesAsync(); var badges = await rewards.EvaluateBadgesAsync(user); await db.SaveChangesAsync(); await tx.CommitAsync();
+        return new(history.Id, artifact.Id, history.VisitId, now) { NewBadges = badges.Select(b => new EarnedBadge(b.Id, b.Name)).ToList() };
     }
     public async Task<IReadOnlyList<RecognitionHistory>> GetHistoryAsync(Guid user, int page, int pageSize)
     {

@@ -19,9 +19,10 @@ public class GamificationService(ApplicationDbContext db, TimeProvider clock, IO
     }
     public async Task AwardScanPointsAsync(Guid user, int artifactId) => await Award(user, "scan_artifact", "artifact", artifactId, options.Value.ScanPoints);
     public Task<int> AwardQuizPointsAsync(Guid user, int questionId) => Award(user, "quiz_correct", "question", questionId, options.Value.CorrectAnswerPoints);
-    public async Task EvaluateBadgesAsync(Guid user)
+    public async Task<IReadOnlyList<Badge>> EvaluateBadgesAsync(Guid user)
     {
         if (db.Database.CurrentTransaction is null) throw new InvalidOperationException("Badge grants require a user-locked transaction.");
+        var awarded = new List<Badge>();
         var owned = await db.Set<UserBadge>().Where(b => b.UserId == user).Select(b => b.BadgeId).ToListAsync();
         foreach (var badge in await db.Set<Badge>().Where(b => !owned.Contains(b.Id)).ToListAsync()) {
             var rule = JsonSerializer.Deserialize<BadgeRule>(badge.RuleJson);
@@ -33,8 +34,12 @@ public class GamificationService(ApplicationDbContext db, TimeProvider clock, IO
                 join q in db.Set<Question>() on answer.QuestionId equals q.Id join a in db.Artifacts on q.ArtifactId equals a.Id
                 where attempt.UserId == user && answer.IsCorrect && answer.AnsweredAt != null && (badge.MuseumId == null || a.MuseumId == badge.MuseumId) select q.Id).Distinct().CountAsync();
             else continue;
-            if (count >= rule.Threshold) db.Add(new UserBadge { UserId = user, BadgeId = badge.Id, AwardedAt = clock.GetUtcNow().UtcDateTime });
+            if (count >= rule.Threshold) {
+                db.Add(new UserBadge { UserId = user, BadgeId = badge.Id, AwardedAt = clock.GetUtcNow().UtcDateTime });
+                awarded.Add(badge);
+            }
         }
+        return awarded;
     }
     public async Task<long> GetBalanceAsync(Guid user) => await db.Set<PointTransaction>().Where(x => x.UserId == user).SumAsync(x => (long)x.Points);
     public async Task<IReadOnlyList<PointTransaction>> GetTransactionsAsync(Guid user, int page, int pageSize) {
