@@ -1,4 +1,5 @@
 using System.Text;
+using System.Linq.Expressions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -52,13 +53,16 @@ public static class DataSeeder
         using var scope = services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var assetService = scope.ServiceProvider.GetService<IArtifactAssetService>();
+        var seedDemoMedia = services.GetRequiredService<IConfiguration>().GetValue<bool>("CloudflareR2:SeedDemoMedia");
+        var assetService = seedDemoMedia ? scope.ServiceProvider.GetService<IArtifactAssetService>() : null;
 
         var (admin, museumStaff, curator) = await AccountSeeder.SeedAsync(userManager);
         _ = await AccountSeeder.EnsureUserAsync(userManager, "visitor@museum.vn", "Khách tham quan Mẫu", "Visitor123", RoleNames.Visitor);
 
-        if (!await db.Museums.AnyAsync())
+        // Serialize repeatable local seeds; existing records are never reset.
+        await using (var seedTransaction = await db.Database.BeginTransactionAsync())
         {
+            await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(73674753001)");
             // 1. Bảo tàng mẫu
             var museum = new Museum
             {
@@ -73,11 +77,10 @@ public static class DataSeeder
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
-            db.Museums.Add(museum);
-            await db.SaveChangesAsync();
+            museum = await GetOrAddAsync(db, db.Museums, x => x.Name == museum.Name, museum);
 
             // 2. Phân công nhân viên bảo tàng (CD-01)
-            db.StaffAssignments.AddRange(
+            StaffAssignment[] assignments = [
                 new StaffAssignment
                 {
                     UserId = museumStaff.Id,
@@ -89,17 +92,19 @@ public static class DataSeeder
                     UserId = curator.Id,
                     MuseumId = museum.Id,
                     AssignedAt = DateTime.UtcNow
-                });
+                }];
+            foreach (var assignment in assignments)
+                await GetOrAddAsync(db, db.StaffAssignments,
+                    x => x.UserId == assignment.UserId && x.MuseumId == museum.Id && x.GalleryId == null && x.ArtifactId == null, assignment);
 
             // 3. Cấu trúc bảo tàng: Building -> Floor -> Gallery (CD-02)
             var building = new Building { MuseumId = museum.Id, Name = "Tòa nhà Trưng bày Chính" };
-            db.Buildings.Add(building);
-            await db.SaveChangesAsync();
+            building = await GetOrAddAsync(db, db.Buildings, x => x.MuseumId == museum.Id && x.Name == building.Name, building);
 
             var floor1 = new Floor { BuildingId = building.Id, LevelNo = 1, Name = "Tầng 1 - Thời kỳ Tiền sử & Sơ sử" };
             var floor2 = new Floor { BuildingId = building.Id, LevelNo = 2, Name = "Tầng 2 - Thời kỳ Phong kiến" };
-            db.Floors.AddRange(floor1, floor2);
-            await db.SaveChangesAsync();
+            floor1 = await GetOrAddAsync(db, db.Floors, x => x.BuildingId == building.Id && x.LevelNo == 1, floor1);
+            floor2 = await GetOrAddAsync(db, db.Floors, x => x.BuildingId == building.Id && x.LevelNo == 2, floor2);
 
             var gallery1 = new Gallery
             {
@@ -113,8 +118,8 @@ public static class DataSeeder
                 Name = "Phòng Triều đại Lý - Trần",
                 Description = "Không gian trưng bày gốm sứ, kiến trúc và cổ vật thời Lý - Trần."
             };
-            db.Galleries.AddRange(gallery1, gallery2);
-            await db.SaveChangesAsync();
+            gallery1 = await GetOrAddAsync(db, db.Galleries, x => x.FloorId == floor1.Id && x.Name == gallery1.Name, gallery1);
+            gallery2 = await GetOrAddAsync(db, db.Galleries, x => x.FloorId == floor2.Id && x.Name == gallery2.Name, gallery2);
 
             // 4. Chủ đề hiện vật (CD-03)
             var topicNational = new Topic
@@ -138,8 +143,9 @@ public static class DataSeeder
                 Description = "Bộ sưu tập gốm men ngọc, men hoa nâu qua các triều đại.",
                 IsActive = true
             };
-            db.Topics.AddRange(topicNational, topicDongSon, topicCeramics);
-            await db.SaveChangesAsync();
+            topicNational = await GetOrAddAsync(db, db.Topics, x => x.MuseumId == museum.Id && x.Name == topicNational.Name, topicNational);
+            topicDongSon = await GetOrAddAsync(db, db.Topics, x => x.MuseumId == museum.Id && x.Name == topicDongSon.Name, topicDongSon);
+            topicCeramics = await GetOrAddAsync(db, db.Topics, x => x.MuseumId == museum.Id && x.Name == topicCeramics.Name, topicCeramics);
 
             // 5. Hiện vật mẫu (Đa dạng hiện vật Free & Premium cho Chatbot và Nhận diện QR/AI Vision)
             var artifact1 = new Artifact
@@ -230,11 +236,17 @@ public static class DataSeeder
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
-            db.Artifacts.AddRange(artifact1, artifact2, artifact3, artifact4, artifact5, artifact6, artifact7, artifact8);
-            await db.SaveChangesAsync();
+            artifact1 = await GetOrAddAsync(db, db.Artifacts, x => x.MuseumId == museum.Id && x.Code == "HV-001", artifact1);
+            artifact2 = await GetOrAddAsync(db, db.Artifacts, x => x.MuseumId == museum.Id && x.Code == "HV-002", artifact2);
+            artifact3 = await GetOrAddAsync(db, db.Artifacts, x => x.MuseumId == museum.Id && x.Code == "HV-003", artifact3);
+            artifact4 = await GetOrAddAsync(db, db.Artifacts, x => x.MuseumId == museum.Id && x.Code == "HV-004", artifact4);
+            artifact5 = await GetOrAddAsync(db, db.Artifacts, x => x.MuseumId == museum.Id && x.Code == "HV-005", artifact5);
+            artifact6 = await GetOrAddAsync(db, db.Artifacts, x => x.MuseumId == museum.Id && x.Code == "HV-006", artifact6);
+            artifact7 = await GetOrAddAsync(db, db.Artifacts, x => x.MuseumId == museum.Id && x.Code == "HV-007", artifact7);
+            artifact8 = await GetOrAddAsync(db, db.Artifacts, x => x.MuseumId == museum.Id && x.Code == "HV-008", artifact8);
 
             // Gán chủ đề cho hiện vật
-            db.ArtifactTopics.AddRange(
+            ArtifactTopic[] artifactTopics = [
                 new ArtifactTopic { ArtifactId = artifact1.Id, TopicId = topicNational.Id },
                 new ArtifactTopic { ArtifactId = artifact1.Id, TopicId = topicDongSon.Id },
                 new ArtifactTopic { ArtifactId = artifact2.Id, TopicId = topicNational.Id },
@@ -246,7 +258,9 @@ public static class DataSeeder
                 new ArtifactTopic { ArtifactId = artifact6.Id, TopicId = topicCeramics.Id },
                 new ArtifactTopic { ArtifactId = artifact7.Id, TopicId = topicNational.Id },
                 new ArtifactTopic { ArtifactId = artifact8.Id, TopicId = topicNational.Id }
-            );
+            ];
+            foreach (var link in artifactTopics)
+                await GetOrAddAsync(db, db.ArtifactTopics, x => x.ArtifactId == link.ArtifactId && x.TopicId == link.TopicId, link);
 
             // 6. Nội dung đa ngôn ngữ & Narration mẫu giàu chi tiết phục vụ Chatbot hỏi đáp (CD-06A)
             var contentVi1 = new ArtifactContent { ArtifactId = artifact1.Id, LanguageCode = "vi" };
@@ -258,11 +272,18 @@ public static class DataSeeder
             var contentVi6 = new ArtifactContent { ArtifactId = artifact6.Id, LanguageCode = "vi" };
             var contentVi7 = new ArtifactContent { ArtifactId = artifact7.Id, LanguageCode = "vi" };
             var contentVi8 = new ArtifactContent { ArtifactId = artifact8.Id, LanguageCode = "vi" };
-            db.ArtifactContents.AddRange(contentVi1, contentEn1, contentVi2, contentVi3, contentVi4, contentVi5, contentVi6, contentVi7, contentVi8);
-            await db.SaveChangesAsync();
+            contentVi1 = await GetOrAddAsync(db, db.ArtifactContents, x => x.ArtifactId == contentVi1.ArtifactId && x.LanguageCode == contentVi1.LanguageCode, contentVi1);
+            contentEn1 = await GetOrAddAsync(db, db.ArtifactContents, x => x.ArtifactId == contentEn1.ArtifactId && x.LanguageCode == contentEn1.LanguageCode, contentEn1);
+            contentVi2 = await GetOrAddAsync(db, db.ArtifactContents, x => x.ArtifactId == contentVi2.ArtifactId && x.LanguageCode == contentVi2.LanguageCode, contentVi2);
+            contentVi3 = await GetOrAddAsync(db, db.ArtifactContents, x => x.ArtifactId == contentVi3.ArtifactId && x.LanguageCode == contentVi3.LanguageCode, contentVi3);
+            contentVi4 = await GetOrAddAsync(db, db.ArtifactContents, x => x.ArtifactId == contentVi4.ArtifactId && x.LanguageCode == contentVi4.LanguageCode, contentVi4);
+            contentVi5 = await GetOrAddAsync(db, db.ArtifactContents, x => x.ArtifactId == contentVi5.ArtifactId && x.LanguageCode == contentVi5.LanguageCode, contentVi5);
+            contentVi6 = await GetOrAddAsync(db, db.ArtifactContents, x => x.ArtifactId == contentVi6.ArtifactId && x.LanguageCode == contentVi6.LanguageCode, contentVi6);
+            contentVi7 = await GetOrAddAsync(db, db.ArtifactContents, x => x.ArtifactId == contentVi7.ArtifactId && x.LanguageCode == contentVi7.LanguageCode, contentVi7);
+            contentVi8 = await GetOrAddAsync(db, db.ArtifactContents, x => x.ArtifactId == contentVi8.ArtifactId && x.LanguageCode == contentVi8.LanguageCode, contentVi8);
 
             var now = DateTime.UtcNow;
-            db.ArtifactContentVersions.AddRange(
+            ArtifactContentVersion[] contentVersions = [
                 new ArtifactContentVersion
                 {
                     ArtifactContentId = contentVi1.Id,
@@ -429,9 +450,15 @@ public static class DataSeeder
                     ReviewNote = "Đã duyệt nội dung Premium.",
                     CreatedAt = now
                 }
-            );
-
-            await db.SaveChangesAsync();
+            ];
+            foreach (var version in contentVersions)
+            {
+                if (await db.ArtifactContentVersions.AnyAsync(x => x.ArtifactContentId == version.ArtifactContentId && x.VersionNo == version.VersionNo)) continue;
+                if (version.IsCurrent && await db.ArtifactContentVersions.AnyAsync(x => x.ArtifactContentId == version.ArtifactContentId && x.IsCurrent))
+                    version.IsCurrent = false;
+                db.ArtifactContentVersions.Add(version);
+                await db.SaveChangesAsync();
+            }
 
             // 6b. Seed sẵn các Tour & TourVersion mẫu cho WF-02 (F04, F05, F06) phục vụ Demo DS-02a / DS-02b
             var tourDongSon = new Tour
@@ -535,13 +562,14 @@ public static class DataSeeder
                 ]
             };
 
-            db.Tours.AddRange(tourDongSon, tourCeramics);
-            await db.SaveChangesAsync();
+            await GetOrAddAsync(db, db.Tours, x => x.MuseumId == museum.Id && x.Title == tourDongSon.Title, tourDongSon);
+            await GetOrAddAsync(db, db.Tours, x => x.MuseumId == museum.Id && x.Title == tourCeramics.Title, tourCeramics);
+            await seedTransaction.CommitAsync();
         }
 
         // 7. Seed sẵn mô hình 3D thật (.glb) và file âm thanh thật (.wav) cho Hiện vật 1 nếu chưa có
         var firstArtifact = await db.Artifacts.OrderBy(a => a.Id).FirstOrDefaultAsync();
-        if (firstArtifact is not null && assetService is not null && services.GetRequiredService<IConfiguration>().GetValue<bool>("CloudflareR2:SeedDemoMedia"))
+        if (firstArtifact is not null && assetService is not null && seedDemoMedia)
         {
             if (!await db.Artifact3DModels.AnyAsync(m => m.ArtifactId == firstArtifact.Id))
             {
@@ -587,6 +615,16 @@ public static class DataSeeder
                 }
             }
         }
+    }
+
+    private static async Task<T> GetOrAddAsync<T>(ApplicationDbContext db, DbSet<T> table, Expression<Func<T, bool>> match, T seed)
+        where T : class
+    {
+        var existing = await table.FirstOrDefaultAsync(match);
+        if (existing is not null) return existing;
+        table.Add(seed);
+        await db.SaveChangesAsync();
+        return seed;
     }
 
     public static byte[] BuildSampleWavBytes()

@@ -246,6 +246,10 @@ public class TourService(ApplicationDbContext db, TimeProvider? clock = null) : 
         {
             ProjectPublicVersionOntoTour(tour, publicVersion);
         }
+        else if (user is null)
+        {
+            tour.Versions = [];
+        }
 
         return tour;
     }
@@ -306,6 +310,10 @@ public class TourService(ApplicationDbContext db, TimeProvider? clock = null) : 
             if (pub is not null)
             {
                 ProjectPublicVersionOntoTour(tour, pub);
+            }
+            else
+            {
+                tour.Versions = [];
             }
         }
 
@@ -849,6 +857,8 @@ public class TourService(ApplicationDbContext db, TimeProvider? clock = null) : 
 
     private static void ProjectPublicVersionOntoTour(Tour tour, TourVersion publicVersion)
     {
+        // Public responses must not serialize submitted/draft navigation entries.
+        tour.Versions = [publicVersion];
         tour.Title = publicVersion.Title;
         tour.Description = publicVersion.Description;
         tour.EstimatedMinutes = publicVersion.EstimatedMinutes;
