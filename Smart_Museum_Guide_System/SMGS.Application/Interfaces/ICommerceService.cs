@@ -13,6 +13,8 @@ public interface ICommerceService
     Task<OrderResponse> CreateOrder(OrderRequest request, Guid buyer);
     Task<IReadOnlyList<OrderResponse>> Orders(Guid buyer, int page, int pageSize);
     Task<PaymentAttempt> StartPayment(Guid orderId, Guid buyer);
+    Task<SePayPaymentResponse> StartSePayPayment(Guid orderId, Guid buyer);
+    Task<SePayWebhookResponse> SePayWebhook(byte[] rawBody, string signature, string timestamp);
     Task<IReadOnlyList<PaymentAttempt>> Transactions(Guid orderId, Guid buyer);
     Task<PaymentAttempt> ConfirmPayment(Guid attemptId, ConfirmPaymentRequest request, Guid staff, bool admin);
     Task<GroupKeyResponse> IssueGroupKey(Guid orderId, Guid buyer);
