@@ -21,6 +21,7 @@ using SMGS.Domain.Entities;
 using SMGS.Infrastructure.Data;
 using SMGS.Infrastructure.Services;
 
+await ScanChecks.Run();
 static void Check(bool value, string message) { if (!value) throw new Exception(message); }
 static async Task Throws<T>(Func<Task> action) where T : Exception { try { await action(); } catch (T) { return; } throw new Exception($"Expected {typeof(T).Name}"); }
 static byte[] Glb(string json = "{\"asset\":{\"version\":\"2.0\"}}") {

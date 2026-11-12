@@ -94,6 +94,7 @@ public static class DependencyInjection
         services.AddSingleton<IndoorImageStore>();
         services.AddScoped<IArtifactContentRepository, ArtifactContentRepository>();
         services.AddScoped<IArtifactContentService, ArtifactContentService>();
+        services.AddHttpClient("artifact-scan", client => client.Timeout = TimeSpan.FromMinutes(10));
         services.AddOptions<GuideModelOptions>().Bind(configuration.GetSection(GuideModelOptions.SectionName));
         services.AddHttpClient<IArtifactGuideModel, LocalArtifactGuideModel>(client =>
         {
