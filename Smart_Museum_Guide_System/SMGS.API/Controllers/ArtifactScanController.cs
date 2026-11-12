@@ -126,7 +126,21 @@ public class ArtifactScanController(IAccountAdminService scopes, IArtifactAssetS
         var length = response.Content.Headers.ContentLength;
         if (length is null or <= 0 or > 104857600) throw new ScanError(413, "GLB phải có dung lượng hợp lệ, tối đa 100 MiB.");
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        var result = await assets.UploadOrReplace3DModelAsync(artifactId, stream, length.Value,
+        // Existing media validation rewinds the GLB. HTTP response streams cannot seek.
+        // Spool to disk with a strict bound instead of holding a full model in RAM.
+        await using var buffered = new FileStream(Path.Combine(Path.GetTempPath(), $"smgs-scan-{Guid.NewGuid():N}.tmp"),
+            FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 65536, FileOptions.Asynchronous | FileOptions.DeleteOnClose);
+        var chunk = new byte[65536]; long received = 0;
+        int read;
+        while ((read = await stream.ReadAsync(chunk, ct)) != 0)
+        {
+            received += read;
+            if (received > length.Value) throw new ScanError(502, "Dung lượng GLB không khớp phản hồi AI.");
+            await buffered.WriteAsync(chunk.AsMemory(0, read), ct);
+        }
+        if (received != length.Value) throw new ScanError(502, "Tải GLB chưa đầy đủ. Vui lòng thử lại.");
+        buffered.Position = 0;
+        var result = await assets.UploadOrReplace3DModelAsync(artifactId, buffered, length.Value,
             "model/gltf-binary", $"scan-{jobId}.glb", new Update3DModelSettingsRequestDto(), UserId, Admin, ct);
         if (result.StatusCode is >= 200 and < 300)
         {
