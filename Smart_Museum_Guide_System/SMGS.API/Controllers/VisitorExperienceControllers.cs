@@ -89,6 +89,9 @@ public class TourController(ITourService service) : ExperienceControllerBase
 [Route("api/recognitions"), Authorize(Roles = RoleNames.Visitor)]
 public class RecognitionController(IRecognitionService service) : ExperienceControllerBase
 {
+    [HttpGet("collection")]
+    public async Task<IActionResult> Collection(int? museumId = null, int page = 1, int pageSize = 4)
+        => Result(await service.GetCollectionAsync(UserId, museumId, page, pageSize));
     [HttpPost("qr")]
     public async Task<IActionResult> Scan(ScanQrRequest request) => Result(await service.RecordQrAsync(request, UserId));
     [HttpGet("me")]

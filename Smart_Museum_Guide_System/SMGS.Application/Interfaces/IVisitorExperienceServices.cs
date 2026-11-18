@@ -29,6 +29,7 @@ public interface ITourService
 }
 public interface IRecognitionService
 {
+    Task<ArtifactCollectionDto> GetCollectionAsync(Guid user, int? museumId, int page, int pageSize);
     Task<ScanResult> RecordQrAsync(ScanQrRequest request, Guid user);
     Task<IReadOnlyList<RecognitionHistory>> GetHistoryAsync(Guid user, int page, int pageSize);
 }

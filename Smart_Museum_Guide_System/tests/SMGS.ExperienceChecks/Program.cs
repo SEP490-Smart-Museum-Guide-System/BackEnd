@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using SMGS.API.Controllers;
@@ -17,6 +18,18 @@ using SMGS.Infrastructure.Identity;
 using SMGS.Infrastructure.Services;
 
 static void Check(bool ok, string message) { if (!ok) throw new Exception("FAIL: " + message); }
+if (args.Contains("--swagger")) {
+    var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder();
+    builder.Services.AddControllers()
+        .AddApplicationPart(typeof(ArtifactScanController).Assembly);
+    builder.Services.AddSwaggerGen();
+    await using var app = builder.Build();
+    var swagger = app.Services.GetRequiredService<Swashbuckle.AspNetCore.Swagger.ISwaggerProvider>().GetSwagger("v1");
+    var upload = swagger.Paths["/api/artifacts/{artifactId}/scans"].Operations[Microsoft.OpenApi.Models.OperationType.Post];
+    Check(upload.RequestBody.Content.ContainsKey("multipart/form-data"), "Scan upload remains multipart");
+    Console.WriteLine("Swagger generation passed for all API controllers.");
+    return;
+}
 static async Task Reject(Func<Task> action, int status) {
     try { await action(); throw new Exception("Expected status " + status); }
     catch (ExperienceException e) { Check(e.StatusCode == status, e.Message + " (status)"); }
@@ -52,6 +65,10 @@ var createSchema = $"CREATE SCHEMA \"{schema}\"";
 var dropSchema = $"DROP SCHEMA \"{schema}\" CASCADE";
 await setup.Database.ExecuteSqlRawAsync(createSchema);
 try {
+    if (args.Contains("--collection")) {
+        await CollectionChecks.Run(setup, Recognition);
+        return;
+    }
     var migrator = setup.GetService<IMigrator>();
     // Older migration histories support the legacy upgrade regression; squashed histories start at the current schema.
     if (setup.Database.GetMigrations().Contains("20261028090549_ConfirmProductValidityPolicy")) {
@@ -132,6 +149,14 @@ try {
     var qr = new ScanQrRequest(a.QrCode!, visit.Id, Guid.NewGuid());
     var scans = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => Run(db => Recognition(db).RecordQrAsync(qr, visitor))));
     Check(scans.Select(s => s.RecognitionId).Distinct().Count() == 1, "Concurrent retries create one recognition");
+    var collection = await Run(db => Recognition(db).GetCollectionAsync(visitor, null, 1, 4));
+    Check(collection.TotalCollected == 1 && collection.Items.Single().ArtifactId == a.Id, "Collection groups verified concurrent QR history");
+    Check(collection.Items.Single().ImageUrl == null, "Missing collection image uses placeholder");
+    Check((await Run(db => Recognition(db).GetCollectionAsync(other, null, 1, 4))).TotalCollected == 0, "Collection belongs to current visitor");
+    Check((await Run(db => Recognition(db).GetCollectionAsync(visitor, -1, 1, 4))).TotalCount == 0, "Museum filter excludes unrelated artifacts");
+    await setup.Artifacts.Where(x => x.Id == a.Id).ExecuteUpdateAsync(s => s.SetProperty(x => x.IsActive, false));
+    Check(!(await Run(db => Recognition(db).GetCollectionAsync(visitor, null, 1, 4))).Items.Single().Available, "Unavailable artifact remains collected");
+    await setup.Artifacts.Where(x => x.Id == a.Id).ExecuteUpdateAsync(s => s.SetProperty(x => x.IsActive, true));
     Check(await setup.Set<DailyQuizEntry>().CountAsync() == 1, "One daily unlock");
     Check(await setup.Set<PointTransaction>().CountAsync() == 1, "One scan award");
     await Reject(async () => await Run(db => Recognition(db).RecordQrAsync(qr with { QrCode = b.QrCode! }, visitor)), 409);

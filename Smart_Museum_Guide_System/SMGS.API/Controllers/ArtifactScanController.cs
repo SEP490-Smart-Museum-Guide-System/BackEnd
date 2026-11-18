@@ -81,8 +81,8 @@ public class ArtifactScanController(IAccountAdminService scopes, IArtifactAssetS
     [HttpPost]
     [RequestSizeLimit(550L * 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = 550L * 1024 * 1024)]
-    public Task<IActionResult> Create(int artifactId, [FromForm] List<IFormFile> images,
-        [FromForm] IFormFile? metadata, [FromForm] IFormFile? referenceObj,
+    public Task<IActionResult> Create(int artifactId, List<IFormFile> images,
+        IFormFile? metadata, IFormFile? referenceObj,
         [FromForm] string mode = "auto", CancellationToken ct = default) => Authorized(artifactId, async () => {
         if (images.Count is < 5 or > 200) throw new ScanError(422, "Chọn 5–200 ảnh của cùng một hiện vật.");
         if (images.Sum(f => f.Length) + (metadata?.Length ?? 0) + (referenceObj?.Length ?? 0) > 500L * 1024 * 1024)

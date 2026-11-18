@@ -9,6 +9,36 @@ namespace SMGS.Infrastructure.Services;
 public class RecognitionService(ApplicationDbContext db, IVisitProgressService progress, IDailyQuizService daily,
     IGamificationService rewards, TimeProvider clock) : IRecognitionService
 {
+    public async Task<ArtifactCollectionDto> GetCollectionAsync(Guid user, int? museumId, int page, int pageSize)
+    {
+        var (skip, take) = ExperienceAccess.Page(page, pageSize);
+        // Group verified history so repeat/concurrent scans always produce one collection entry.
+        var discoveries = db.Set<RecognitionHistory>().AsNoTracking()
+            .Where(h => h.UserId == user && h.IsSuccess && h.Method == "qr" && h.ArtifactId != null)
+            .GroupBy(h => h.ArtifactId)
+            .Select(g => new { ArtifactId = g.Key, FirstDiscoveredAt = g.Min(h => h.RecognizedAt) });
+        var collection = from discovery in discoveries
+                         join artifact in db.Artifacts.AsNoTracking() on discovery.ArtifactId equals artifact.Id
+                         select new { Artifact = artifact, discovery.FirstDiscoveredAt };
+        var totalCollected = await collection.CountAsync();
+        var museumRows = await collection.Select(x => new { Id = x.Artifact.MuseumId, x.Artifact.Museum!.Name })
+            .Distinct().OrderBy(m => m.Name).ThenBy(m => m.Id).ToListAsync();
+        var museums = museumRows.Select(m => new CollectionMuseum(m.Id, m.Name)).ToList();
+        if (museumId.HasValue) collection = collection.Where(x => x.Artifact.MuseumId == museumId.Value);
+        var totalCount = await collection.CountAsync();
+        var rows = await collection.OrderByDescending(x => x.FirstDiscoveredAt).ThenBy(x => x.Artifact.Id)
+            .Skip(skip).Take(take).Select(x => new {
+                x.Artifact.Id, x.Artifact.Name, x.Artifact.MuseumId, MuseumName = x.Artifact.Museum!.Name,
+                Available = x.Artifact.IsActive && x.Artifact.Museum.IsActive, x.FirstDiscoveredAt,
+                ImageId = x.Artifact.MediaItems.Where(m => m.MediaType == "image")
+                    .OrderBy(m => m.SortOrder).ThenBy(m => m.Id).Select(m => (int?)m.Id).FirstOrDefault()
+            }).ToListAsync();
+        var items = rows.Select(x => new CollectedArtifact(x.Id, x.Name, x.MuseumId, x.MuseumName,
+            x.Available, x.Available && x.ImageId.HasValue ? $"/api/artifacts/{x.Id}/media/{x.ImageId}/file" : null,
+            x.FirstDiscoveredAt)).ToList();
+        return new(items, totalCount, totalCollected, museums, page, (int)Math.Ceiling(totalCount / (double)take));
+    }
+
     public async Task<ScanResult> RecordQrAsync(ScanQrRequest request, Guid user)
     {
         if (request.RequestId == Guid.Empty || string.IsNullOrWhiteSpace(request.QrCode) || request.QrCode.Length > 200)
