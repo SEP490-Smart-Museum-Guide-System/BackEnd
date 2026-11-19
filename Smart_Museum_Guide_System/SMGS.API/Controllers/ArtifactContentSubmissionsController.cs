@@ -9,7 +9,7 @@ namespace SMGS.API.Controllers;
 [ApiController]
 [Route("api/artifacts/{artifactId:int}/contents")]
 [Produces("application/json")]
-public class ArtifactContentSubmissionsController(IArtifactContentService service) : ControllerBase
+public class ArtifactContentSubmissionsController(IArtifactContentService service, IAccountAdminService accounts) : ControllerBase
 {
     /// <summary>Nhận kết quả AI hoặc nội dung nhập và tạo phiên bản mới chờ Curator duyệt.</summary>
     [Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff)]
@@ -17,6 +17,7 @@ public class ArtifactContentSubmissionsController(IArtifactContentService servic
     public async Task<IActionResult> Submit(int artifactId, [FromBody] SubmitArtifactContentRequestDto dto)
     {
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Unauthorized();
+        if (!await accounts.CanManageArtifactAsync(userId, User.IsInRole(RoleNames.Admin), artifactId)) return Forbid();
         var response = await service.SubmitAsync(artifactId, dto, userId);
         return StatusCode(response.StatusCode, response);
     }
@@ -27,6 +28,7 @@ public class ArtifactContentSubmissionsController(IArtifactContentService servic
     public async Task<IActionResult> SubmitManual(int artifactId, [FromBody] SubmitArtifactContentRequestDto dto)
     {
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Unauthorized();
+        if (!await accounts.CanManageArtifactAsync(userId, User.IsInRole(RoleNames.Admin), artifactId)) return Forbid();
         dto.IsAiGenerated = false;
         var response = await service.SubmitAsync(artifactId, dto, userId);
         return StatusCode(response.StatusCode, response);
@@ -57,6 +59,8 @@ public class ArtifactContentSubmissionsController(IArtifactContentService servic
     [HttpGet("versions")]
     public async Task<IActionResult> GetVersionHistory(int artifactId, [FromQuery] string? languageCode = null)
     {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Unauthorized();
+        if (!await accounts.CanManageArtifactAsync(userId, User.IsInRole(RoleNames.Admin), artifactId)) return Forbid();
         var response = await service.GetVersionHistoryAsync(artifactId, languageCode);
         return StatusCode(response.StatusCode, response);
     }

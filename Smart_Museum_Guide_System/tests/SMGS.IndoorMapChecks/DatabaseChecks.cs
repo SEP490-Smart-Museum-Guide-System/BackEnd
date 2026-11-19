@@ -22,22 +22,20 @@ internal static class DatabaseChecks
         var connection = Environment.GetEnvironmentVariable("SMGS_TEST_CONNECTION") ?? config.GetConnectionString("DefaultConnection");
         var schema = "smgs_indoor_test_" + Guid.NewGuid().ToString("N");
         var builder = new NpgsqlConnectionStringBuilder(connection) { SearchPath = schema, Pooling = false };
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql(builder.ConnectionString).Options;
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseNpgsql(builder.ConnectionString, o => o.MigrationsHistoryTable("__EFMigrationsHistory", schema)).Options;
         await using var setup = new ApplicationDbContext(options);
         var createSql = $"CREATE SCHEMA \"{schema}\""; // Fixed prefix and generated UUID only.
         var dropSql = $"DROP SCHEMA \"{schema}\" CASCADE";
         await setup.Database.ExecuteSqlRawAsync(createSql);
         try
         {
-            await setup.Database.ExecuteSqlRawAsync(setup.Database.GenerateCreateScript());
+            await setup.Database.MigrateAsync();
             var museum = new Museum { Name = "Fixture museum" }; var other = new Museum { Name = "Other museum" };
             setup.Museums.AddRange(museum, other); await setup.SaveChangesAsync();
-            var migrator = setup.GetService<IMigrator>();
-            await setup.Database.ExecuteSqlRawAsync("CREATE TABLE \"__EFMigrationsHistory\" (\"MigrationId\" varchar(150) PRIMARY KEY, \"ProductVersion\" varchar(32) NOT NULL)");
-            await setup.Database.ExecuteSqlRawAsync(migrator.GenerateScript("20261026002857_AddIndoorMaps", "20261021025653_InitialCreate"));
-            await setup.Database.ExecuteSqlRawAsync(migrator.GenerateScript("20261021025653_InitialCreate", "20261026002857_AddIndoorMaps"));
+            await setup.Database.MigrateAsync();
             setup.ChangeTracker.Clear();
-            Check(await setup.Museums.CountAsync() == 2 && await setup.Cities.CountAsync() == 34, "migration preserves museums and cities");
+            Check(await setup.Museums.CountAsync() == 2 && await setup.Cities.CountAsync() == 34, "repeat baseline preserves museums and cities; historical upgrade not verified");
             await using (var creationDb = new ApplicationDbContext(options))
             {
                 var created = await new SMGS.Infrastructure.Repositories.MuseumRepository(creationDb)
@@ -116,7 +114,7 @@ internal static class DatabaseChecks
             await Call(s => s.Publish(id, map.Revision, false, staff, false));
             await Deny(() => Call(s => s.Published(id)), 404);
             await HttpChecks.Run(builder.ConnectionString, id, museum.Id, staff);
-            Console.WriteLine("PASS: PostgreSQL migration roundtrip, preserved data, staff scope, layout/floor checks, graph roundtrip, atomic failures, revision conflicts, immutable publication, QR and foreign links.");
+            Console.WriteLine("PASS: PostgreSQL baseline/repeat migration, preserved fixtures, staff scope, layout/floor checks, graph roundtrip, atomic failures, revision conflicts, immutable publication, QR and foreign links. Historical upgrade not verified.");
         }
         finally { await setup.Database.ExecuteSqlRawAsync(dropSql); }
     }

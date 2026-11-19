@@ -48,8 +48,7 @@ public class MuseumsController(IMuseumService museumService) : ControllerBase
     /// <summary>
     /// Tạo bảo tàng mới (chỉ Admin).
     /// </summary>
-    //[Authorize(Roles = RoleNames.Admin)] // TODO: bật lại sau khi test xong
-    [AllowAnonymous]
+    [Authorize(Roles = RoleNames.Admin)]
     [HttpPost]
     [ProducesResponseType(typeof(ResponseDto<MuseumResponseDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ResponseDto<MuseumResponseDto>), StatusCodes.Status400BadRequest)]

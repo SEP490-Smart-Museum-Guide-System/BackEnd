@@ -18,29 +18,21 @@ internal static class DatabaseChecks
         var connection = Environment.GetEnvironmentVariable("SMGS_TEST_CONNECTION") ?? config.GetConnectionString("DefaultConnection");
         var schema = "smgs_discovery_test_" + Guid.NewGuid().ToString("N");
         var builder = new NpgsqlConnectionStringBuilder(connection) { SearchPath = schema, Pooling = false };
-        await using var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql(builder.ConnectionString).Options);
+        await using var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseNpgsql(builder.ConnectionString, o => o.MigrationsHistoryTable("__EFMigrationsHistory", schema)).Options);
         // Identifier is generated locally from a fixed prefix and Guid N, never input.
         var createSchemaSql = $"CREATE SCHEMA \"{schema}\"";
         var dropSchemaSql = $"DROP SCHEMA \"{schema}\" CASCADE";
         await db.Database.ExecuteSqlRawAsync(createSchemaSql);
         try
         {
-            // Existing museum baseline only; legacy migrations are deliberately not replayed.
-            await db.Database.ExecuteSqlRawAsync("""
-                CREATE TABLE museums (
-                  "Id" integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-                  "Name" varchar(200) NOT NULL, "Description" text, "Address" varchar(500),
-                  "Latitude" decimal(9,6), "Longitude" decimal(9,6), "OpeningHours" varchar(500),
-                  "CoverImageUrl" varchar(1000), "IsActive" boolean NOT NULL DEFAULT true,
-                  "CreatedAt" timestamptz NOT NULL);
-                CREATE TABLE "__EFMigrationsHistory" ("MigrationId" varchar(150) PRIMARY KEY, "ProductVersion" varchar(32) NOT NULL);
-                INSERT INTO museums ("Name", "CreatedAt") VALUES ('Legacy', now());
-                """);
-            var migrator = db.GetService<IMigrator>();
-            var script = migrator.GenerateScript("20261021025653_InitialCreate", "20261021093939_AddMuseumDiscoveryCities");
-            await db.Database.ExecuteSqlRawAsync(script);
+            // The removed historical migrations cannot prove an upgrade. Test the shipped baseline honestly.
+            await db.Database.MigrateAsync();
+            db.Museums.Add(new Museum { Name = "Unassigned city" });
+            await db.SaveChangesAsync();
+            await db.Database.MigrateAsync();
             Check(await db.Cities.CountAsync() == 34, "City seed missing.");
-            Check((await db.Museums.SingleAsync()).CityCode is null, "Migration changed legacy data.");
+            Check((await db.Museums.SingleAsync()).CityCode is null, "Repeat migration changed existing data.");
             var near = new Museum { Name = "Test Near", CityCode = "79", Latitude = 0, Longitude = 1 };
             var tied = new Museum { Name = "Test Tied", CityCode = "79", Latitude = 0, Longitude = 1 };
             var far = new Museum { Name = "Test Far", CityCode = "79", Latitude = 0, Longitude = 2 };
@@ -70,7 +62,7 @@ internal static class DatabaseChecks
             using var canceled = new CancellationTokenSource(); canceled.Cancel();
             try { await repo.DiscoverAsync(query, canceled.Token); throw new Exception("DB cancellation swallowed."); }
             catch (OperationCanceledException) { }
-            Console.WriteLine("PASS: isolated PostgreSQL migration, preserved data, FK/catalog, Haversine translation, pagination, ties, dateline and cancellation.");
+            Console.WriteLine("PASS: current baseline/repeat migration, FK/catalog, Haversine translation, pagination, ties, dateline and cancellation. Historical upgrade not verified.");
         }
         finally { await db.Database.ExecuteSqlRawAsync(dropSchemaSql); }
     }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SMGS.Application.DTOs.Feedback.Request;
 using SMGS.Application.Interfaces;
 using SMGS.Domain.Constants;
+using SMGS.Domain.Interfaces;
 
 namespace SMGS.API.Controllers;
 
@@ -11,7 +12,7 @@ namespace SMGS.API.Controllers;
 [Route("api/feedbacks")]
 [Produces("application/json")]
 [Authorize]
-public class FeedbacksController(IFeedbackService feedbackService) : ControllerBase
+public class FeedbacksController(IFeedbackService feedbackService, IAccountAdminService accounts, IFeedbackRepository feedbackRepository) : ControllerBase
 {
     // ─────────────────────────── Visitor ───────────────────────────
 
@@ -49,12 +50,13 @@ public class FeedbacksController(IFeedbackService feedbackService) : ControllerB
 
     /// <summary>
     /// Museum Staff xem feedback của bảo tàng.
-    /// TODO: kiểm tra staff có được phân công bảo tàng này khi có Staff Assignment.
     /// </summary>
     [Authorize(Roles = $"{RoleNames.MuseumStaff},{RoleNames.Admin}")]
     [HttpGet("museum/{museumId:int}")]
     public async Task<IActionResult> GetByMuseum(int museumId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
+        if (!TryGetUserId(out var userId)) return Unauthorized();
+        if (!await accounts.CanManageMuseumAsync(userId, User.IsInRole(RoleNames.Admin), museumId)) return Forbid();
         var response = await feedbackService.GetByMuseumAsync(museumId, page, pageSize);
         return StatusCode(response.StatusCode, response);
     }
@@ -65,6 +67,9 @@ public class FeedbacksController(IFeedbackService feedbackService) : ControllerB
     public async Task<IActionResult> Respond(int id, [FromBody] StaffResponseRequestDto dto)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
+        var feedback = await feedbackRepository.GetByIdAsync(id);
+        if (feedback?.Visit == null) return NotFound();
+        if (!await accounts.CanManageMuseumAsync(userId, false, feedback.Visit.MuseumId)) return Forbid();
         var response = await feedbackService.RespondAsync(id, userId, dto);
         return StatusCode(response.StatusCode, response);
     }

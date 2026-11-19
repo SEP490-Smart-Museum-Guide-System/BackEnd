@@ -1,0 +1,3450 @@
+[
+  {
+    "table": "artifact_3d_models",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "AutoRotate",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "CameraOrbit",
+        "type": "character varying(100)",
+        "nullable": true
+      },
+      {
+        "name": "ContentType",
+        "type": "character varying(100)",
+        "nullable": false
+      },
+      {
+        "name": "FieldOfView",
+        "type": "character varying(50)",
+        "nullable": true
+      },
+      {
+        "name": "FileFormat",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "FileName",
+        "type": "character varying(300)",
+        "nullable": false
+      },
+      {
+        "name": "FileSize",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "Name",
+        "type": "character varying(300)",
+        "nullable": false
+      },
+      {
+        "name": "PosterUrl",
+        "type": "character varying(1000)",
+        "nullable": true
+      },
+      {
+        "name": "Scale",
+        "type": "numeric(10,4)",
+        "nullable": false
+      },
+      {
+        "name": "StorageKey",
+        "type": "character varying(200)",
+        "nullable": false
+      },
+      {
+        "name": "UpdatedAt",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "UpdatedBy",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "artifact_content_versions",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactContentId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "AudioUrl",
+        "type": "character varying(1000)",
+        "nullable": true
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "CreatedBy",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "Description",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "IsAiGenerated",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "IsCurrent",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "NarrationText",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "PublishedAt",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "ReviewNote",
+        "type": "character varying(2000)",
+        "nullable": true
+      },
+      {
+        "name": "ReviewedAt",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "ReviewedBy",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "Status",
+        "type": "character varying(30)",
+        "nullable": false
+      },
+      {
+        "name": "Title",
+        "type": "character varying(300)",
+        "nullable": false
+      },
+      {
+        "name": "VersionNo",
+        "type": "integer",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "CreatedBy"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "ReviewedBy"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "ArtifactContentId"
+        ],
+        "parent": "artifact_contents",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "artifact_contents",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "LanguageCode",
+        "type": "character varying(35)",
+        "nullable": false
+      },
+      {
+        "name": "Revision",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "artifact_medias",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ContentType",
+        "type": "character varying(100)",
+        "nullable": false
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "CreatedBy",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "FileName",
+        "type": "character varying(300)",
+        "nullable": false
+      },
+      {
+        "name": "FileSize",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "LanguageCode",
+        "type": "character varying(35)",
+        "nullable": true
+      },
+      {
+        "name": "MediaType",
+        "type": "character varying(30)",
+        "nullable": false
+      },
+      {
+        "name": "SortOrder",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "StorageKey",
+        "type": "character varying(200)",
+        "nullable": false
+      },
+      {
+        "name": "Title",
+        "type": "character varying(300)",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "artifact_topics",
+    "columns": [
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "TopicId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "AssignedAt",
+        "type": "timestamptz",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "ArtifactId",
+      "TopicId"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "TopicId"
+        ],
+        "parent": "topics",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "artifacts",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "AccessLevel",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "Code",
+        "type": "character varying(100)",
+        "nullable": true
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "GalleryId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "IsActive",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "MapIcon",
+        "type": "character varying(500)",
+        "nullable": true
+      },
+      {
+        "name": "MapNodeId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "MapX",
+        "type": "real",
+        "nullable": true
+      },
+      {
+        "name": "MapY",
+        "type": "real",
+        "nullable": true
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Name",
+        "type": "character varying(300)",
+        "nullable": false
+      },
+      {
+        "name": "QrCode",
+        "type": "character varying(200)",
+        "nullable": true
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "GalleryId"
+        ],
+        "parent": "galleries",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "badges",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Code",
+        "type": "character varying(50)",
+        "nullable": false
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "Name",
+        "type": "character varying(200)",
+        "nullable": false
+      },
+      {
+        "name": "RuleJson",
+        "type": "jsonb",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "buildings",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Name",
+        "type": "character varying(200)",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "cities",
+    "columns": [
+      {
+        "name": "Code",
+        "type": "character varying(2)",
+        "nullable": false
+      },
+      {
+        "name": "Name",
+        "type": "character varying(100)",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Code"
+    ],
+    "foreignKeys": []
+  },
+  {
+    "table": "commerce_products",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Currency",
+        "type": "character varying(3)",
+        "nullable": false
+      },
+      {
+        "name": "IsActive",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "Kind",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Name",
+        "type": "character varying(200)",
+        "nullable": false
+      },
+      {
+        "name": "Price",
+        "type": "numeric(18,2)",
+        "nullable": false
+      },
+      {
+        "name": "ResourceIdsJson",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "Seats",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ValidityHours",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "ValidityStartsAt",
+        "type": "text",
+        "nullable": true
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "commerce_resources",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "AccessLevel",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "Kind",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Name",
+        "type": "character varying(200)",
+        "nullable": false
+      },
+      {
+        "name": "ScopeReference",
+        "type": "character varying(200)",
+        "nullable": true
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "complaints",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "AssignedTo",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "Body",
+        "type": "character varying(5000)",
+        "nullable": false
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "ResolutionNote",
+        "type": "character varying(2000)",
+        "nullable": true
+      },
+      {
+        "name": "ResolvedAt",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "Status",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "Subject",
+        "type": "character varying(300)",
+        "nullable": false
+      },
+      {
+        "name": "UpdatedAt",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "VisitorId",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "AssignedTo"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "VisitorId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "daily_quiz_entries",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "EntryDate",
+        "type": "date",
+        "nullable": false
+      },
+      {
+        "name": "QuizId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "RecognitionId",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "Status",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "UserId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "VisitId",
+        "type": "integer",
+        "nullable": true
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "UserId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "QuizId"
+        ],
+        "parent": "quizzes",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "RecognitionId"
+        ],
+        "parent": "recognition_history",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "VisitId"
+        ],
+        "parent": "visits",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "floors",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "BuildingId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "LevelNo",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "MapImageUrl",
+        "type": "character varying(1000)",
+        "nullable": true
+      },
+      {
+        "name": "Name",
+        "type": "character varying(200)",
+        "nullable": true
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "BuildingId"
+        ],
+        "parent": "buildings",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "galleries",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Description",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "FloorId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Name",
+        "type": "character varying(300)",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "FloorId"
+        ],
+        "parent": "floors",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "indoor_maps",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "FloorId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "ImageHeight",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ImageKey",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "ImageWidth",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Name",
+        "type": "character varying(200)",
+        "nullable": false
+      },
+      {
+        "name": "PublishedAt",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "PublishedJson",
+        "type": "jsonb",
+        "nullable": true
+      },
+      {
+        "name": "Revision",
+        "type": "integer",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "FloorId"
+        ],
+        "parent": "floors",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "map_edges",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "Bidirectional",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "FromNodeId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "IndoorMapId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "IsAccessible",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "ToNodeId",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "IndoorMapId"
+        ],
+        "parent": "indoor_maps",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "IndoorMapId",
+          "FromNodeId"
+        ],
+        "parent": "map_nodes",
+        "parentColumns": [
+          "IndoorMapId",
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "IndoorMapId",
+          "ToNodeId"
+        ],
+        "parent": "map_nodes",
+        "parentColumns": [
+          "IndoorMapId",
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "map_markers",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "GalleryId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "IndoorMapId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "IsActive",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "IsDestination",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "Label",
+        "type": "character varying(200)",
+        "nullable": false
+      },
+      {
+        "name": "NodeId",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "Type",
+        "type": "character varying(30)",
+        "nullable": false
+      },
+      {
+        "name": "X",
+        "type": "double precision",
+        "nullable": false
+      },
+      {
+        "name": "Y",
+        "type": "double precision",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "GalleryId"
+        ],
+        "parent": "galleries",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "IndoorMapId"
+        ],
+        "parent": "indoor_maps",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "IndoorMapId",
+          "NodeId"
+        ],
+        "parent": "map_nodes",
+        "parentColumns": [
+          "IndoorMapId",
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "map_nodes",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "IndoorMapId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Label",
+        "type": "character varying(200)",
+        "nullable": false
+      },
+      {
+        "name": "Type",
+        "type": "character varying(30)",
+        "nullable": false
+      },
+      {
+        "name": "X",
+        "type": "double precision",
+        "nullable": false
+      },
+      {
+        "name": "Y",
+        "type": "double precision",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "IndoorMapId"
+        ],
+        "parent": "indoor_maps",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "museum_passes",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "ClaimedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "OrderId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "RevokedAt",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "UserId",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "UserId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "OrderId"
+        ],
+        "parent": "purchase_orders",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "museums",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Address",
+        "type": "character varying(500)",
+        "nullable": true
+      },
+      {
+        "name": "CityCode",
+        "type": "character varying(2)",
+        "nullable": true
+      },
+      {
+        "name": "CoverImageUrl",
+        "type": "character varying(1000)",
+        "nullable": true
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "Description",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "IndoorLayout",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "IsActive",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "Latitude",
+        "type": "numeric(9,6)",
+        "nullable": true
+      },
+      {
+        "name": "Longitude",
+        "type": "numeric(9,6)",
+        "nullable": true
+      },
+      {
+        "name": "Name",
+        "type": "character varying(200)",
+        "nullable": false
+      },
+      {
+        "name": "OpeningHours",
+        "type": "character varying(500)",
+        "nullable": true
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "CityCode"
+        ],
+        "parent": "cities",
+        "parentColumns": [
+          "Code"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "payment_attempts",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "CompletedAt",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "ConfirmedBy",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "FailureReason",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "OrderId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "Reference",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "Status",
+        "type": "text",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "ConfirmedBy"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "OrderId"
+        ],
+        "parent": "purchase_orders",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "personalized_tours",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "OwnerId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "SnapshotJson",
+        "type": "jsonb",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "OwnerId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "point_transactions",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "Points",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Reason",
+        "type": "character varying(50)",
+        "nullable": false
+      },
+      {
+        "name": "RefId",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "RefType",
+        "type": "character varying(50)",
+        "nullable": false
+      },
+      {
+        "name": "UserId",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "UserId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "purchase_invoices",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "Amount",
+        "type": "numeric(18,2)",
+        "nullable": false
+      },
+      {
+        "name": "BuyerDetailsJson",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "BuyerName",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "Currency",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "IssuedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "Number",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "OrderId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "ProductKind",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "ProductName",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "Seats",
+        "type": "integer",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "OrderId"
+        ],
+        "parent": "purchase_orders",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "purchase_orders",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "Amount",
+        "type": "numeric(18,2)",
+        "nullable": false
+      },
+      {
+        "name": "BuyerDetailsJson",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "BuyerId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "BuyerName",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "Currency",
+        "type": "character varying(3)",
+        "nullable": false
+      },
+      {
+        "name": "ExpiresAt",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "GroupKeyHash",
+        "type": "character varying(64)",
+        "nullable": true
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "PaidAt",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "ProductId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ProductKind",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "ProductName",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "ResourceIdsJson",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "Seats",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Status",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "ValidityHours",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ValidityStartsAt",
+        "type": "text",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "BuyerId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "ProductId"
+        ],
+        "parent": "commerce_products",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "question_options",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Content",
+        "type": "character varying(1000)",
+        "nullable": false
+      },
+      {
+        "name": "IsCorrect",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "OrderNo",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "QuestionId",
+        "type": "integer",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "QuestionId"
+        ],
+        "parent": "questions",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "questions",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Content",
+        "type": "character varying(4000)",
+        "nullable": false
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "CreatedBy",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "Explanation",
+        "type": "character varying(4000)",
+        "nullable": false
+      },
+      {
+        "name": "LanguageCode",
+        "type": "character varying(35)",
+        "nullable": false
+      },
+      {
+        "name": "ReviewNote",
+        "type": "character varying(1000)",
+        "nullable": true
+      },
+      {
+        "name": "ReviewedAt",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "ReviewedBy",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "Status",
+        "type": "character varying(20)",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "CreatedBy"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "ReviewedBy"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "quiz_attempt_answers",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "AnsweredAt",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "AttemptId",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "IsCorrect",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "OrderNo",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Points",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "QuestionId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "SelectedOptionId",
+        "type": "integer",
+        "nullable": true
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "SelectedOptionId"
+        ],
+        "parent": "question_options",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "QuestionId"
+        ],
+        "parent": "questions",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "AttemptId"
+        ],
+        "parent": "quiz_attempts",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "quiz_attempts",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "CompletedAt",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "CorrectCount",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "DailyEntryId",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "Mode",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "QuizId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Score",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "StartedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "Status",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "TotalQuestions",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "UserId",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "UserId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "DailyEntryId"
+        ],
+        "parent": "daily_quiz_entries",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "QuizId"
+        ],
+        "parent": "quizzes",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "quiz_questions",
+    "columns": [
+      {
+        "name": "QuizId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "QuestionId",
+        "type": "integer",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "QuizId",
+      "QuestionId"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "QuestionId"
+        ],
+        "parent": "questions",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "QuizId"
+        ],
+        "parent": "quizzes",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "quizzes",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "CreatedBy",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "QuestionsPerAttempt",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Status",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "Title",
+        "type": "character varying(200)",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "CreatedBy"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "recognition_history",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "IsSuccess",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "Method",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "RecognizedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "RequestId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "UserId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "VisitId",
+        "type": "integer",
+        "nullable": true
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "UserId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "VisitId"
+        ],
+        "parent": "visits",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "RoleClaims",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ClaimType",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "ClaimValue",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "RoleId",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "RoleId"
+        ],
+        "parent": "Roles",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "Roles",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "ConcurrencyStamp",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "Name",
+        "type": "character varying(256)",
+        "nullable": true
+      },
+      {
+        "name": "NormalizedName",
+        "type": "character varying(256)",
+        "nullable": true
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": []
+  },
+  {
+    "table": "saved_routes",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "AvailableMinutes",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Explanation",
+        "type": "character varying(1000)",
+        "nullable": false
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "SavedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "Score",
+        "type": "double precision",
+        "nullable": false
+      },
+      {
+        "name": "TopicIdsJson",
+        "type": "character varying(1000)",
+        "nullable": false
+      },
+      {
+        "name": "TourId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "TourVersionId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "VisitorId",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "VisitorId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "TourVersionId"
+        ],
+        "parent": "tour_versions",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "TourId"
+        ],
+        "parent": "tours",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "staff_assignments",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "AssignedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "GalleryId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "UserId",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "UserId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "GalleryId"
+        ],
+        "parent": "galleries",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "staff_responses",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Content",
+        "type": "character varying(2000)",
+        "nullable": false
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "FeedbackId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "RespondedBy",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "UpdatedAt",
+        "type": "timestamptz",
+        "nullable": true
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "RespondedBy"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "FeedbackId"
+        ],
+        "parent": "visit_feedbacks",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "topics",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "Description",
+        "type": "character varying(2000)",
+        "nullable": true
+      },
+      {
+        "name": "IsActive",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Name",
+        "type": "character varying(200)",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "tour_items",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "OrderNo",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "TourId",
+        "type": "integer",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "TourId"
+        ],
+        "parent": "tours",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "tour_version_items",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "OrderNo",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "TourVersionId",
+        "type": "integer",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "TourVersionId"
+        ],
+        "parent": "tour_versions",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "tour_versions",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "CreatedBy",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "Description",
+        "type": "character varying(4000)",
+        "nullable": false
+      },
+      {
+        "name": "EstimatedMinutes",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "PublicAt",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "ReviewNote",
+        "type": "character varying(1000)",
+        "nullable": true
+      },
+      {
+        "name": "ReviewedAt",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "ReviewedBy",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "Status",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "SubmittedAt",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "SubmittedBy",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "Title",
+        "type": "character varying(200)",
+        "nullable": false
+      },
+      {
+        "name": "TourId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "VersionNo",
+        "type": "integer",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "CreatedBy"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "ReviewedBy"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "SubmittedBy"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "TourId"
+        ],
+        "parent": "tours",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "tours",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "CreatedBy",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "Description",
+        "type": "character varying(4000)",
+        "nullable": false
+      },
+      {
+        "name": "EstimatedMinutes",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Revision",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "Status",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "Title",
+        "type": "character varying(200)",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "CreatedBy"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "user_badges",
+    "columns": [
+      {
+        "name": "UserId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "BadgeId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "AwardedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "UserId",
+      "BadgeId"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "UserId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "BadgeId"
+        ],
+        "parent": "badges",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "UserClaims",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ClaimType",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "ClaimValue",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "UserId",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "UserId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "UserLogins",
+    "columns": [
+      {
+        "name": "LoginProvider",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "ProviderKey",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "ProviderDisplayName",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "UserId",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "LoginProvider",
+      "ProviderKey"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "UserId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "UserRoles",
+    "columns": [
+      {
+        "name": "UserId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "RoleId",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "UserId",
+      "RoleId"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "RoleId"
+        ],
+        "parent": "Roles",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "UserId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "Users",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "AccessFailedCount",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ConcurrencyStamp",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "Email",
+        "type": "character varying(256)",
+        "nullable": true
+      },
+      {
+        "name": "EmailConfirmed",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "FullName",
+        "type": "character varying(200)",
+        "nullable": false
+      },
+      {
+        "name": "IsActive",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "LockoutEnabled",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "LockoutEnd",
+        "type": "timestamp with time zone",
+        "nullable": true
+      },
+      {
+        "name": "NormalizedEmail",
+        "type": "character varying(256)",
+        "nullable": true
+      },
+      {
+        "name": "NormalizedUserName",
+        "type": "character varying(256)",
+        "nullable": true
+      },
+      {
+        "name": "PasswordHash",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "PhoneNumber",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "PhoneNumberConfirmed",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "SecurityStamp",
+        "type": "text",
+        "nullable": true
+      },
+      {
+        "name": "TwoFactorEnabled",
+        "type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "UserName",
+        "type": "character varying(256)",
+        "nullable": true
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": []
+  },
+  {
+    "table": "UserTokens",
+    "columns": [
+      {
+        "name": "UserId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "LoginProvider",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "Name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "Value",
+        "type": "text",
+        "nullable": true
+      }
+    ],
+    "primaryKey": [
+      "UserId",
+      "LoginProvider",
+      "Name"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "UserId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "visit_feedbacks",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ChatbotRating",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "Comment",
+        "type": "character varying(2000)",
+        "nullable": true
+      },
+      {
+        "name": "ContentRating",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "CreatedAt",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "ModerationNote",
+        "type": "character varying(1000)",
+        "nullable": true
+      },
+      {
+        "name": "ModerationStatus",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "OverallRating",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "TourRating",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "UpdatedAt",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "VisitId",
+        "type": "integer",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "VisitId"
+        ],
+        "parent": "visits",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "visit_items",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ArtifactId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "LastVisitedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "TourItemId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "TourVersionItemId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "VisitId",
+        "type": "integer",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "ArtifactId"
+        ],
+        "parent": "artifacts",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "TourItemId"
+        ],
+        "parent": "tour_items",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "TourVersionItemId"
+        ],
+        "parent": "tour_version_items",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "VisitId"
+        ],
+        "parent": "visits",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
+    "table": "visits",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "CompletedAt",
+        "type": "timestamptz",
+        "nullable": true
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "PersonalizedTourId",
+        "type": "uuid",
+        "nullable": true
+      },
+      {
+        "name": "StartedAt",
+        "type": "timestamptz",
+        "nullable": false
+      },
+      {
+        "name": "Status",
+        "type": "character varying(20)",
+        "nullable": false
+      },
+      {
+        "name": "TourId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "TourVersionId",
+        "type": "integer",
+        "nullable": true
+      },
+      {
+        "name": "VisitorId",
+        "type": "uuid",
+        "nullable": false
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "VisitorId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "PersonalizedTourId"
+        ],
+        "parent": "personalized_tours",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "TourVersionId"
+        ],
+        "parent": "tour_versions",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "TourId"
+        ],
+        "parent": "tours",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  }
+]

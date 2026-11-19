@@ -10,6 +10,9 @@ using SMGS.Domain.Constants;
 using SMGS.Infrastructure;
 using SMGS.Infrastructure.Identity;
 using SMGS.Infrastructure.Services;
+using SMGS.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 internal static class RoleChecks
 {
@@ -19,6 +22,18 @@ internal static class RoleChecks
         var config = new ConfigurationBuilder().AddJsonFile(Path.Combine(apiPath, "appsettings.json"))
             .AddJsonFile(Path.Combine(apiPath, "appsettings.Development.json"))
             .AddUserSecrets("smgs-api-local-development").AddEnvironmentVariables().Build();
+        var connection = Environment.GetEnvironmentVariable("SMGS_TEST_CONNECTION")
+            ?? throw new InvalidOperationException("Set SMGS_TEST_CONNECTION; role checks use an isolated schema.");
+        var schema = "smgs_auth_role_test_" + Guid.NewGuid().ToString("N");
+        var testConnection = new NpgsqlConnectionStringBuilder(connection) { SearchPath = schema, Pooling = false }.ConnectionString;
+        config["ConnectionStrings:DefaultConnection"] = testConnection;
+        await using var setup = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql(testConnection).Options);
+        var createSchema = $"CREATE SCHEMA \"{schema}\"";
+        var dropSchema = $"DROP SCHEMA \"{schema}\" CASCADE";
+        await setup.Database.ExecuteSqlRawAsync(createSchema);
+        try
+        {
+        await setup.Database.ExecuteSqlRawAsync(setup.Database.GenerateCreateScript());
         ServiceProvider CreateProvider(bool rejectRole = false)
         {
             var services = new ServiceCollection();
@@ -81,6 +96,8 @@ internal static class RoleChecks
             if (user is not null && !(await users.DeleteAsync(user)).Succeeded)
                 throw new Exception("Could not remove temporary role test user.");
         }
+        }
+        finally { await setup.Database.ExecuteSqlRawAsync(dropSchema); }
     }
 }
 

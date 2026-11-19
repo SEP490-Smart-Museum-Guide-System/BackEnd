@@ -1,786 +1,926 @@
-Project SMGS {
-  database_type: 'PostgreSQL'
-}
+// Generated from ApplicationDbContext by tools/SMGS.SchemaExport.
+// Backend only; AI Vision / Scan manage separate schemas. SQL is authoritative for filtered indexes/defaults/checks.
 
-Table Roles {
-  Id uuid [pk, not null]
-  ConcurrencyStamp text
-  Name varchar(256)
-  NormalizedName varchar(256)
+Table "artifact_3d_models" {
+  "Id" "integer" [not null]
+  "ArtifactId" "integer" [not null]
+  "AutoRotate" "boolean" [not null]
+  "CameraOrbit" "character varying(100)"
+  "ContentType" "character varying(100)" [not null]
+  "FieldOfView" "character varying(50)"
+  "FileFormat" "character varying(20)" [not null]
+  "FileName" "character varying(300)" [not null]
+  "FileSize" "bigint" [not null]
+  "Name" "character varying(300)" [not null]
+  "PosterUrl" "character varying(1000)"
+  "Scale" "numeric(10,4)" [not null]
+  "StorageKey" "character varying(200)" [not null]
+  "UpdatedAt" "timestamptz" [not null]
+  "UpdatedBy" "uuid" [not null]
   indexes {
-    NormalizedName [unique]
+    ("Id") [pk]
+    ("ArtifactId") [name: "IX_artifact_3d_models_ArtifactId", unique]
   }
 }
 
-Table RoleClaims {
-  Id integer [pk, not null, increment]
-  ClaimType text
-  ClaimValue text
-  RoleId uuid [not null]
+Table "artifact_content_versions" {
+  "Id" "integer" [not null]
+  "ArtifactContentId" "integer" [not null]
+  "AudioUrl" "character varying(1000)"
+  "CreatedAt" "timestamp with time zone" [not null]
+  "CreatedBy" "uuid" [not null]
+  "Description" "text" [not null]
+  "IsAiGenerated" "boolean" [not null]
+  "IsCurrent" "boolean" [not null]
+  "NarrationText" "text"
+  "PublishedAt" "timestamp with time zone"
+  "ReviewNote" "character varying(2000)"
+  "ReviewedAt" "timestamp with time zone"
+  "ReviewedBy" "uuid"
+  "Status" "character varying(30)" [not null]
+  "Title" "character varying(300)" [not null]
+  "VersionNo" "integer" [not null]
   indexes {
-    RoleId
+    ("Id") [pk]
+    ("ArtifactContentId") [name: "IX_artifact_content_versions_ArtifactContentId", unique]
+    ("ArtifactContentId", "VersionNo") [name: "IX_artifact_content_versions_ArtifactContentId_VersionNo", unique]
+    ("CreatedBy") [name: "IX_artifact_content_versions_CreatedBy"]
+    ("ReviewedBy") [name: "IX_artifact_content_versions_ReviewedBy"]
   }
 }
 
-Table UserClaims {
-  Id integer [pk, not null, increment]
-  ClaimType text
-  ClaimValue text
-  UserId uuid [not null]
+Table "artifact_contents" {
+  "Id" "integer" [not null]
+  "ArtifactId" "integer" [not null]
+  "LanguageCode" "character varying(35)" [not null]
+  "Revision" "uuid" [not null]
   indexes {
-    UserId
+    ("Id") [pk]
+    ("ArtifactId", "LanguageCode") [name: "IX_artifact_contents_ArtifactId_LanguageCode", unique]
   }
 }
 
-Table UserLogins {
-  LoginProvider text [not null]
-  ProviderKey text [not null]
-  ProviderDisplayName text
-  UserId uuid [not null]
+Table "artifact_medias" {
+  "Id" "integer" [not null]
+  "ArtifactId" "integer" [not null]
+  "ContentType" "character varying(100)" [not null]
+  "CreatedAt" "timestamptz" [not null]
+  "CreatedBy" "uuid" [not null]
+  "FileName" "character varying(300)" [not null]
+  "FileSize" "bigint" [not null]
+  "LanguageCode" "character varying(35)"
+  "MediaType" "character varying(30)" [not null]
+  "SortOrder" "integer" [not null]
+  "StorageKey" "character varying(200)" [not null]
+  "Title" "character varying(300)" [not null]
   indexes {
-    (LoginProvider, ProviderKey) [pk]
-    UserId
+    ("Id") [pk]
+    ("ArtifactId") [name: "IX_artifact_medias_ArtifactId"]
   }
 }
 
-Table UserRoles {
-  UserId uuid [not null]
-  RoleId uuid [not null]
+Table "artifact_topics" {
+  "ArtifactId" "integer" [not null]
+  "TopicId" "integer" [not null]
+  "AssignedAt" "timestamptz" [not null]
   indexes {
-    (UserId, RoleId) [pk]
-    RoleId
+    ("ArtifactId", "TopicId") [pk]
+    ("TopicId") [name: "IX_artifact_topics_TopicId"]
   }
 }
 
-Table UserTokens {
-  UserId uuid [not null]
-  LoginProvider text [not null]
-  Name text [not null]
-  Value text
+Table "artifacts" {
+  "Id" "integer" [not null]
+  "AccessLevel" "character varying(20)" [not null]
+  "Code" "character varying(100)"
+  "CreatedAt" "timestamptz" [not null]
+  "GalleryId" "integer"
+  "IsActive" "boolean" [not null]
+  "MapIcon" "character varying(500)"
+  "MapNodeId" "integer"
+  "MapX" "real"
+  "MapY" "real"
+  "MuseumId" "integer" [not null]
+  "Name" "character varying(300)" [not null]
+  "QrCode" "character varying(200)"
   indexes {
-    (UserId, LoginProvider, Name) [pk]
+    ("Id") [pk]
+    ("GalleryId") [name: "IX_artifacts_GalleryId"]
+    ("MuseumId") [name: "IX_artifacts_MuseumId"]
+    ("QrCode") [name: "IX_artifacts_QrCode", unique]
   }
 }
 
-Table artifacts {
-  Id integer [pk, not null, increment]
-  AccessLevel varchar(20) [not null, default: 'free']
-  Code varchar(100)
-  CreatedAt timestamptz [not null]
-  GalleryId integer
-  IsActive boolean [not null, default: true]
-  MapIcon varchar(500)
-  MapNodeId integer
-  MapX real
-  MapY real
-  MuseumId integer [not null]
-  Name varchar(300) [not null]
-  QrCode varchar(200)
-  // QrCode [unique] WHERE "QrCode" IS NOT NULL
+Table "badges" {
+  "Id" "integer" [not null]
+  "Code" "character varying(50)" [not null]
+  "MuseumId" "integer"
+  "Name" "character varying(200)" [not null]
+  "RuleJson" "jsonb" [not null]
   indexes {
-    GalleryId
-    MuseumId
+    ("Id") [pk]
+    ("Code") [name: "IX_badges_Code", unique]
+    ("MuseumId") [name: "IX_badges_MuseumId"]
   }
 }
 
-Table artifact_3d_models {
-  Id integer [pk, not null, increment]
-  ArtifactId integer [not null]
-  AutoRotate boolean [not null]
-  CameraOrbit varchar(100)
-  ContentType varchar(100) [not null]
-  FieldOfView varchar(50)
-  FileFormat varchar(20) [not null]
-  FileName varchar(300) [not null]
-  FileSize bigint [not null]
-  Name varchar(300) [not null]
-  PosterUrl varchar(1000)
-  Scale decimal(10,4) [not null, default: 1.0]
-  StorageKey varchar(200) [not null]
-  UpdatedAt timestamptz [not null]
-  UpdatedBy uuid [not null]
+Table "buildings" {
+  "Id" "integer" [not null]
+  "MuseumId" "integer" [not null]
+  "Name" "character varying(200)" [not null]
   indexes {
-    ArtifactId [unique]
+    ("Id") [pk]
+    ("MuseumId") [name: "IX_buildings_MuseumId"]
   }
 }
 
-Table artifact_contents {
-  Id integer [pk, not null, increment]
-  ArtifactId integer [not null]
-  LanguageCode varchar(35) [not null]
-  Revision uuid [not null]
+Table "cities" {
+  "Code" "character varying(2)" [not null]
+  "Name" "character varying(100)" [not null]
   indexes {
-    (ArtifactId, LanguageCode) [unique]
+    ("Code") [pk]
   }
 }
 
-Table artifact_content_versions {
-  Id integer [pk, not null, increment]
-  ArtifactContentId integer [not null]
-  AudioUrl varchar(1000)
-  CreatedAt timestamptz [not null]
-  CreatedBy uuid [not null]
-  Description text [not null]
-  IsAiGenerated boolean [not null]
-  IsCurrent boolean [not null]
-  NarrationText text
-  PublishedAt timestamptz
-  ReviewNote varchar(2000)
-  ReviewedAt timestamptz
-  ReviewedBy uuid
-  Status varchar(30) [not null]
-  Title varchar(300) [not null]
-  VersionNo integer [not null]
-  // ArtifactContentId [unique] WHERE "IsCurrent" = TRUE
+Table "commerce_products" {
+  "Id" "integer" [not null]
+  "Currency" "character varying(3)" [not null]
+  "IsActive" "boolean" [not null]
+  "Kind" "character varying(20)" [not null]
+  "MuseumId" "integer" [not null]
+  "Name" "character varying(200)" [not null]
+  "Price" "numeric(18,2)" [not null]
+  "ResourceIdsJson" "text" [not null]
+  "Seats" "integer" [not null]
+  "ValidityHours" "integer"
+  "ValidityStartsAt" "text"
   indexes {
-    CreatedBy
-    ReviewedBy
-    (ArtifactContentId, VersionNo) [unique]
+    ("Id") [pk]
+    ("MuseumId") [name: "IX_commerce_products_MuseumId"]
   }
 }
 
-Table artifact_medias {
-  Id integer [pk, not null, increment]
-  ArtifactId integer [not null]
-  ContentType varchar(100) [not null]
-  CreatedAt timestamptz [not null]
-  CreatedBy uuid [not null]
-  FileName varchar(300) [not null]
-  FileSize bigint [not null]
-  LanguageCode varchar(35)
-  MediaType varchar(30) [not null]
-  SortOrder integer [not null]
-  StorageKey varchar(200) [not null]
-  Title varchar(300) [not null]
+Table "commerce_resources" {
+  "Id" "integer" [not null]
+  "AccessLevel" "character varying(20)" [not null]
+  "ArtifactId" "integer"
+  "Kind" "character varying(20)" [not null]
+  "MuseumId" "integer" [not null]
+  "Name" "character varying(200)" [not null]
+  "ScopeReference" "character varying(200)"
   indexes {
-    ArtifactId
+    ("Id") [pk]
+    ("ArtifactId") [name: "IX_commerce_resources_ArtifactId", unique]
+    ("MuseumId") [name: "IX_commerce_resources_MuseumId"]
   }
 }
 
-Table artifact_topics {
-  ArtifactId integer [not null]
-  TopicId integer [not null]
-  AssignedAt timestamptz [not null]
+Table "complaints" {
+  "Id" "integer" [not null]
+  "AssignedTo" "uuid"
+  "Body" "character varying(5000)" [not null]
+  "CreatedAt" "timestamptz" [not null]
+  "ResolutionNote" "character varying(2000)"
+  "ResolvedAt" "timestamptz"
+  "Status" "character varying(20)" [not null]
+  "Subject" "character varying(300)" [not null]
+  "UpdatedAt" "timestamptz"
+  "VisitorId" "uuid" [not null]
   indexes {
-    (ArtifactId, TopicId) [pk]
-    TopicId
+    ("Id") [pk]
+    ("AssignedTo") [name: "IX_complaints_AssignedTo"]
+    ("Status") [name: "IX_complaints_Status"]
+    ("VisitorId") [name: "IX_complaints_VisitorId"]
   }
 }
 
-Table badges {
-  Id integer [pk, not null, increment]
-  Code varchar(50) [not null]
-  MuseumId integer
-  Name varchar(200) [not null]
-  RuleJson jsonb [not null]
+Table "daily_quiz_entries" {
+  "Id" "bigint" [not null]
+  "ArtifactId" "integer" [not null]
+  "CreatedAt" "timestamp with time zone" [not null]
+  "EntryDate" "date" [not null]
+  "QuizId" "integer" [not null]
+  "RecognitionId" "bigint" [not null]
+  "Status" "character varying(20)" [not null]
+  "UserId" "uuid" [not null]
+  "VisitId" "integer"
   indexes {
-    Code [unique]
-    MuseumId
+    ("Id") [pk]
+    ("ArtifactId") [name: "IX_daily_quiz_entries_ArtifactId"]
+    ("QuizId") [name: "IX_daily_quiz_entries_QuizId"]
+    ("RecognitionId") [name: "IX_daily_quiz_entries_RecognitionId"]
+    ("UserId", "QuizId", "EntryDate") [name: "IX_daily_quiz_entries_UserId_QuizId_EntryDate", unique]
+    ("VisitId") [name: "IX_daily_quiz_entries_VisitId"]
   }
 }
 
-Table buildings {
-  Id integer [pk, not null, increment]
-  MuseumId integer [not null]
-  Name varchar(200) [not null]
+Table "floors" {
+  "Id" "integer" [not null]
+  "BuildingId" "integer" [not null]
+  "LevelNo" "integer" [not null]
+  "MapImageUrl" "character varying(1000)"
+  "Name" "character varying(200)"
   indexes {
-    MuseumId
+    ("Id") [pk]
+    ("BuildingId", "LevelNo") [name: "IX_floors_BuildingId_LevelNo", unique]
   }
 }
 
-Table cities {
-  Code varchar(2) [pk, not null]
-  Name varchar(100) [not null]
-}
-
-Table commerce_products {
-  Id integer [pk, not null, increment]
-  Currency varchar(3) [not null]
-  IsActive boolean [not null]
-  Kind varchar(20) [not null]
-  MuseumId integer [not null]
-  Name varchar(200) [not null]
-  Price numeric(18,2) [not null]
-  ResourceIdsJson text [not null]
-  Seats integer [not null]
-  ValidityHours integer
-  ValidityStartsAt text
+Table "galleries" {
+  "Id" "integer" [not null]
+  "Description" "text"
+  "FloorId" "integer" [not null]
+  "Name" "character varying(300)" [not null]
   indexes {
-    MuseumId
+    ("Id") [pk]
+    ("FloorId") [name: "IX_galleries_FloorId"]
   }
 }
 
-Table commerce_resources {
-  Id integer [pk, not null, increment]
-  AccessLevel varchar(20) [not null]
-  ArtifactId integer
-  Kind varchar(20) [not null]
-  MuseumId integer [not null]
-  Name varchar(200) [not null]
-  ScopeReference varchar(200)
+Table "indoor_maps" {
+  "Id" "integer" [not null]
+  "FloorId" "integer"
+  "ImageHeight" "integer" [not null]
+  "ImageKey" "text"
+  "ImageWidth" "integer" [not null]
+  "MuseumId" "integer" [not null]
+  "Name" "character varying(200)" [not null]
+  "PublishedAt" "timestamp with time zone"
+  "PublishedJson" "jsonb"
+  "Revision" "integer" [not null]
   indexes {
-    ArtifactId [unique]
-    MuseumId
+    ("Id") [pk]
+    ("FloorId") [name: "IX_indoor_maps_FloorId", unique]
+    ("MuseumId") [name: "IX_indoor_maps_MuseumId", unique]
   }
 }
 
-Table complaints {
-  Id integer [pk, not null, increment]
-  AssignedTo uuid
-  Body varchar(5000) [not null]
-  CreatedAt timestamptz [not null]
-  ResolutionNote varchar(2000)
-  ResolvedAt timestamptz
-  Status varchar(20) [not null, default: 'New']
-  Subject varchar(300) [not null]
-  UpdatedAt timestamptz
-  VisitorId uuid [not null]
+Table "map_edges" {
+  "Id" "uuid" [not null]
+  "Bidirectional" "boolean" [not null]
+  "FromNodeId" "uuid" [not null]
+  "IndoorMapId" "integer" [not null]
+  "IsAccessible" "boolean" [not null]
+  "ToNodeId" "uuid" [not null]
   indexes {
-    AssignedTo
-    Status
-    VisitorId
+    ("Id") [pk]
+    ("IndoorMapId", "FromNodeId", "ToNodeId") [name: "IX_map_edges_IndoorMapId_FromNodeId_ToNodeId", unique]
+    ("IndoorMapId", "ToNodeId") [name: "IX_map_edges_IndoorMapId_ToNodeId"]
   }
 }
 
-Table daily_quiz_entries {
-  Id bigint [pk, not null, increment]
-  ArtifactId integer [not null]
-  CreatedAt timestamptz [not null]
-  EntryDate date [not null]
-  QuizId integer [not null]
-  RecognitionId bigint [not null]
-  Status varchar(20) [not null]
-  UserId uuid [not null]
-  VisitId integer
+Table "map_markers" {
+  "Id" "uuid" [not null]
+  "ArtifactId" "integer"
+  "GalleryId" "integer"
+  "IndoorMapId" "integer" [not null]
+  "IsActive" "boolean" [not null]
+  "IsDestination" "boolean" [not null]
+  "Label" "character varying(200)" [not null]
+  "NodeId" "uuid"
+  "Type" "character varying(30)" [not null]
+  "X" "double precision" [not null]
+  "Y" "double precision" [not null]
   indexes {
-    ArtifactId
-    QuizId
-    RecognitionId
-    VisitId
-    (UserId, QuizId, EntryDate) [unique]
+    ("Id") [pk]
+    ("ArtifactId") [name: "IX_map_markers_ArtifactId"]
+    ("GalleryId") [name: "IX_map_markers_GalleryId"]
+    ("IndoorMapId", "NodeId") [name: "IX_map_markers_IndoorMapId_NodeId"]
   }
 }
 
-Table floors {
-  Id integer [pk, not null, increment]
-  BuildingId integer [not null]
-  LevelNo integer [not null]
-  MapImageUrl varchar(1000)
-  Name varchar(200)
+Table "map_nodes" {
+  "Id" "uuid" [not null]
+  "IndoorMapId" "integer" [not null]
+  "Label" "character varying(200)" [not null]
+  "Type" "character varying(30)" [not null]
+  "X" "double precision" [not null]
+  "Y" "double precision" [not null]
   indexes {
-    (BuildingId, LevelNo) [unique]
+    ("Id") [pk]
   }
 }
 
-Table galleries {
-  Id integer [pk, not null, increment]
-  Description text
-  FloorId integer [not null]
-  Name varchar(300) [not null]
+Table "museum_passes" {
+  "Id" "uuid" [not null]
+  "ClaimedAt" "timestamp with time zone" [not null]
+  "OrderId" "uuid" [not null]
+  "RevokedAt" "timestamp with time zone"
+  "UserId" "uuid" [not null]
   indexes {
-    FloorId
+    ("Id") [pk]
+    ("OrderId", "UserId") [name: "IX_museum_passes_OrderId_UserId", unique]
+    ("UserId") [name: "IX_museum_passes_UserId"]
   }
 }
 
-Table indoor_maps {
-  Id integer [pk, not null, increment]
-  FloorId integer
-  ImageHeight integer [not null]
-  ImageKey text
-  ImageWidth integer [not null]
-  MuseumId integer [not null]
-  Name varchar(200) [not null]
-  PublishedAt timestamptz
-  PublishedJson jsonb
-  Revision integer [not null]
-  // FloorId [unique] WHERE "FloorId" IS NOT NULL
-  // MuseumId [unique] WHERE "FloorId" IS NULL
-}
-
-Table map_edges {
-  Id uuid [pk, not null]
-  Bidirectional boolean [not null]
-  FromNodeId uuid [not null]
-  IndoorMapId integer [not null]
-  IsAccessible boolean [not null]
-  ToNodeId uuid [not null]
+Table "museums" {
+  "Id" "integer" [not null]
+  "Address" "character varying(500)"
+  "CityCode" "character varying(2)"
+  "CoverImageUrl" "character varying(1000)"
+  "CreatedAt" "timestamptz" [not null]
+  "Description" "text"
+  "IndoorLayout" "character varying(20)" [not null]
+  "IsActive" "boolean" [not null]
+  "Latitude" "numeric(9,6)"
+  "Longitude" "numeric(9,6)"
+  "Name" "character varying(200)" [not null]
+  "OpeningHours" "character varying(500)"
   indexes {
-    (IndoorMapId, ToNodeId)
-    (IndoorMapId, FromNodeId, ToNodeId) [unique]
+    ("Id") [pk]
+    ("CityCode") [name: "IX_museums_CityCode"]
   }
 }
 
-Table map_markers {
-  Id uuid [pk, not null]
-  ArtifactId integer
-  GalleryId integer
-  IndoorMapId integer [not null]
-  IsActive boolean [not null]
-  IsDestination boolean [not null]
-  Label varchar(200) [not null]
-  NodeId uuid
-  Type varchar(30) [not null]
-  X float8 [not null]
-  Y float8 [not null]
+Table "payment_attempts" {
+  "Id" "uuid" [not null]
+  "CompletedAt" "timestamp with time zone"
+  "ConfirmedBy" "uuid"
+  "CreatedAt" "timestamp with time zone" [not null]
+  "FailureReason" "text"
+  "OrderId" "uuid" [not null]
+  "Reference" "text"
+  "Status" "text" [not null]
   indexes {
-    ArtifactId
-    GalleryId
-    (IndoorMapId, NodeId)
+    ("Id") [pk]
+    ("ConfirmedBy") [name: "IX_payment_attempts_ConfirmedBy"]
+    ("OrderId") [name: "IX_payment_attempts_pending", unique]
+    ("Reference") [name: "IX_payment_attempts_Reference", unique]
+    ("OrderId") [name: "IX_payment_attempts_success", unique]
   }
 }
 
-Table map_nodes {
-  Id uuid [pk, not null]
-  IndoorMapId integer [not null]
-  Label varchar(200) [not null]
-  Type varchar(30) [not null]
-  X float8 [not null]
-  Y float8 [not null]
-}
-
-Table museums {
-  Id integer [pk, not null, increment]
-  Address varchar(500)
-  CityCode varchar(2)
-  CoverImageUrl varchar(1000)
-  CreatedAt timestamptz [not null]
-  Description text
-  IndoorLayout varchar(20) [not null, default: 'unknown']
-  IsActive boolean [not null, default: true]
-  Latitude decimal(9,6)
-  Longitude decimal(9,6)
-  Name varchar(200) [not null]
-  OpeningHours varchar(500)
+Table "personalized_tours" {
+  "Id" "uuid" [not null]
+  "CreatedAt" "timestamp with time zone" [not null]
+  "MuseumId" "integer" [not null]
+  "OwnerId" "uuid" [not null]
+  "SnapshotJson" "jsonb" [not null]
   indexes {
-    CityCode
+    ("Id") [pk]
+    ("MuseumId") [name: "IX_personalized_tours_MuseumId"]
+    ("OwnerId", "CreatedAt") [name: "IX_personalized_tours_OwnerId_CreatedAt"]
   }
 }
 
-Table museum_passes {
-  Id uuid [pk, not null]
-  ClaimedAt timestamptz [not null]
-  OrderId uuid [not null]
-  RevokedAt timestamptz
-  UserId uuid [not null]
+Table "point_transactions" {
+  "Id" "bigint" [not null]
+  "CreatedAt" "timestamp with time zone" [not null]
+  "Points" "integer" [not null]
+  "Reason" "character varying(50)" [not null]
+  "RefId" "bigint" [not null]
+  "RefType" "character varying(50)" [not null]
+  "UserId" "uuid" [not null]
   indexes {
-    UserId
-    (OrderId, UserId) [unique]
+    ("Id") [pk]
+    ("UserId", "Reason", "RefType", "RefId") [name: "IX_point_transactions_UserId_Reason_RefType_RefId", unique]
   }
 }
 
-Table payment_attempts {
-  Id uuid [pk, not null]
-  CompletedAt timestamptz
-  ConfirmedBy uuid
-  CreatedAt timestamptz [not null]
-  FailureReason text
-  OrderId uuid [not null]
-  Reference text
-  Status text [not null]
-  // Reference [unique] WHERE "Reference" IS NOT NULL
-  // (OrderId, IX_payment_attempts_pending) [unique] WHERE "Status" = 'pending'
-  // (OrderId, IX_payment_attempts_success) [unique] WHERE "Status" = 'succeeded'
+Table "purchase_invoices" {
+  "Id" "uuid" [not null]
+  "Amount" "numeric(18,2)" [not null]
+  "BuyerDetailsJson" "text" [not null]
+  "BuyerName" "text" [not null]
+  "Currency" "text" [not null]
+  "IssuedAt" "timestamp with time zone" [not null]
+  "Number" "text" [not null]
+  "OrderId" "uuid" [not null]
+  "ProductKind" "text" [not null]
+  "ProductName" "text" [not null]
+  "Seats" "integer" [not null]
   indexes {
-    ConfirmedBy
+    ("Id") [pk]
+    ("Number") [name: "IX_purchase_invoices_Number", unique]
+    ("OrderId") [name: "IX_purchase_invoices_OrderId", unique]
   }
 }
 
-Table point_transactions {
-  Id bigint [pk, not null, increment]
-  CreatedAt timestamptz [not null]
-  Points integer [not null]
-  Reason varchar(50) [not null]
-  RefId bigint [not null]
-  RefType varchar(50) [not null]
-  UserId uuid [not null]
+Table "purchase_orders" {
+  "Id" "uuid" [not null]
+  "Amount" "numeric(18,2)" [not null]
+  "BuyerDetailsJson" "text" [not null]
+  "BuyerId" "uuid" [not null]
+  "BuyerName" "text" [not null]
+  "CreatedAt" "timestamp with time zone" [not null]
+  "Currency" "character varying(3)" [not null]
+  "ExpiresAt" "timestamp with time zone"
+  "GroupKeyHash" "character varying(64)"
+  "MuseumId" "integer" [not null]
+  "PaidAt" "timestamp with time zone"
+  "ProductId" "integer" [not null]
+  "ProductKind" "text" [not null]
+  "ProductName" "text" [not null]
+  "ResourceIdsJson" "text" [not null]
+  "Seats" "integer" [not null]
+  "Status" "text" [not null]
+  "ValidityHours" "integer" [not null]
+  "ValidityStartsAt" "text" [not null]
   indexes {
-    (UserId, Reason, RefType, RefId) [unique]
+    ("Id") [pk]
+    ("BuyerId", "CreatedAt") [name: "IX_purchase_orders_BuyerId_CreatedAt"]
+    ("GroupKeyHash") [name: "IX_purchase_orders_GroupKeyHash", unique]
+    ("MuseumId", "PaidAt") [name: "IX_purchase_orders_MuseumId_PaidAt"]
+    ("ProductId") [name: "IX_purchase_orders_ProductId"]
   }
 }
 
-Table purchase_invoices {
-  Id uuid [pk, not null]
-  Amount numeric(18,2) [not null]
-  BuyerDetailsJson text [not null]
-  BuyerName text [not null]
-  Currency text [not null]
-  IssuedAt timestamptz [not null]
-  Number text [not null]
-  OrderId uuid [not null]
-  ProductKind text [not null]
-  ProductName text [not null]
-  Seats integer [not null]
+Table "question_options" {
+  "Id" "integer" [not null]
+  "Content" "character varying(1000)" [not null]
+  "IsCorrect" "boolean" [not null]
+  "OrderNo" "integer" [not null]
+  "QuestionId" "integer" [not null]
   indexes {
-    Number [unique]
-    OrderId [unique]
+    ("Id") [pk]
+    ("QuestionId") [name: "IX_question_options_QuestionId"]
   }
 }
 
-Table purchase_orders {
-  Id uuid [pk, not null]
-  Amount numeric(18,2) [not null]
-  BuyerDetailsJson text [not null]
-  BuyerId uuid [not null]
-  BuyerName text [not null]
-  CreatedAt timestamptz [not null]
-  Currency varchar(3) [not null]
-  ExpiresAt timestamptz
-  GroupKeyHash varchar(64)
-  MuseumId integer [not null]
-  PaidAt timestamptz
-  ProductId integer [not null]
-  ProductKind text [not null]
-  ProductName text [not null]
-  ResourceIdsJson text [not null]
-  Seats integer [not null]
-  Status text [not null]
-  ValidityHours integer [not null]
-  ValidityStartsAt text [not null]
+Table "questions" {
+  "Id" "integer" [not null]
+  "ArtifactId" "integer" [not null]
+  "Content" "character varying(4000)" [not null]
+  "CreatedAt" "timestamp with time zone" [not null]
+  "CreatedBy" "uuid" [not null]
+  "Explanation" "character varying(4000)" [not null]
+  "LanguageCode" "character varying(35)" [not null]
+  "ReviewNote" "character varying(1000)"
+  "ReviewedAt" "timestamp with time zone"
+  "ReviewedBy" "uuid"
+  "Status" "character varying(20)" [not null]
   indexes {
-    GroupKeyHash [unique]
-    ProductId
-    (BuyerId, CreatedAt)
-    (MuseumId, PaidAt)
+    ("Id") [pk]
+    ("ArtifactId") [name: "IX_questions_ArtifactId"]
+    ("CreatedBy") [name: "IX_questions_CreatedBy"]
+    ("ReviewedBy") [name: "IX_questions_ReviewedBy"]
   }
 }
 
-Table questions {
-  Id integer [pk, not null, increment]
-  ArtifactId integer [not null]
-  Content varchar(4000) [not null]
-  CreatedAt timestamptz [not null]
-  CreatedBy uuid [not null]
-  Explanation varchar(4000) [not null]
-  LanguageCode varchar(35) [not null]
-  ReviewNote varchar(1000)
-  ReviewedAt timestamptz
-  ReviewedBy uuid
-  Status varchar(20) [not null]
+Table "quiz_attempt_answers" {
+  "Id" "bigint" [not null]
+  "AnsweredAt" "timestamp with time zone"
+  "AttemptId" "bigint" [not null]
+  "IsCorrect" "boolean" [not null]
+  "OrderNo" "integer" [not null]
+  "Points" "integer" [not null]
+  "QuestionId" "integer" [not null]
+  "SelectedOptionId" "integer"
   indexes {
-    ArtifactId
-    CreatedBy
-    ReviewedBy
+    ("Id") [pk]
+    ("AttemptId", "QuestionId") [name: "IX_quiz_attempt_answers_AttemptId_QuestionId", unique]
+    ("QuestionId") [name: "IX_quiz_attempt_answers_QuestionId"]
+    ("SelectedOptionId") [name: "IX_quiz_attempt_answers_SelectedOptionId"]
   }
 }
 
-Table question_options {
-  Id integer [pk, not null, increment]
-  Content varchar(1000) [not null]
-  IsCorrect boolean [not null]
-  OrderNo integer [not null]
-  QuestionId integer [not null]
+Table "quiz_attempts" {
+  "Id" "bigint" [not null]
+  "CompletedAt" "timestamp with time zone"
+  "CorrectCount" "integer" [not null]
+  "DailyEntryId" "bigint" [not null]
+  "Mode" "character varying(20)" [not null]
+  "QuizId" "integer" [not null]
+  "Score" "integer" [not null]
+  "StartedAt" "timestamp with time zone" [not null]
+  "Status" "character varying(20)" [not null]
+  "TotalQuestions" "integer" [not null]
+  "UserId" "uuid" [not null]
   indexes {
-    QuestionId
+    ("Id") [pk]
+    ("DailyEntryId") [name: "IX_quiz_attempts_DailyEntryId", unique]
+    ("QuizId") [name: "IX_quiz_attempts_QuizId"]
+    ("UserId") [name: "IX_quiz_attempts_UserId"]
   }
 }
 
-Table quizzes {
-  Id integer [pk, not null, increment]
-  ArtifactId integer [not null]
-  CreatedAt timestamptz [not null]
-  CreatedBy uuid [not null]
-  QuestionsPerAttempt integer [not null]
-  Status varchar(20) [not null]
-  Title varchar(200) [not null]
+Table "quiz_questions" {
+  "QuizId" "integer" [not null]
+  "QuestionId" "integer" [not null]
   indexes {
-    ArtifactId
-    CreatedBy
+    ("QuizId", "QuestionId") [pk]
+    ("QuestionId") [name: "IX_quiz_questions_QuestionId"]
   }
 }
 
-Table quiz_attempts {
-  Id bigint [pk, not null, increment]
-  CompletedAt timestamptz
-  CorrectCount integer [not null]
-  DailyEntryId bigint [not null]
-  Mode varchar(20) [not null]
-  QuizId integer [not null]
-  Score integer [not null]
-  StartedAt timestamptz [not null]
-  Status varchar(20) [not null]
-  TotalQuestions integer [not null]
-  UserId uuid [not null]
-  // DailyEntryId [unique] WHERE "Status" = 'in_progress'
+Table "quizzes" {
+  "Id" "integer" [not null]
+  "ArtifactId" "integer" [not null]
+  "CreatedAt" "timestamp with time zone" [not null]
+  "CreatedBy" "uuid" [not null]
+  "QuestionsPerAttempt" "integer" [not null]
+  "Status" "character varying(20)" [not null]
+  "Title" "character varying(200)" [not null]
   indexes {
-    QuizId
-    UserId
+    ("Id") [pk]
+    ("ArtifactId") [name: "IX_quizzes_ArtifactId"]
+    ("CreatedBy") [name: "IX_quizzes_CreatedBy"]
   }
 }
 
-Table quiz_attempt_answers {
-  Id bigint [pk, not null, increment]
-  AnsweredAt timestamptz
-  AttemptId bigint [not null]
-  IsCorrect boolean [not null]
-  OrderNo integer [not null]
-  Points integer [not null]
-  QuestionId integer [not null]
-  SelectedOptionId integer
+Table "recognition_history" {
+  "Id" "bigint" [not null]
+  "ArtifactId" "integer"
+  "IsSuccess" "boolean" [not null]
+  "Method" "character varying(20)" [not null]
+  "RecognizedAt" "timestamp with time zone" [not null]
+  "RequestId" "uuid" [not null]
+  "UserId" "uuid" [not null]
+  "VisitId" "integer"
   indexes {
-    QuestionId
-    SelectedOptionId
-    (AttemptId, QuestionId) [unique]
+    ("Id") [pk]
+    ("ArtifactId") [name: "IX_recognition_history_ArtifactId"]
+    ("UserId", "RecognizedAt") [name: "IX_recognition_history_UserId_RecognizedAt"]
+    ("UserId", "RequestId") [name: "IX_recognition_history_UserId_RequestId", unique]
+    ("VisitId") [name: "IX_recognition_history_VisitId"]
   }
 }
 
-Table quiz_questions {
-  QuizId integer [not null]
-  QuestionId integer [not null]
+Table "RoleClaims" {
+  "Id" "integer" [not null]
+  "ClaimType" "text"
+  "ClaimValue" "text"
+  "RoleId" "uuid" [not null]
   indexes {
-    (QuizId, QuestionId) [pk]
-    QuestionId
+    ("Id") [pk]
+    ("RoleId") [name: "IX_RoleClaims_RoleId"]
   }
 }
 
-Table recognition_history {
-  Id bigint [pk, not null, increment]
-  ArtifactId integer
-  IsSuccess boolean [not null]
-  Method varchar(20) [not null]
-  RecognizedAt timestamptz [not null]
-  RequestId uuid [not null]
-  UserId uuid [not null]
-  VisitId integer
+Table "Roles" {
+  "Id" "uuid" [not null]
+  "ConcurrencyStamp" "text"
+  "Name" "character varying(256)"
+  "NormalizedName" "character varying(256)"
   indexes {
-    ArtifactId
-    VisitId
-    (UserId, RecognizedAt)
-    (UserId, RequestId) [unique]
+    ("Id") [pk]
+    ("NormalizedName") [name: "RoleNameIndex", unique]
   }
 }
 
-Table staff_assignments {
-  Id integer [pk, not null, increment]
-  ArtifactId integer
-  AssignedAt timestamptz [not null]
-  GalleryId integer
-  MuseumId integer [not null]
-  UserId uuid [not null]
-  // (UserId, MuseumId) [unique] WHERE "GalleryId" IS NULL AND "ArtifactId" IS NULL
+Table "saved_routes" {
+  "Id" "integer" [not null]
+  "AvailableMinutes" "integer" [not null]
+  "Explanation" "character varying(1000)" [not null]
+  "MuseumId" "integer" [not null]
+  "SavedAt" "timestamp with time zone" [not null]
+  "Score" "double precision" [not null]
+  "TopicIdsJson" "character varying(1000)" [not null]
+  "TourId" "integer" [not null]
+  "TourVersionId" "integer" [not null]
+  "VisitorId" "uuid" [not null]
   indexes {
-    ArtifactId
-    GalleryId
-    MuseumId
+    ("Id") [pk]
+    ("MuseumId") [name: "IX_saved_routes_MuseumId"]
+    ("TourId") [name: "IX_saved_routes_TourId"]
+    ("TourVersionId") [name: "IX_saved_routes_TourVersionId"]
+    ("VisitorId", "MuseumId", "SavedAt") [name: "IX_saved_routes_VisitorId_MuseumId_SavedAt"]
   }
 }
 
-Table staff_responses {
-  Id integer [pk, not null, increment]
-  Content varchar(2000) [not null]
-  CreatedAt timestamptz [not null]
-  FeedbackId integer [not null]
-  RespondedBy uuid [not null]
-  UpdatedAt timestamptz
+Table "staff_assignments" {
+  "Id" "integer" [not null]
+  "ArtifactId" "integer"
+  "AssignedAt" "timestamp with time zone" [not null]
+  "GalleryId" "integer"
+  "MuseumId" "integer" [not null]
+  "UserId" "uuid" [not null]
   indexes {
-    FeedbackId [unique]
-    RespondedBy
+    ("Id") [pk]
+    ("ArtifactId") [name: "IX_staff_assignments_ArtifactId"]
+    ("GalleryId") [name: "IX_staff_assignments_GalleryId"]
+    ("MuseumId") [name: "IX_staff_assignments_MuseumId"]
+    ("UserId", "MuseumId") [name: "IX_staff_assignments_UserId_MuseumId", unique]
   }
 }
 
-Table topics {
-  Id integer [pk, not null, increment]
-  CreatedAt timestamptz [not null]
-  Description varchar(2000)
-  IsActive boolean [not null, default: true]
-  MuseumId integer [not null]
-  Name varchar(200) [not null]
+Table "staff_responses" {
+  "Id" "integer" [not null]
+  "Content" "character varying(2000)" [not null]
+  "CreatedAt" "timestamptz" [not null]
+  "FeedbackId" "integer" [not null]
+  "RespondedBy" "uuid" [not null]
+  "UpdatedAt" "timestamptz"
   indexes {
-    (MuseumId, Name) [unique]
+    ("Id") [pk]
+    ("FeedbackId") [name: "IX_staff_responses_FeedbackId", unique]
+    ("RespondedBy") [name: "IX_staff_responses_RespondedBy"]
   }
 }
 
-Table tours {
-  Id integer [pk, not null, increment]
-  CreatedAt timestamptz [not null]
-  CreatedBy uuid [not null]
-  Description varchar(4000) [not null]
-  EstimatedMinutes integer [not null]
-  MuseumId integer [not null]
-  Revision integer [not null]
-  Status varchar(20) [not null]
-  Title varchar(200) [not null]
+Table "topics" {
+  "Id" "integer" [not null]
+  "CreatedAt" "timestamptz" [not null]
+  "Description" "character varying(2000)"
+  "IsActive" "boolean" [not null]
+  "MuseumId" "integer" [not null]
+  "Name" "character varying(200)" [not null]
   indexes {
-    CreatedBy
-    MuseumId
+    ("Id") [pk]
+    ("MuseumId", "Name") [name: "IX_topics_MuseumId_Name", unique]
   }
 }
 
-Table tour_items {
-  Id integer [pk, not null, increment]
-  ArtifactId integer [not null]
-  OrderNo integer [not null]
-  TourId integer [not null]
+Table "tour_items" {
+  "Id" "integer" [not null]
+  "ArtifactId" "integer" [not null]
+  "OrderNo" "integer" [not null]
+  "TourId" "integer" [not null]
   indexes {
-    ArtifactId
-    (TourId, ArtifactId) [unique]
-    (TourId, OrderNo) [unique]
+    ("Id") [pk]
+    ("ArtifactId") [name: "IX_tour_items_ArtifactId"]
+    ("TourId", "ArtifactId") [name: "IX_tour_items_TourId_ArtifactId", unique]
+    ("TourId", "OrderNo") [name: "IX_tour_items_TourId_OrderNo", unique]
   }
 }
 
-Table user_badges {
-  UserId uuid [not null]
-  BadgeId integer [not null]
-  AwardedAt timestamptz [not null]
+Table "tour_version_items" {
+  "Id" "integer" [not null]
+  "ArtifactId" "integer" [not null]
+  "OrderNo" "integer" [not null]
+  "TourVersionId" "integer" [not null]
   indexes {
-    (UserId, BadgeId) [pk]
-    BadgeId
+    ("Id") [pk]
+    ("ArtifactId") [name: "IX_tour_version_items_ArtifactId"]
+    ("TourVersionId", "ArtifactId") [name: "IX_tour_version_items_TourVersionId_ArtifactId", unique]
+    ("TourVersionId", "OrderNo") [name: "IX_tour_version_items_TourVersionId_OrderNo", unique]
   }
 }
 
-Table visits {
-  Id integer [pk, not null, increment]
-  CompletedAt timestamptz
-  MuseumId integer [not null]
-  StartedAt timestamptz [not null]
-  Status varchar(20) [not null]
-  TourId integer
-  VisitorId uuid [not null]
+Table "tour_versions" {
+  "Id" "integer" [not null]
+  "CreatedAt" "timestamp with time zone" [not null]
+  "CreatedBy" "uuid" [not null]
+  "Description" "character varying(4000)" [not null]
+  "EstimatedMinutes" "integer" [not null]
+  "PublicAt" "timestamp with time zone"
+  "ReviewNote" "character varying(1000)"
+  "ReviewedAt" "timestamp with time zone"
+  "ReviewedBy" "uuid"
+  "Status" "character varying(20)" [not null]
+  "SubmittedAt" "timestamp with time zone"
+  "SubmittedBy" "uuid"
+  "Title" "character varying(200)" [not null]
+  "TourId" "integer" [not null]
+  "VersionNo" "integer" [not null]
   indexes {
-    MuseumId
-    TourId
-    (VisitorId, MuseumId, Status)
+    ("Id") [pk]
+    ("CreatedBy") [name: "IX_tour_versions_CreatedBy"]
+    ("ReviewedBy") [name: "IX_tour_versions_ReviewedBy"]
+    ("SubmittedBy") [name: "IX_tour_versions_SubmittedBy"]
+    ("TourId", "Status", "PublicAt") [name: "IX_tour_versions_TourId_Status_PublicAt"]
+    ("TourId", "VersionNo") [name: "IX_tour_versions_TourId_VersionNo", unique]
   }
 }
 
-Table visit_feedbacks {
-  Id integer [pk, not null, increment]
-  ChatbotRating integer
-  Comment varchar(2000)
-  ContentRating integer
-  CreatedAt timestamptz [not null]
-  ModerationNote varchar(1000)
-  ModerationStatus varchar(20) [not null, default: 'Visible']
-  OverallRating integer [not null]
-  TourRating integer
-  UpdatedAt timestamptz
-  VisitId integer [not null]
+Table "tours" {
+  "Id" "integer" [not null]
+  "CreatedAt" "timestamp with time zone" [not null]
+  "CreatedBy" "uuid" [not null]
+  "Description" "character varying(4000)" [not null]
+  "EstimatedMinutes" "integer" [not null]
+  "MuseumId" "integer" [not null]
+  "Revision" "integer" [not null]
+  "Status" "character varying(20)" [not null]
+  "Title" "character varying(200)" [not null]
   indexes {
-    VisitId [unique]
+    ("Id") [pk]
+    ("CreatedBy") [name: "IX_tours_CreatedBy"]
+    ("MuseumId") [name: "IX_tours_MuseumId"]
   }
 }
 
-Table visit_items {
-  Id integer [pk, not null, increment]
-  ArtifactId integer [not null]
-  LastVisitedAt timestamptz [not null]
-  TourItemId integer
-  VisitId integer [not null]
+Table "user_badges" {
+  "UserId" "uuid" [not null]
+  "BadgeId" "integer" [not null]
+  "AwardedAt" "timestamp with time zone" [not null]
   indexes {
-    ArtifactId
-    TourItemId
-    (VisitId, ArtifactId) [unique]
+    ("UserId", "BadgeId") [pk]
+    ("BadgeId") [name: "IX_user_badges_BadgeId"]
   }
 }
 
-Table Users {
-  Id uuid [pk, not null]
-  AccessFailedCount integer [not null]
-  ConcurrencyStamp text
-  CreatedAt timestamptz [not null]
-  Email varchar(256)
-  EmailConfirmed boolean [not null]
-  FullName varchar(200) [not null]
-  IsActive boolean [not null, default: true]
-  LockoutEnabled boolean [not null]
-  LockoutEnd timestamptz
-  NormalizedEmail varchar(256)
-  NormalizedUserName varchar(256)
-  PasswordHash text
-  PhoneNumber text
-  PhoneNumberConfirmed boolean [not null]
-  SecurityStamp text
-  TwoFactorEnabled boolean [not null]
-  UserName varchar(256)
+Table "UserClaims" {
+  "Id" "integer" [not null]
+  "ClaimType" "text"
+  "ClaimValue" "text"
+  "UserId" "uuid" [not null]
   indexes {
-    NormalizedEmail [unique]
-    NormalizedUserName [unique]
+    ("Id") [pk]
+    ("UserId") [name: "IX_UserClaims_UserId"]
   }
 }
 
-Ref: Roles.Id < RoleClaims.RoleId
-Ref: Users.Id < UserClaims.UserId
-Ref: Users.Id < UserLogins.UserId
-Ref: Roles.Id < UserRoles.RoleId
-Ref: Users.Id < UserRoles.UserId
-Ref: Users.Id < UserTokens.UserId
-Ref: galleries.Id < artifacts.GalleryId
-Ref: museums.Id < artifacts.MuseumId
-Ref: artifacts.Id - artifact_3d_models.ArtifactId
-Ref: artifacts.Id < artifact_contents.ArtifactId
-Ref: artifact_contents.Id < artifact_content_versions.ArtifactContentId
-Ref: Users.Id < artifact_content_versions.CreatedBy
-Ref: Users.Id < artifact_content_versions.ReviewedBy
-Ref: artifacts.Id < artifact_medias.ArtifactId
-Ref: artifacts.Id < artifact_topics.ArtifactId
-Ref: topics.Id < artifact_topics.TopicId
-Ref: museums.Id < badges.MuseumId
-Ref: museums.Id < buildings.MuseumId
-Ref: museums.Id < commerce_products.MuseumId
-Ref: artifacts.Id < commerce_resources.ArtifactId
-Ref: museums.Id < commerce_resources.MuseumId
-Ref: Users.Id < complaints.AssignedTo
-Ref: Users.Id < complaints.VisitorId
-Ref: artifacts.Id < daily_quiz_entries.ArtifactId
-Ref: quizzes.Id < daily_quiz_entries.QuizId
-Ref: recognition_history.Id < daily_quiz_entries.RecognitionId
-Ref: Users.Id < daily_quiz_entries.UserId
-Ref: visits.Id < daily_quiz_entries.VisitId
-Ref: buildings.Id < floors.BuildingId
-Ref: floors.Id < galleries.FloorId
-Ref: floors.Id < indoor_maps.FloorId
-Ref: museums.Id < indoor_maps.MuseumId
-Ref: indoor_maps.Id < map_edges.IndoorMapId
-Ref: map_nodes.(IndoorMapId, Id) < map_edges.(IndoorMapId, FromNodeId)
-Ref: map_nodes.(IndoorMapId, Id) < map_edges.(IndoorMapId, ToNodeId)
-Ref: artifacts.Id < map_markers.ArtifactId
-Ref: galleries.Id < map_markers.GalleryId
-Ref: indoor_maps.Id < map_markers.IndoorMapId
-Ref: map_nodes.(IndoorMapId, Id) < map_markers.(IndoorMapId, NodeId)
-Ref: indoor_maps.Id < map_nodes.IndoorMapId
-Ref: cities.Code < museums.CityCode
-Ref: purchase_orders.Id < museum_passes.OrderId
-Ref: Users.Id < museum_passes.UserId
-Ref: Users.Id < payment_attempts.ConfirmedBy
-Ref: purchase_orders.Id < payment_attempts.OrderId
-Ref: Users.Id < point_transactions.UserId
-Ref: purchase_orders.Id < purchase_invoices.OrderId
-Ref: Users.Id < purchase_orders.BuyerId
-Ref: museums.Id < purchase_orders.MuseumId
-Ref: commerce_products.Id < purchase_orders.ProductId
-Ref: artifacts.Id < questions.ArtifactId
-Ref: Users.Id < questions.CreatedBy
-Ref: Users.Id < questions.ReviewedBy
-Ref: questions.Id < question_options.QuestionId
-Ref: artifacts.Id < quizzes.ArtifactId
-Ref: Users.Id < quizzes.CreatedBy
-Ref: daily_quiz_entries.Id < quiz_attempts.DailyEntryId
-Ref: quizzes.Id < quiz_attempts.QuizId
-Ref: Users.Id < quiz_attempts.UserId
-Ref: quiz_attempts.Id < quiz_attempt_answers.AttemptId
-Ref: questions.Id < quiz_attempt_answers.QuestionId
-Ref: question_options.Id < quiz_attempt_answers.SelectedOptionId
-Ref: questions.Id < quiz_questions.QuestionId
-Ref: quizzes.Id < quiz_questions.QuizId
-Ref: artifacts.Id < recognition_history.ArtifactId
-Ref: Users.Id < recognition_history.UserId
-Ref: visits.Id < recognition_history.VisitId
-Ref: artifacts.Id < staff_assignments.ArtifactId
-Ref: galleries.Id < staff_assignments.GalleryId
-Ref: museums.Id < staff_assignments.MuseumId
-Ref: Users.Id < staff_assignments.UserId
-Ref: visit_feedbacks.Id - staff_responses.FeedbackId
-Ref: Users.Id < staff_responses.RespondedBy
-Ref: museums.Id < topics.MuseumId
-Ref: Users.Id < tours.CreatedBy
-Ref: museums.Id < tours.MuseumId
-Ref: artifacts.Id < tour_items.ArtifactId
-Ref: tours.Id < tour_items.TourId
-Ref: badges.Id < user_badges.BadgeId
-Ref: Users.Id < user_badges.UserId
-Ref: museums.Id < visits.MuseumId
-Ref: tours.Id < visits.TourId
-Ref: Users.Id < visits.VisitorId
-Ref: visits.Id - visit_feedbacks.VisitId
-Ref: artifacts.Id < visit_items.ArtifactId
-Ref: tour_items.Id < visit_items.TourItemId
-Ref: visits.Id < visit_items.VisitId
+Table "UserLogins" {
+  "LoginProvider" "text" [not null]
+  "ProviderKey" "text" [not null]
+  "ProviderDisplayName" "text"
+  "UserId" "uuid" [not null]
+  indexes {
+    ("LoginProvider", "ProviderKey") [pk]
+    ("UserId") [name: "IX_UserLogins_UserId"]
+  }
+}
+
+Table "UserRoles" {
+  "UserId" "uuid" [not null]
+  "RoleId" "uuid" [not null]
+  indexes {
+    ("UserId", "RoleId") [pk]
+    ("RoleId") [name: "IX_UserRoles_RoleId"]
+  }
+}
+
+Table "Users" {
+  "Id" "uuid" [not null]
+  "AccessFailedCount" "integer" [not null]
+  "ConcurrencyStamp" "text"
+  "CreatedAt" "timestamp with time zone" [not null]
+  "Email" "character varying(256)"
+  "EmailConfirmed" "boolean" [not null]
+  "FullName" "character varying(200)" [not null]
+  "IsActive" "boolean" [not null]
+  "LockoutEnabled" "boolean" [not null]
+  "LockoutEnd" "timestamp with time zone"
+  "NormalizedEmail" "character varying(256)"
+  "NormalizedUserName" "character varying(256)"
+  "PasswordHash" "text"
+  "PhoneNumber" "text"
+  "PhoneNumberConfirmed" "boolean" [not null]
+  "SecurityStamp" "text"
+  "TwoFactorEnabled" "boolean" [not null]
+  "UserName" "character varying(256)"
+  indexes {
+    ("Id") [pk]
+    ("NormalizedEmail") [name: "EmailIndex", unique]
+    ("NormalizedUserName") [name: "UserNameIndex", unique]
+  }
+}
+
+Table "UserTokens" {
+  "UserId" "uuid" [not null]
+  "LoginProvider" "text" [not null]
+  "Name" "text" [not null]
+  "Value" "text"
+  indexes {
+    ("UserId", "LoginProvider", "Name") [pk]
+  }
+}
+
+Table "visit_feedbacks" {
+  "Id" "integer" [not null]
+  "ChatbotRating" "integer"
+  "Comment" "character varying(2000)"
+  "ContentRating" "integer"
+  "CreatedAt" "timestamptz" [not null]
+  "ModerationNote" "character varying(1000)"
+  "ModerationStatus" "character varying(20)" [not null]
+  "OverallRating" "integer" [not null]
+  "TourRating" "integer"
+  "UpdatedAt" "timestamptz"
+  "VisitId" "integer" [not null]
+  indexes {
+    ("Id") [pk]
+    ("VisitId") [name: "IX_visit_feedbacks_VisitId", unique]
+  }
+}
+
+Table "visit_items" {
+  "Id" "integer" [not null]
+  "ArtifactId" "integer" [not null]
+  "LastVisitedAt" "timestamp with time zone" [not null]
+  "TourItemId" "integer"
+  "TourVersionItemId" "integer"
+  "VisitId" "integer" [not null]
+  indexes {
+    ("Id") [pk]
+    ("ArtifactId") [name: "IX_visit_items_ArtifactId"]
+    ("TourItemId") [name: "IX_visit_items_TourItemId"]
+    ("TourVersionItemId") [name: "IX_visit_items_TourVersionItemId"]
+    ("VisitId", "ArtifactId") [name: "IX_visit_items_VisitId_ArtifactId", unique]
+  }
+}
+
+Table "visits" {
+  "Id" "integer" [not null]
+  "CompletedAt" "timestamptz"
+  "MuseumId" "integer" [not null]
+  "PersonalizedTourId" "uuid"
+  "StartedAt" "timestamptz" [not null]
+  "Status" "character varying(20)" [not null]
+  "TourId" "integer"
+  "TourVersionId" "integer"
+  "VisitorId" "uuid" [not null]
+  indexes {
+    ("Id") [pk]
+    ("MuseumId") [name: "IX_visits_MuseumId"]
+    ("PersonalizedTourId") [name: "IX_visits_PersonalizedTourId"]
+    ("TourId") [name: "IX_visits_TourId"]
+    ("TourVersionId") [name: "IX_visits_TourVersionId"]
+    ("VisitorId", "MuseumId", "Status") [name: "IX_visits_VisitorId_MuseumId_Status"]
+  }
+}
+
+Ref: "artifact_3d_models".("ArtifactId") > "artifacts".("Id")
+Ref: "artifact_content_versions".("ArtifactContentId") > "artifact_contents".("Id")
+Ref: "artifact_content_versions".("CreatedBy") > "Users".("Id")
+Ref: "artifact_content_versions".("ReviewedBy") > "Users".("Id")
+Ref: "artifact_contents".("ArtifactId") > "artifacts".("Id")
+Ref: "artifact_medias".("ArtifactId") > "artifacts".("Id")
+Ref: "artifact_topics".("ArtifactId") > "artifacts".("Id")
+Ref: "artifact_topics".("TopicId") > "topics".("Id")
+Ref: "artifacts".("GalleryId") > "galleries".("Id")
+Ref: "artifacts".("MuseumId") > "museums".("Id")
+Ref: "badges".("MuseumId") > "museums".("Id")
+Ref: "buildings".("MuseumId") > "museums".("Id")
+Ref: "commerce_products".("MuseumId") > "museums".("Id")
+Ref: "commerce_resources".("ArtifactId") > "artifacts".("Id")
+Ref: "commerce_resources".("MuseumId") > "museums".("Id")
+Ref: "complaints".("AssignedTo") > "Users".("Id")
+Ref: "complaints".("VisitorId") > "Users".("Id")
+Ref: "daily_quiz_entries".("ArtifactId") > "artifacts".("Id")
+Ref: "daily_quiz_entries".("QuizId") > "quizzes".("Id")
+Ref: "daily_quiz_entries".("RecognitionId") > "recognition_history".("Id")
+Ref: "daily_quiz_entries".("UserId") > "Users".("Id")
+Ref: "daily_quiz_entries".("VisitId") > "visits".("Id")
+Ref: "floors".("BuildingId") > "buildings".("Id")
+Ref: "galleries".("FloorId") > "floors".("Id")
+Ref: "indoor_maps".("FloorId") > "floors".("Id")
+Ref: "indoor_maps".("MuseumId") > "museums".("Id")
+Ref: "map_edges".("IndoorMapId") > "indoor_maps".("Id")
+Ref: "map_edges".("IndoorMapId", "FromNodeId") > "map_nodes".("IndoorMapId", "Id")
+Ref: "map_edges".("IndoorMapId", "ToNodeId") > "map_nodes".("IndoorMapId", "Id")
+Ref: "map_markers".("ArtifactId") > "artifacts".("Id")
+Ref: "map_markers".("GalleryId") > "galleries".("Id")
+Ref: "map_markers".("IndoorMapId") > "indoor_maps".("Id")
+Ref: "map_markers".("IndoorMapId", "NodeId") > "map_nodes".("IndoorMapId", "Id")
+Ref: "map_nodes".("IndoorMapId") > "indoor_maps".("Id")
+Ref: "museum_passes".("OrderId") > "purchase_orders".("Id")
+Ref: "museum_passes".("UserId") > "Users".("Id")
+Ref: "museums".("CityCode") > "cities".("Code")
+Ref: "payment_attempts".("OrderId") > "purchase_orders".("Id")
+Ref: "payment_attempts".("ConfirmedBy") > "Users".("Id")
+Ref: "personalized_tours".("MuseumId") > "museums".("Id")
+Ref: "personalized_tours".("OwnerId") > "Users".("Id")
+Ref: "point_transactions".("UserId") > "Users".("Id")
+Ref: "purchase_invoices".("OrderId") > "purchase_orders".("Id")
+Ref: "purchase_orders".("ProductId") > "commerce_products".("Id")
+Ref: "purchase_orders".("MuseumId") > "museums".("Id")
+Ref: "purchase_orders".("BuyerId") > "Users".("Id")
+Ref: "question_options".("QuestionId") > "questions".("Id")
+Ref: "questions".("ArtifactId") > "artifacts".("Id")
+Ref: "questions".("CreatedBy") > "Users".("Id")
+Ref: "questions".("ReviewedBy") > "Users".("Id")
+Ref: "quiz_attempt_answers".("SelectedOptionId") > "question_options".("Id")
+Ref: "quiz_attempt_answers".("QuestionId") > "questions".("Id")
+Ref: "quiz_attempt_answers".("AttemptId") > "quiz_attempts".("Id")
+Ref: "quiz_attempts".("DailyEntryId") > "daily_quiz_entries".("Id")
+Ref: "quiz_attempts".("QuizId") > "quizzes".("Id")
+Ref: "quiz_attempts".("UserId") > "Users".("Id")
+Ref: "quiz_questions".("QuestionId") > "questions".("Id")
+Ref: "quiz_questions".("QuizId") > "quizzes".("Id")
+Ref: "quizzes".("ArtifactId") > "artifacts".("Id")
+Ref: "quizzes".("CreatedBy") > "Users".("Id")
+Ref: "recognition_history".("ArtifactId") > "artifacts".("Id")
+Ref: "recognition_history".("UserId") > "Users".("Id")
+Ref: "recognition_history".("VisitId") > "visits".("Id")
+Ref: "RoleClaims".("RoleId") > "Roles".("Id")
+Ref: "saved_routes".("MuseumId") > "museums".("Id")
+Ref: "saved_routes".("TourVersionId") > "tour_versions".("Id")
+Ref: "saved_routes".("TourId") > "tours".("Id")
+Ref: "saved_routes".("VisitorId") > "Users".("Id")
+Ref: "staff_assignments".("ArtifactId") > "artifacts".("Id")
+Ref: "staff_assignments".("GalleryId") > "galleries".("Id")
+Ref: "staff_assignments".("MuseumId") > "museums".("Id")
+Ref: "staff_assignments".("UserId") > "Users".("Id")
+Ref: "staff_responses".("RespondedBy") > "Users".("Id")
+Ref: "staff_responses".("FeedbackId") > "visit_feedbacks".("Id")
+Ref: "topics".("MuseumId") > "museums".("Id")
+Ref: "tour_items".("ArtifactId") > "artifacts".("Id")
+Ref: "tour_items".("TourId") > "tours".("Id")
+Ref: "tour_version_items".("ArtifactId") > "artifacts".("Id")
+Ref: "tour_version_items".("TourVersionId") > "tour_versions".("Id")
+Ref: "tour_versions".("TourId") > "tours".("Id")
+Ref: "tour_versions".("CreatedBy") > "Users".("Id")
+Ref: "tour_versions".("ReviewedBy") > "Users".("Id")
+Ref: "tour_versions".("SubmittedBy") > "Users".("Id")
+Ref: "tours".("MuseumId") > "museums".("Id")
+Ref: "tours".("CreatedBy") > "Users".("Id")
+Ref: "user_badges".("BadgeId") > "badges".("Id")
+Ref: "user_badges".("UserId") > "Users".("Id")
+Ref: "UserClaims".("UserId") > "Users".("Id")
+Ref: "UserLogins".("UserId") > "Users".("Id")
+Ref: "UserRoles".("RoleId") > "Roles".("Id")
+Ref: "UserRoles".("UserId") > "Users".("Id")
+Ref: "UserTokens".("UserId") > "Users".("Id")
+Ref: "visit_feedbacks".("VisitId") > "visits".("Id")
+Ref: "visit_items".("ArtifactId") > "artifacts".("Id")
+Ref: "visit_items".("TourItemId") > "tour_items".("Id")
+Ref: "visit_items".("TourVersionItemId") > "tour_version_items".("Id")
+Ref: "visit_items".("VisitId") > "visits".("Id")
+Ref: "visits".("MuseumId") > "museums".("Id")
+Ref: "visits".("PersonalizedTourId") > "personalized_tours".("Id")
+Ref: "visits".("TourVersionId") > "tour_versions".("Id")
+Ref: "visits".("TourId") > "tours".("Id")
+Ref: "visits".("VisitorId") > "Users".("Id")

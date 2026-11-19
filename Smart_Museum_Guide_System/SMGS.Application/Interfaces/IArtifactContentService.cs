@@ -5,7 +5,7 @@ namespace SMGS.Application.Interfaces;
 
 public interface IArtifactContentService
 {
-    Task<ResponseDto<PaginatedResponseDto<ArtifactContentResponseDto>>> GetAllAsync(int? museumId, int? artifactId, string? status, int page, int pageSize);
+    Task<ResponseDto<PaginatedResponseDto<ArtifactContentResponseDto>>> GetAllAsync(int? museumId, int? artifactId, string? status, int page, int pageSize, Guid? scopeUserId = null);
     Task<ResponseDto<ArtifactContentResponseDto>> GetByIdAsync(int id);
     Task<ResponseDto<ArtifactContentResponseDto>> GetPublishedAsync(int artifactId, string languageCode, Guid? userId = null);
     Task<ResponseDto<List<ArtifactContentResponseDto>>> GetAllPublishedByArtifactAsync(int artifactId, Guid? userId = null);

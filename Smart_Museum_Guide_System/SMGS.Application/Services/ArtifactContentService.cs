@@ -10,13 +10,13 @@ namespace SMGS.Application.Services;
 public class ArtifactContentService(IArtifactContentRepository repository, IArtifactRepository artifacts, ICommerceService? commerce = null) : IArtifactContentService
 {
     public async Task<ResponseDto<PaginatedResponseDto<ArtifactContentResponseDto>>> GetAllAsync(
-        int? museumId, int? artifactId, string? status, int page, int pageSize)
+        int? museumId, int? artifactId, string? status, int page, int pageSize, Guid? scopeUserId = null)
     {
         if (status is not null && status is not (ContentStatuses.PendingReview or ContentStatuses.Published or ContentStatuses.Rejected or ContentStatuses.Archived))
             return ResponseDto<PaginatedResponseDto<ArtifactContentResponseDto>>.Fail("Trạng thái không hợp lệ.");
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
-        var (items, count) = await repository.GetPagedAsync(museumId, artifactId, status, page, pageSize);
+        var (items, count) = await repository.GetPagedAsync(museumId, artifactId, status, page, pageSize, scopeUserId);
         return ResponseDto<PaginatedResponseDto<ArtifactContentResponseDto>>.Success(new()
         {
             Items = items.Select(Map).ToList(), Page = page, PageSize = pageSize, TotalCount = count

@@ -9,9 +9,14 @@ namespace SMGS.Infrastructure.Repositories;
 public class ArtifactContentRepository(ApplicationDbContext db) : IArtifactContentRepository
 {
     private IQueryable<ArtifactContentVersion> Query => db.ArtifactContentVersions.Include(v => v.Content).ThenInclude(c => c.Artifact);
-    public async Task<(List<ArtifactContentVersion> Items, int TotalCount)> GetPagedAsync(int? museumId, int? artifactId, string? status, int page, int pageSize)
+    public async Task<(List<ArtifactContentVersion> Items, int TotalCount)> GetPagedAsync(int? museumId, int? artifactId, string? status, int page, int pageSize, Guid? scopeUserId = null)
     {
         var query = Query.AsNoTracking();
+        // Apply assignments before Count/Skip/Take so neither rows nor totals leak across scopes.
+        if (scopeUserId.HasValue) query = query.Where(v => db.StaffAssignments.Any(a =>
+            a.UserId == scopeUserId.Value && a.MuseumId == v.Content.Artifact.MuseumId &&
+            (a.ArtifactId == v.Content.ArtifactId ||
+             (a.ArtifactId == null && (a.GalleryId == null || a.GalleryId == v.Content.Artifact.GalleryId)))));
         if (museumId.HasValue) query = query.Where(v => v.Content.Artifact.MuseumId == museumId);
         if (artifactId.HasValue) query = query.Where(v => v.Content.ArtifactId == artifactId);
         if (status is not null) query = query.Where(v => v.Status == status);

@@ -112,7 +112,7 @@ public static class DependencyInjection
         }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddHttpClient<IStaffAiModel, LocalStaffAiModel>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(105);
+            client.Timeout = TimeSpan.FromSeconds(240);
             client.MaxResponseContentBufferSize = 256 * 1024;
         }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddSingleton<IQrCodeService, QrCodeService>();

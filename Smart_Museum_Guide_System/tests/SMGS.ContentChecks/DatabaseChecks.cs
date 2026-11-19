@@ -263,6 +263,21 @@ internal static class DatabaseChecks
                 Note = "Approved French narration"
             }, curatorUser.Id, true);
             Check(approveFr.StatusCode == 200 && approveFr.Data is { Status: ContentStatuses.Published, IsCurrent: true }, "CD-06A: Approve narration failed.");
+            // Regression: assignments must constrain both page rows and total count in SQL.
+            var contentRepository = new ArtifactContentRepository(db);
+            var scoped = await contentRepository.GetPagedAsync(null, null, null, 1, 1, staffId);
+            var expectedScoped = await db.ArtifactContentVersions.CountAsync(v => v.Content.ArtifactId == seededArtifact.Id);
+            Check(expectedScoped > 1 && scoped.TotalCount == expectedScoped && scoped.Items.Count == 1
+                && scoped.Items.All(v => v.Content.ArtifactId == seededArtifact.Id), "Scoped content paging/count leaked other artifact assignments.");
+            var stranger = await contentRepository.GetPagedAsync(null, null, null, 1, 10, Guid.NewGuid());
+            Check(stranger.TotalCount == 0 && stranger.Items.Count == 0, "Unassigned user received review records.");
+            var wrongMuseum = await contentRepository.GetPagedAsync(int.MaxValue, null, null, 1, 10, staffId);
+            Check(wrongMuseum.TotalCount == 0 && wrongMuseum.Items.Count == 0, "Museum filter bypassed assignment scope.");
+            await accountService.RevokeScopeAsync(assignArtifact.Data!.Id, staffId);
+            var revoked = await contentRepository.GetPagedAsync(null, null, null, 1, 10, staffId);
+            Check(revoked.TotalCount == 0, "Revoked content assignment remained usable.");
+            await accountService.AssignScopeAsync(staffId, new ScopeAssignmentRequestDto { MuseumId = museum.Id, ArtifactId = seededArtifact.Id });
+            Console.WriteLine("PASS database content scope: assignment filtering before count/pagination, no assignment, foreign filter, revocation.");
 
             // 4c. Upload & Thay thế Mô hình 3D + Cấu hình Viewer
             var glbBytes = Convert.FromBase64String("Z2xURgIAAAAwAAAAHAAAAEpTT057ImFzc2V0Ijp7InZlcnNpb24iOiIyLjAifX0g");

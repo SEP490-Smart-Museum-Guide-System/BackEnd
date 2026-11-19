@@ -130,7 +130,10 @@ try {
     await Reject(async () => await Run(db => new TourService(db).CreateAsync(museum.Id, tourRequest with { ArtifactIds = [a.Id, c.Id] }, staff, false)), 400);
     var tour = await Run(db => new TourService(db).CreateAsync(museum.Id, tourRequest, staff, false));
     await Reject(async () => await Run(db => new VisitProgressService(db, clock).StartVisitAsync(visitor, new() { MuseumId = museum.Id, TourId = tour.Id })), 400);
-    await Run(db => new TourService(db).PublishAsync(tour.Id, tour.Revision, staff, false));
+    await Reject(async () => await Run(db => new TourService(db).PublishAsync(tour.Id, tour.Revision, staff, false)), 409);
+    var tourDraft = (await Run(db => new TourService(db).ListVersionsAsync(tour.Id, staff, false))).Single();
+    await Run(db => new TourService(db).SubmitVersionAsync(tourDraft.Id, staff, false));
+    await Run(db => new TourService(db).ApproveVersionAsync(tourDraft.Id, new(null, null), curator, false));
     var visit = await Run(db => new VisitProgressService(db, clock).StartVisitAsync(visitor, new() { MuseumId = museum.Id, TourId = tour.Id }));
     await Reject(async () => await Run(db => new VisitProgressService(db, clock).CompleteTourAsync(visitor, visit.Id)), 409);
     await Reject(async () => await Run(db => new VisitProgressService(db, clock).GetProgressAsync(other, visit.Id)), 404);

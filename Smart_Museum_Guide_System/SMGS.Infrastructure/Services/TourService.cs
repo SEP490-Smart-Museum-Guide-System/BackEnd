@@ -159,50 +159,22 @@ public class TourService(ApplicationDbContext db, TimeProvider? clock = null) : 
             throw new ExperienceException("Tour đã thay đổi, hãy tải lại.", 409);
         }
 
-        await db.Entry(tour).Collection(x => x.Items).LoadAsync();
-        var artifactIds = tour.Items.OrderBy(x => x.OrderNo).Select(x => x.ArtifactId).ToArray();
-        await Validate(tour.MuseumId, new(tour.Title, tour.Description, tour.EstimatedMinutes, artifactIds));
-
         var now = UtcNow;
         var version = await db.Set<TourVersion>()
             .Include(v => v.Items)
+            .Where(v => v.Status == TourVersionStatuses.Approved && v.PublicAt != null && v.PublicAt <= now)
             .OrderByDescending(v => v.VersionNo)
             .FirstOrDefaultAsync(v => v.TourId == id);
 
         if (version is null)
         {
-            version = new TourVersion
-            {
-                TourId = id,
-                VersionNo = 1,
-                Title = tour.Title,
-                Description = tour.Description,
-                EstimatedMinutes = tour.EstimatedMinutes,
-                Status = TourVersionStatuses.Approved,
-                PublicAt = now,
-                CreatedBy = tour.CreatedBy,
-                CreatedAt = now,
-                SubmittedBy = user,
-                SubmittedAt = now,
-                ReviewedBy = user,
-                ReviewedAt = now,
-                Items = artifactIds
-                    .Select((aid, idx) => new TourVersionItem { ArtifactId = aid, OrderNo = idx + 1 })
-                    .ToList()
-            };
-            db.Add(version);
-        }
-        else if (version.Status != TourVersionStatuses.Approved || version.PublicAt > now)
-        {
-            version.Status = TourVersionStatuses.Approved;
-            version.PublicAt = now;
-            version.SubmittedBy ??= user;
-            version.SubmittedAt ??= now;
-            version.ReviewedBy = user;
-            version.ReviewedAt = now;
+            throw new ExperienceException("Tour cần được Curator duyệt và đến thời điểm công bố trước khi xuất bản.", 409);
         }
 
-        tour.Status = "published";
+        // Compatibility publication must never create approval or change reviewer/schedule.
+        var artifactIds = version.Items.OrderBy(x => x.OrderNo).Select(x => x.ArtifactId).ToArray();
+        await Validate(tour.MuseumId, new(version.Title, version.Description, version.EstimatedMinutes, artifactIds));
+        await SyncTourSummaryFromVersionAsync(tour, version);
         tour.Revision++;
 
         await db.SaveChangesAsync();

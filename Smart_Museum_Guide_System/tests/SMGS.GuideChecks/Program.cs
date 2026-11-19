@@ -133,7 +133,7 @@ class ContentFixture : IArtifactContentService {
         return Task.FromResult(Failure == 0 ? ResponseDto<ArtifactContentResponseDto>.Success(Value)
             : ResponseDto<ArtifactContentResponseDto>.Fail("Không có quyền hoặc nội dung.", Failure));
     }
-    public Task<ResponseDto<PaginatedResponseDto<ArtifactContentResponseDto>>> GetAllAsync(int? m, int? a, string? s, int p, int n) => throw new NotSupportedException();
+    public Task<ResponseDto<PaginatedResponseDto<ArtifactContentResponseDto>>> GetAllAsync(int? m, int? a, string? s, int p, int n, Guid? scopeUserId = null) => throw new NotSupportedException();
     public Task<ResponseDto<ArtifactContentResponseDto>> GetByIdAsync(int id) => throw new NotSupportedException();
     public Task<ResponseDto<List<ArtifactContentResponseDto>>> GetAllPublishedByArtifactAsync(int a, Guid? u = null) => throw new NotSupportedException();
     public Task<ResponseDto<List<ArtifactContentResponseDto>>> GetVersionHistoryAsync(int a, string? l = null) => throw new NotSupportedException();

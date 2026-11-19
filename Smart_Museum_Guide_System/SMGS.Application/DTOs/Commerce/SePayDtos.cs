@@ -2,6 +2,8 @@ namespace SMGS.Application.DTOs.Commerce;
 
 public class SePayOptions
 {
+    // Disabled for the registered gateway-confirmed flow. Explicit opt-in is for isolated demos only.
+    public bool EnableManualConfirmation { get; set; }
     public string Bank { get; set; } = "TPBank";
     public string AccountNumber { get; set; } = "11140845389";
     public string AccountHolder { get; set; } = "NGUYEN DANG KHOA";

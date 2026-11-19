@@ -140,6 +140,7 @@ try { ArtifactAssetStore.Validate3DModel(gltfBytes, "drum.gltf"); throw new Exce
 try { ArtifactAssetStore.Validate3DModel([1, 2, 3, 4], "fake.glb"); throw new Exception("Fake GLB must fail"); } catch (ArgumentException) { }
 try { ArtifactAssetStore.Validate3DModel(Encoding.UTF8.GetBytes("{}"), "invalid.gltf"); throw new Exception("GLTF without asset must fail"); } catch (ArgumentException) { }
 
+await ScopeChecks.RunAsync();
 if (args.Contains("--database")) await DatabaseChecks.RunAsync();
 Console.WriteLine("PASS: authorization, CD-01/CD-02/CD-03/CD-06/CD-07 endpoints, manual narration & versioning, media/3D validation, review guards, audit mapping, conflicts and pagination.");
 
@@ -150,7 +151,7 @@ sealed class ContentRepository : IArtifactContentRepository
     public int Reviews { get; private set; }
     public Task<ArtifactContentVersion?> GetByIdAsync(int id) => Task.FromResult(versions.FirstOrDefault(v => v.Id == id));
     public Task<ArtifactContentVersion?> GetPublishedAsync(int id, string language) => Task.FromResult(versions.FirstOrDefault(v => v.IsCurrent && v.Content.LanguageCode == language));
-    public Task<(List<ArtifactContentVersion> Items, int TotalCount)> GetPagedAsync(int? museum, int? artifact, string? status, int page, int size) => Task.FromResult((versions.ToList(), versions.Count));
+    public Task<(List<ArtifactContentVersion> Items, int TotalCount)> GetPagedAsync(int? museum, int? artifact, string? status, int page, int size, Guid? scopeUserId = null) => Task.FromResult((versions.ToList(), versions.Count));
     public Task<bool> CreateAsync(int id, string language, ArtifactContentVersion version)
     {
         version.Id = versions.Count + 1;

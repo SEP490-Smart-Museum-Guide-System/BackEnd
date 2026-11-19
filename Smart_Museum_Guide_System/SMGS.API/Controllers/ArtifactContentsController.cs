@@ -10,19 +10,21 @@ namespace SMGS.API.Controllers;
 [Route("api/artifact-contents")]
 [Produces("application/json")]
 [Authorize(Roles = RoleNames.Curator)]
-public class ArtifactContentsController(IArtifactContentService service) : ControllerBase
+public class ArtifactContentsController(IArtifactContentService service, IAccountAdminService accounts) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] int? museumId, [FromQuery] int? artifactId,
         [FromQuery] string? status = ContentStatuses.PendingReview, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var response = await service.GetAllAsync(museumId, artifactId, status, page, pageSize);
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Unauthorized();
+        var response = await service.GetAllAsync(museumId, artifactId, status, page, pageSize, userId);
         return StatusCode(response.StatusCode, response);
     }
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
         var response = await service.GetByIdAsync(id);
+        if (response.Data != null && !await CanAccess(response.Data.ArtifactId)) return Forbid();
         return StatusCode(response.StatusCode, response);
     }
     [HttpPost("{id:int}/approve")]
@@ -32,7 +34,14 @@ public class ArtifactContentsController(IArtifactContentService service) : Contr
     private async Task<IActionResult> Review(int id, ReviewArtifactContentRequestDto dto, bool approve)
     {
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Unauthorized();
+        var existing = await service.GetByIdAsync(id);
+        if (existing.Data == null) return StatusCode(existing.StatusCode, existing);
+        if (!await CanAccess(existing.Data.ArtifactId)) return Forbid();
         var response = await service.ReviewAsync(id, dto, userId, approve);
         return StatusCode(response.StatusCode, response);
     }
+    private Task<bool> CanAccess(int artifactId) =>
+        Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
+            ? accounts.CanManageArtifactAsync(userId, false, artifactId)
+            : Task.FromResult(false);
 }

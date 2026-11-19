@@ -66,7 +66,7 @@ var connectionBuilder = new NpgsqlConnectionStringBuilder(connection) { SearchPa
 ApplicationDbContext Open() => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql(connectionBuilder.ConnectionString).Options);
 async Task<T> Run<T>(Func<CommerceService, Task<T>> action)
 {
-    await using var db = Open(); return await action(new CommerceService(db));
+    await using var db = Open(); return await action(new CommerceService(db, Options.Create(new SePayOptions { EnableManualConfirmation = true })));
 }
 async Task Fails(Func<Task> action, int status)
 {
@@ -106,6 +106,11 @@ try
     await Run(s => s.ConfigureProduct(museum.Id, product.Id, new() { Name = "Changed", Kind = "combo", Price = 999,
         Seats = 6, ValidityHours = 48, ValidityStartsAt = "payment", ResourceIds = [admission.Id, digital.Id], IsActive = true }, staff, false));
     var confirm = new ConfirmPaymentRequest { Succeeded = true, Reference = "manual-test-" + Guid.NewGuid() };
+    await using (var guarded = Open())
+        await Fails(async () => await new CommerceService(guarded).ConfirmPayment(second.Id, confirm, staff, false), 403);
+    await using (var unchanged = Open())
+        Check((await unchanged.PaymentAttempts.SingleAsync(a => a.Id == second.Id)).Status == "pending"
+            && !await unchanged.PurchaseInvoices.AnyAsync(i => i.OrderId == order.Id), "Disabled manual confirmation cannot grant access or create an invoice.");
     await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => Run(s => s.ConfirmPayment(second.Id, confirm, staff, false))));
     Check((await Run(s => s.Transactions(order.Id, owner))).Count == 2, "Preserve failed and succeeded attempts.");
     var invoice = await Run(s => s.Invoice(order.Id, owner));

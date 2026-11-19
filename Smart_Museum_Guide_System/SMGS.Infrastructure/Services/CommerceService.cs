@@ -134,6 +134,8 @@ public partial class CommerceService(ApplicationDbContext db,
 
     public async Task<PaymentAttempt> ConfirmPayment(Guid attemptId, ConfirmPaymentRequest r, Guid staff, bool admin)
     {
+        if (!SePay.EnableManualConfirmation)
+            throw new CommerceException("Xác nhận thanh toán thủ công đã tắt. Quyền truy cập chỉ được cấp sau xác nhận từ cổng thanh toán.", 403);
         var found = await db.PaymentAttempts.AsNoTracking().SingleOrDefaultAsync(a => a.Id == attemptId)
             ?? throw new CommerceException("Không tìm thấy giao dịch.", 404);
         await using var tx = await db.Database.BeginTransactionAsync();

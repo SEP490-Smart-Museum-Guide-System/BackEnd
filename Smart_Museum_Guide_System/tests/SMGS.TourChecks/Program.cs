@@ -324,6 +324,8 @@ try
     var versions = await Run(db => Tours(db).ListVersionsAsync(createdTour.Id, staff, false));
     Check(versions.Count == 1 && versions[0].VersionNo == 1 && versions[0].Status == TourVersionStatuses.Draft, "TC-014: Creating tour creates Version 1 in Draft");
     var v1Id = versions[0].Id;
+    await Reject(async () => await Run(db => Tours(db).PublishAsync(createdTour.Id, createdTour.Revision, staff, false)), 409,
+        "Legacy publish must not approve a draft or create reviewer metadata");
 
     // Khi v1 còn là Draft, khách chưa thấy được.
     await Reject(
