@@ -49,6 +49,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         IndoorMapConfiguration.Configure(builder);
         CommerceConfiguration.Configure(builder);
         VisitorExperienceConfiguration.Configure(builder);
+        builder.Entity<MuseumPresence>(e =>
+        {
+            e.ToTable("museum_presence");
+            e.HasIndex(x => new { x.UserId, x.RequestId }).IsUnique();
+            e.HasIndex(x => new { x.UserId, x.MuseumId, x.ObservedAt });
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Museum>().WithMany().HasForeignKey(x => x.MuseumId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Visit>().WithMany().HasForeignKey(x => x.VisitId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<IndoorMap>().WithMany().HasForeignKey(x => x.MapId).OnDelete(DeleteBehavior.Restrict);
+        });
         builder.Entity<ApplicationUser>().ToTable("Users");
         builder.Entity<IdentityRole<Guid>>().ToTable("Roles");
         builder.Entity<IdentityRole<Guid>>().HasData(DataSeeder.CreateRoleSeeds());

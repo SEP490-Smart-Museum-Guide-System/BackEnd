@@ -29,3 +29,23 @@ dotnet run --project tools/SMGS.SchemaExport -- ../project-docs --verify
 ```
 
 Verification creates a unique schema, applies migrations twice, compares every model table/column and drops only that schema. The account needs CREATE SCHEMA permission. Generated `smgs_backend.dbml` is the physical backend ERD. `smgs_schema.dbml` is a conceptual target, not proof of implemented tables. SQL/migrations are authoritative for defaults, checks and filtered indexes.
+
+## Museum arrival and room positioning — 20/11/2026
+
+`AddMuseumPresence` adds only `museum_presence`, its indexes and foreign keys. Its Up operation does not delete existing tables or rows. The physical model now has 53 tables. The separate `museum_presence_upgrade.sql` script includes only this incremental migration, not the full initial schema. It requires the existing backend parent tables and `__EFMigrationsHistory`. On an existing database, inspect/backup it and run this incremental script after verifying those prerequisites; do not replay InitialCurrentSchema over existing tables. This change was tested on isolated schemas, not applied automatically to the user's application database.
+
+Staff workflow: open the indoor-map editor, link an **entrance** marker or **gallery** marker to a route node, publish the map, then choose **Tải QR vị trí**. Print/place it at the corresponding entrance/room. The QR encodes map ID, published revision and marker ID. Reprint QR codes after publishing a new map revision. Artifact QR generation stays separate.
+
+Visitor workflow: the museum detail/directions screens show GPS proximity and a QR confirmation action. GPS requires a fresh sample (<=30 seconds), reported accuracy <=50 m, and the distance plus error circle inside the 150 m proximity radius to show `nearby`. Last-known/mock/poor-accuracy samples cannot confirm arrival; GPS never writes confirmed presence. Checks run only in the foreground, with explicit permission and a manual retry, and refresh after returning from Maps.
+
+Scanning a valid entrance/room QR records a private server-timestamped observation, restores the room/floor/map after reopening, and supports routing from its node. The general artifact scanner also accepts location QR. Artifact QR recognition remains usable as a positioning anchor. QR room scans do not award artifact progress, points or quiz eligibility. Only the most recent applicable QR observation is used; after five minutes routes require another scan. Changing floors selects the corresponding published map; cross-floor paths are not fabricated. Manual start selection is labelled as manual and does not record confirmation.
+
+This is checkpoint-based positioning, not continuous GPS movement inside rooms. Coordinates/map nodes/room links and physical QR placement must be configured by the museum. Real-device GPS/camera accuracy inside the actual museum has not been measured. Static QR scanning is an observation, not anti-spoofing attendance evidence or a payment entitlement.
+
+Run backend regression from Smart_Museum_Guide_System with SMGS_TEST_CONNECTION set to a disposable test database:
+
+```powershell
+dotnet run --project tests/SMGS.PresenceChecks
+```
+
+Frontend regression: `flutter test --no-pub test/museum_presence_test.dart` from FrontEnd/smgs_mobile. Tests include GPS metadata/denial, nearby-versus-confirmed UI, saved room/floor, stale observations and authenticated route requests. Existing web and Flutter suites should also pass. No new positioning hardware, background-location permission or model service is required.

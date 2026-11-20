@@ -135,6 +135,7 @@ public static class DependencyInjection
         services.AddScoped<IVisitProgressService, VisitProgressService>();
         services.AddScoped<IRecognitionService, RecognitionService>();
         services.AddScoped<IVisitorNavigationService, VisitorNavigationService>();
+        services.AddScoped<MuseumPresenceService>();
         services.AddScoped<IQuestionBankService, QuestionBankService>();
         services.AddScoped<IDailyQuizService, DailyQuizService>();
         services.AddScoped<IQuizAttemptService, QuizAttemptService>();
