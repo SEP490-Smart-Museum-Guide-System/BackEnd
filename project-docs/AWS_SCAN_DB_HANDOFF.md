@@ -1,5 +1,9 @@
 # Scan PostgreSQL connection — 2026-11-20
 
+## Backend Scan API integration
+
+On 2026-11-20, the user supplied the exact `AiScan__BaseUrl` and `AiScan__ServiceKey`. These were merged into encrypted SSM `/smgs/demo/runtime` and the live `/opt/smgs/appsettings.Production.json` as `AiScan:BaseUrl` / `AiScan:ServiceKey`, preserving other settings. The URL is `https://scan.172-198-161-72.sslip.io/`; the key is not recorded in documentation or source. BE runs as systemd service `smgs`, which was restarted to apply the change. Direct authenticated Scan access from EC2 and Scan database readiness passed. The temporary update IAM permission was removed. The instance was already running and was left running for this configuration update. Original database setup status below describes its earlier stopped state.
+
 AWS-side setup is complete. The user requested EC2 be stopped again after checks. It must be running before Azure can connect.
 
 ## Connection settings
