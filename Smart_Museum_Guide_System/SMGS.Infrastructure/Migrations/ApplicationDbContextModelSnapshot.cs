@@ -1272,6 +1272,54 @@ namespace SMGS.Infrastructure.Migrations
                     b.ToTable("museum_passes", (string)null);
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.MuseumPresence", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("MapId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MapRevision")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MarkerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("MuseumId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ObservedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("VisitId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MapId");
+
+                    b.HasIndex("MuseumId");
+
+                    b.HasIndex("VisitId");
+
+                    b.HasIndex("UserId", "RequestId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "MuseumId", "ObservedAt");
+
+                    b.ToTable("museum_presence", (string)null);
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.PaymentAttempt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2736,6 +2784,32 @@ namespace SMGS.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.MuseumPresence", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.IndoorMap", null)
+                        .WithMany()
+                        .HasForeignKey("MapId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Domain.Entities.Museum", null)
+                        .WithMany()
+                        .HasForeignKey("MuseumId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Domain.Entities.Visit", null)
+                        .WithMany()
+                        .HasForeignKey("VisitId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.PaymentAttempt", b =>

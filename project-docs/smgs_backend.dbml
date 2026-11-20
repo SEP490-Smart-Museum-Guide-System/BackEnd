@@ -314,6 +314,26 @@ Table "museum_passes" {
   }
 }
 
+Table "museum_presence" {
+  "Id" "bigint" [not null]
+  "MapId" "integer" [not null]
+  "MapRevision" "integer" [not null]
+  "MarkerId" "uuid" [not null]
+  "MuseumId" "integer" [not null]
+  "ObservedAt" "timestamp with time zone" [not null]
+  "RequestId" "uuid" [not null]
+  "UserId" "uuid" [not null]
+  "VisitId" "integer"
+  indexes {
+    ("Id") [pk]
+    ("MapId") [name: "IX_museum_presence_MapId"]
+    ("MuseumId") [name: "IX_museum_presence_MuseumId"]
+    ("UserId", "MuseumId", "ObservedAt") [name: "IX_museum_presence_UserId_MuseumId_ObservedAt"]
+    ("UserId", "RequestId") [name: "IX_museum_presence_UserId_RequestId", unique]
+    ("VisitId") [name: "IX_museum_presence_VisitId"]
+  }
+}
+
 Table "museums" {
   "Id" "integer" [not null]
   "Address" "character varying(500)"
@@ -858,6 +878,10 @@ Ref: "map_markers".("IndoorMapId", "NodeId") > "map_nodes".("IndoorMapId", "Id")
 Ref: "map_nodes".("IndoorMapId") > "indoor_maps".("Id")
 Ref: "museum_passes".("OrderId") > "purchase_orders".("Id")
 Ref: "museum_passes".("UserId") > "Users".("Id")
+Ref: "museum_presence".("MapId") > "indoor_maps".("Id")
+Ref: "museum_presence".("MuseumId") > "museums".("Id")
+Ref: "museum_presence".("UserId") > "Users".("Id")
+Ref: "museum_presence".("VisitId") > "visits".("Id")
 Ref: "museums".("CityCode") > "cities".("Code")
 Ref: "payment_attempts".("OrderId") > "purchase_orders".("Id")
 Ref: "payment_attempts".("ConfirmedBy") > "Users".("Id")

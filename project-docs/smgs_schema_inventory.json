@@ -1315,6 +1315,97 @@
     ]
   },
   {
+    "table": "museum_presence",
+    "columns": [
+      {
+        "name": "Id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "MapId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "MapRevision",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "MarkerId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "MuseumId",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "ObservedAt",
+        "type": "timestamp with time zone",
+        "nullable": false
+      },
+      {
+        "name": "RequestId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "UserId",
+        "type": "uuid",
+        "nullable": false
+      },
+      {
+        "name": "VisitId",
+        "type": "integer",
+        "nullable": true
+      }
+    ],
+    "primaryKey": [
+      "Id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "UserId"
+        ],
+        "parent": "Users",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "MapId"
+        ],
+        "parent": "indoor_maps",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "MuseumId"
+        ],
+        "parent": "museums",
+        "parentColumns": [
+          "Id"
+        ]
+      },
+      {
+        "columns": [
+          "VisitId"
+        ],
+        "parent": "visits",
+        "parentColumns": [
+          "Id"
+        ]
+      }
+    ]
+  },
+  {
     "table": "museums",
     "columns": [
       {
