@@ -96,6 +96,8 @@ public static class DependencyInjection
         services.AddScoped<IArtifactContentService, ArtifactContentService>();
         services.AddHttpClient("artifact-scan", client => client.Timeout = TimeSpan.FromMinutes(10));
         services.AddOptions<GuideModelOptions>().Bind(configuration.GetSection(GuideModelOptions.SectionName));
+        services.AddOptions<GuideModelOptions>("StaffAi").Bind(configuration.GetSection(
+            configuration.GetSection("StaffAi").Exists() ? "StaffAi" : GuideModelOptions.SectionName));
         services.AddHttpClient<IArtifactGuideModel, LocalArtifactGuideModel>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(55);

@@ -7,11 +7,11 @@ using SMGS.Application.Interfaces;
 
 namespace SMGS.Infrastructure.Services;
 
-public class LocalStaffAiModel(HttpClient http, IOptions<GuideModelOptions> options) : IStaffAiModel
+public class LocalStaffAiModel(HttpClient http, IOptionsMonitor<GuideModelOptions> options) : IStaffAiModel
 {
     public async Task<JsonElement> GenerateAsync(StaffAiModelRequest data, CancellationToken cancellationToken = default)
     {
-        var config = options.Value;
+        var config = options.Get("StaffAi");
         if (!config.Enabled || string.IsNullOrWhiteSpace(config.ServiceKey) || !Uri.TryCreate(config.BaseUrl, UriKind.Absolute, out var uri)
             || uri.Scheme is not ("http" or "https") || uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0 || uri.AbsolutePath != "/")
             throw new GuideException("Model AI local chưa được kết nối. Chưa tạo bản nháp nào.");

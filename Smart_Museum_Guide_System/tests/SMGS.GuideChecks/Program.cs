@@ -102,6 +102,7 @@ handler.Status = HttpStatusCode.OK; handler.Failure = new HttpRequestException("
 await ExpectFailure(503);
 handler.Failure = new TaskCanceledException(); await ExpectFailure(504);
 await StaffAiChecks.RunAsync();
+await StaffAiConfigChecks.RunAsync();
 await SpeechChecks.RunAsync();
 await HttpChecks.RunAsync();
 Console.WriteLine($"PASS: {checks} guide service/provider checks and HTTP authorization/validation checks. No real DB/provider requests.");
