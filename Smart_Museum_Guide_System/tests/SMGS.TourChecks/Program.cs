@@ -62,6 +62,7 @@ var reviewQueueAttr = typeof(TourController).GetMethod(nameof(TourController.Rev
 var statusSummaryAttr = typeof(TourController).GetMethod(nameof(TourController.StatusSummary))!.GetCustomAttribute<AuthorizeAttribute>()!;
 var versionDetailAttr = typeof(TourController).GetMethod(nameof(TourController.GetVersionDetail))!.GetCustomAttribute<AuthorizeAttribute>()!;
 var cloneDraftAttr = typeof(TourController).GetMethod(nameof(TourController.CloneVersionToDraft))!.GetCustomAttribute<AuthorizeAttribute>()!;
+var compareAttr = typeof(TourController).GetMethod(nameof(TourController.CompareVersions))!.GetCustomAttribute<AuthorizeAttribute>()!;
 var saveRouteAttr = typeof(TourController).GetMethod(nameof(TourController.SaveRoute))!.GetCustomAttribute<AuthorizeAttribute>()!;
 
 Check(approveAttr.Roles == RoleNames.Admin + "," + RoleNames.Curator, "TC-015: ApproveVersion requires Curator or Admin role");
@@ -73,6 +74,7 @@ Check(reviewQueueAttr.Roles == RoleNames.Admin + "," + RoleNames.MuseumStaff + "
 Check(statusSummaryAttr.Roles == RoleNames.Admin + "," + RoleNames.MuseumStaff + "," + RoleNames.Curator, "TC-015: StatusSummary requires Admin, MuseumStaff or Curator role");
 Check(versionDetailAttr.Roles == RoleNames.Admin + "," + RoleNames.MuseumStaff + "," + RoleNames.Curator, "TC-015: GetVersionDetail requires Admin, MuseumStaff or Curator role");
 Check(cloneDraftAttr.Roles == RoleNames.Admin + "," + RoleNames.MuseumStaff, "TC-015: CloneVersionToDraft requires MuseumStaff or Admin role");
+Check(compareAttr.Roles == RoleNames.Admin + "," + RoleNames.MuseumStaff + "," + RoleNames.Curator, "TC-015: CompareVersions requires Admin, MuseumStaff or Curator role");
 Check(saveRouteAttr.Roles == RoleNames.Visitor, "TC-019: SaveRoute requires Visitor role");
 
 // TC-024: Chuyển trạng thái hợp lệ Draft -> Submitted -> Approved và Draft -> Submitted -> Rejected.
@@ -426,6 +428,18 @@ try
     await Run(db => Tours(db).SubmitVersionAsync(v3.Id, staff, false));
     var futureTime = clock.Now.UtcDateTime.AddHours(2);
     await Run(db => Tours(db).ApproveVersionAsync(v3.Id, new ApproveTourVersionRequest(futureTime, "Hẹn công bố sau 2h"), curator, false));
+
+    // Kiểm tra so sánh sự khác biệt giữa 2 phiên bản (Version Diff: v1 vs v3)
+    var diffV1ToV3 = await Run(db => Tours(db).CompareVersionsAsync(createdTour.Id, v1Id, v3.Id, curator, false));
+    Check(
+        diffV1ToV3.FromVersionNo == 1 &&
+        diffV1ToV3.ToVersionNo == 3 &&
+        diffV1ToV3.EstimatedMinutesDelta == 15 &&
+        diffV1ToV3.AddedStops.Count == 1 &&
+        diffV1ToV3.AddedStops[0].ArtifactId == art3.Id &&
+        diffV1ToV3.RemovedStops.Count == 0 &&
+        diffV1ToV3.UnchangedStopCount == 2,
+        "CompareVersions computes added stops, unchanged stops and time delta accurately");
 
     // Kiểm tra thêm trường hợp duyệt công bố NGAY LẬP TỨC (PublicAt <= now) trong lúc khách đang có Visit_Item quét dở ở v1.
     var v4 = await Run(db => Tours(db).CreateVersionDraftAsync(

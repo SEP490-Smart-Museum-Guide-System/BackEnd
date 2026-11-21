@@ -48,6 +48,33 @@ public record TourVersionStatusSummaryDto(
     int PublicCount,
     int ScheduledApprovalCount,
     int RejectedCount);
+public record TourVersionStopReorderDto(
+    int ArtifactId,
+    string ArtifactName,
+    int FromOrderNo,
+    int ToOrderNo);
+public record TourVersionDiffDto(
+    int TourId,
+    int FromVersionId,
+    int FromVersionNo,
+    string FromStatus,
+    int ToVersionId,
+    int ToVersionNo,
+    string ToStatus,
+    bool TitleChanged,
+    string FromTitle,
+    string ToTitle,
+    bool DescriptionChanged,
+    string FromDescription,
+    string ToDescription,
+    int FromEstimatedMinutes,
+    int ToEstimatedMinutes,
+    int EstimatedMinutesDelta,
+    IReadOnlyList<TourVersionStopDetailDto> AddedStops,
+    IReadOnlyList<TourVersionStopDetailDto> RemovedStops,
+    IReadOnlyList<TourVersionStopReorderDto> ReorderedStops,
+    int UnchangedStopCount,
+    string Summary);
 public record TourRecommendRequest(int[]? TopicIds, [Range(1, 1440)] int AvailableMinutes);
 public record SaveRouteRequest([Range(1, int.MaxValue)] int TourVersionId, int[]? TopicIds, [Range(1, 1440)] int AvailableMinutes);
 public record RecommendedTourDto(

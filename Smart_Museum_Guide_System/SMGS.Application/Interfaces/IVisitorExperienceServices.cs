@@ -24,6 +24,7 @@ public interface ITourService
     Task<IReadOnlyList<TourVersionReviewItemDto>> ListReviewQueueAsync(int museumId, string? status, Guid user, bool admin, int page, int pageSize);
     Task<TourVersionStatusSummaryDto> GetStatusSummaryAsync(int museumId, Guid user, bool admin);
     Task<TourVersion> CloneVersionToDraftAsync(int versionId, Guid user, bool admin);
+    Task<TourVersionDiffDto> CompareVersionsAsync(int tourId, int? fromVersionId, int toVersionId, Guid user, bool admin);
 
     // WF-02 (F05): Gợi ý tour theo sở thích + thời gian rảnh, fallback có giải thích, và lưu lộ trình để mở lại.
     Task<TourRecommendationResultDto> RecommendAsync(int museumId, TourRecommendRequest request, Guid? visitor);

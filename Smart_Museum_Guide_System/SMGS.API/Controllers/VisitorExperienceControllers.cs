@@ -58,6 +58,9 @@ public class TourController(ITourService service) : ExperienceControllerBase
     public async Task<IActionResult> GetPublicVersion(int tourId) => Result(await service.GetPublicTourVersionAsync(tourId));
     [HttpGet("{tourId:int}/versions"), Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff + "," + RoleNames.Curator)]
     public async Task<IActionResult> ListVersions(int tourId) => Result(await service.ListVersionsAsync(tourId, UserId, Admin));
+    [HttpGet("{tourId:int}/versions/compare"), Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff + "," + RoleNames.Curator)]
+    public async Task<IActionResult> CompareVersions(int tourId, [FromQuery] int toVersionId, [FromQuery] int? fromVersionId = null)
+        => Result(await service.CompareVersionsAsync(tourId, fromVersionId, toVersionId, UserId, Admin));
     [HttpGet("versions/review-queue"), Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff + "," + RoleNames.Curator)]
     public async Task<IActionResult> ReviewQueue([FromQuery] int museumId, [FromQuery] string? status = null, int page = 1, int pageSize = 20)
         => Result(await service.ListReviewQueueAsync(museumId, status, UserId, Admin, page, pageSize));

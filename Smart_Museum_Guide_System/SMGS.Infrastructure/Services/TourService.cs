@@ -719,6 +719,126 @@ public class TourService(ApplicationDbContext db, TimeProvider? clock = null) : 
             admin);
     }
 
+    public async Task<TourVersionDiffDto> CompareVersionsAsync(
+        int tourId,
+        int? fromVersionId,
+        int toVersionId,
+        Guid user,
+        bool admin)
+    {
+        var tour = await db.Set<Tour>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(t => t.Id == tourId)
+            ?? throw new ExperienceException("Không tìm thấy tour.", 404);
+
+        await ExperienceAccess.Museum(db, tour.MuseumId, user, admin);
+
+        var toVersion = await db.Set<TourVersion>()
+            .AsNoTracking()
+            .Include(v => v.Items.OrderBy(i => i.OrderNo))
+            .SingleOrDefaultAsync(v => v.Id == toVersionId && v.TourId == tourId)
+            ?? throw new ExperienceException("Không tìm thấy phiên bản đích thuộc tour này.", 404);
+
+        TourVersion? fromVersion;
+        if (fromVersionId.HasValue)
+        {
+            fromVersion = await db.Set<TourVersion>()
+                .AsNoTracking()
+                .Include(v => v.Items.OrderBy(i => i.OrderNo))
+                .SingleOrDefaultAsync(v => v.Id == fromVersionId.Value && v.TourId == tourId)
+                ?? throw new ExperienceException("Không tìm thấy phiên bản gốc thuộc tour này.", 404);
+        }
+        else
+        {
+            var now = UtcNow;
+            fromVersion = await db.Set<TourVersion>()
+                .AsNoTracking()
+                .Include(v => v.Items.OrderBy(i => i.OrderNo))
+                .Where(v => v.TourId == tourId && v.Id != toVersionId && v.Status == TourVersionStatuses.Approved && v.PublicAt <= now)
+                .OrderByDescending(v => v.VersionNo)
+                .FirstOrDefaultAsync()
+                ?? await db.Set<TourVersion>()
+                    .AsNoTracking()
+                    .Include(v => v.Items.OrderBy(i => i.OrderNo))
+                    .Where(v => v.TourId == tourId && v.Id != toVersionId && v.VersionNo < toVersion.VersionNo)
+                    .OrderByDescending(v => v.VersionNo)
+                    .FirstOrDefaultAsync()
+                ?? throw new ExperienceException("Không tìm thấy phiên bản trước đó để so sánh; hãy truyền fromVersionId.", 404);
+        }
+
+        var museumName = await db.Museums
+            .AsNoTracking()
+            .Where(m => m.Id == tour.MuseumId)
+            .Select(m => m.Name)
+            .FirstOrDefaultAsync() ?? string.Empty;
+
+        var enriched = await BuildReviewItemsAsync(
+            [fromVersion, toVersion],
+            new Dictionary<int, (int MuseumId, string MuseumName)> { [tour.Id] = (tour.MuseumId, museumName) });
+
+        var fromDetail = enriched[0];
+        var toDetail = enriched[1];
+
+        var fromMap = fromDetail.Stops.ToDictionary(s => s.ArtifactId);
+        var toMap = toDetail.Stops.ToDictionary(s => s.ArtifactId);
+
+        var addedStops = toDetail.Stops
+            .Where(s => !fromMap.ContainsKey(s.ArtifactId))
+            .OrderBy(s => s.OrderNo)
+            .ToList();
+
+        var removedStops = fromDetail.Stops
+            .Where(s => !toMap.ContainsKey(s.ArtifactId))
+            .OrderBy(s => s.OrderNo)
+            .ToList();
+
+        var reorderedStops = toDetail.Stops
+            .Where(s => fromMap.TryGetValue(s.ArtifactId, out var prev) && prev.OrderNo != s.OrderNo)
+            .OrderBy(s => s.OrderNo)
+            .Select(s => new TourVersionStopReorderDto(
+                ArtifactId: s.ArtifactId,
+                ArtifactName: s.ArtifactName,
+                FromOrderNo: fromMap[s.ArtifactId].OrderNo,
+                ToOrderNo: s.OrderNo))
+            .ToList();
+
+        var unchangedCount = toDetail.Stops.Count(s =>
+            fromMap.TryGetValue(s.ArtifactId, out var prev) && prev.OrderNo == s.OrderNo);
+
+        var titleChanged = !string.Equals(fromVersion.Title, toVersion.Title, StringComparison.Ordinal);
+        var descChanged = !string.Equals(fromVersion.Description, toVersion.Description, StringComparison.Ordinal);
+        var minutesDelta = toVersion.EstimatedMinutes - fromVersion.EstimatedMinutes;
+        var deltaText = minutesDelta > 0 ? $"+{minutesDelta}" : minutesDelta.ToString();
+
+        var summary = $"So sánh v{fromVersion.VersionNo} -> v{toVersion.VersionNo}: " +
+                      $"thêm {addedStops.Count} điểm dừng, xóa {removedStops.Count} điểm dừng, " +
+                      $"đổi thứ tự {reorderedStops.Count} điểm dừng, giữ nguyên {unchangedCount} điểm dừng, " +
+                      $"thời lượng {deltaText} phút.";
+
+        return new TourVersionDiffDto(
+            TourId: tourId,
+            FromVersionId: fromVersion.Id,
+            FromVersionNo: fromVersion.VersionNo,
+            FromStatus: fromVersion.Status,
+            ToVersionId: toVersion.Id,
+            ToVersionNo: toVersion.VersionNo,
+            ToStatus: toVersion.Status,
+            TitleChanged: titleChanged,
+            FromTitle: fromVersion.Title,
+            ToTitle: toVersion.Title,
+            DescriptionChanged: descChanged,
+            FromDescription: fromVersion.Description,
+            ToDescription: toVersion.Description,
+            FromEstimatedMinutes: fromVersion.EstimatedMinutes,
+            ToEstimatedMinutes: toVersion.EstimatedMinutes,
+            EstimatedMinutesDelta: minutesDelta,
+            AddedStops: addedStops,
+            RemovedStops: removedStops,
+            ReorderedStops: reorderedStops,
+            UnchangedStopCount: unchangedCount,
+            Summary: summary);
+    }
+
     // =========================================================================
     // WF-02 (F05): Gợi ý lộ trình theo sở thích + thời gian & lưu lộ trình (SavedRoute)
     // =========================================================================
