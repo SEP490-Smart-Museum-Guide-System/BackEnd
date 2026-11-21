@@ -34,12 +34,25 @@ public static class CommerceConfiguration
             e.Property(x => x.Amount).HasPrecision(18, 2);
             e.Property(x => x.Currency).HasMaxLength(3);
             e.Property(x => x.GroupKeyHash).HasMaxLength(64);
+            e.Property(x => x.RefundedAmount).HasPrecision(18, 2);
             e.HasIndex(x => x.GroupKeyHash).IsUnique();
             e.HasIndex(x => new { x.BuyerId, x.CreatedAt });
             e.HasIndex(x => new { x.MuseumId, x.PaidAt });
             e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.BuyerId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Museum>().WithMany().HasForeignKey(x => x.MuseumId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<CommerceProduct>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+        b.Entity<WalletTransaction>(e =>
+        {
+            e.ToTable("wallet_transactions");
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.Currency).HasMaxLength(3);
+            e.Property(x => x.Type).HasMaxLength(20);
+            e.Property(x => x.Description).HasMaxLength(500);
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasIndex(x => x.OrderId).HasFilter("\"OrderId\" IS NOT NULL");
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<PurchaseOrder>().WithMany().HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Restrict);
         });
         b.Entity<PaymentAttempt>(e =>
         {

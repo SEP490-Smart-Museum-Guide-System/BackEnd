@@ -33,6 +33,7 @@ public class PurchaseOrder
     public Guid BuyerId { get; set; }
     public int MuseumId { get; set; }
     public int ProductId { get; set; }
+    public DateOnly VisitDate { get; set; }
     public string ProductName { get; set; } = "";
     public string ProductKind { get; set; } = "";
     public decimal Amount { get; set; }
@@ -48,6 +49,20 @@ public class PurchaseOrder
     public DateTime? PaidAt { get; set; }
     public DateTime? ExpiresAt { get; set; }
     public string? GroupKeyHash { get; set; }
+    public decimal RefundedAmount { get; set; }
+    public DateTime? CancelledAt { get; set; }
+}
+
+public class WalletTransaction
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid UserId { get; set; }
+    public Guid? OrderId { get; set; }
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = "VND";
+    public string Type { get; set; } = "refund";
+    public string Description { get; set; } = "";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class PaymentAttempt
