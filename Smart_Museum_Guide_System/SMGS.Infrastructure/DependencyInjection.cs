@@ -95,6 +95,10 @@ public static class DependencyInjection
         services.AddScoped<IArtifactContentRepository, ArtifactContentRepository>();
         services.AddScoped<IArtifactContentService, ArtifactContentService>();
         services.AddHttpClient("artifact-scan", client => client.Timeout = TimeSpan.FromMinutes(10));
+        services.AddHttpClient("artifact-vision", client => {
+            client.Timeout = TimeSpan.FromSeconds(45);
+            client.MaxResponseContentBufferSize = 256 * 1024;
+        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddOptions<GuideModelOptions>().Bind(configuration.GetSection(GuideModelOptions.SectionName));
         services.AddOptions<GuideModelOptions>("StaffAi").Bind(configuration.GetSection(
             configuration.GetSection("StaffAi").Exists() ? "StaffAi" : GuideModelOptions.SectionName));
