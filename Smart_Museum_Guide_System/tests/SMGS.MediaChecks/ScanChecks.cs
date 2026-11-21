@@ -49,6 +49,17 @@ static class ScanChecks
         var roles = typeof(ArtifactScanController).GetCustomAttribute<AuthorizeAttribute>()!.Roles!;
         Check(roles.Contains("Museum Staff") && !roles.Contains("Visitor"), "Scan: staff/admin authorization");
         Check(http.Key == "internal-test-key", "Scan: BE supplies server key");
+        http.Status = HttpStatusCode.OK;
+        http.Json = "{\"artifactId\":8,\"status\":\"PROCESSING\"}";
+        var previousCalls = http.Calls;
+        Check(await controller.Cancel(7, job, default) is ObjectResult { StatusCode: 403 }, "Scan: cross-artifact cancellation denied");
+        Check(http.Calls == previousCalls + 1 && !http.LastPath!.EndsWith("/cancel"), "Scan: foreign job never receives cancellation request");
+        state.Allowed = false;
+        previousCalls = http.Calls;
+        Check(await controller.Cancel(7, job, default) is ObjectResult { StatusCode: 403 } && http.Calls == previousCalls, "Scan: unassigned staff cancellation never reaches AI");
+        state.Allowed = true;
+        http.Json = "{\"artifactId\":7,\"status\":\"CANCELLED\"}";
+        Check(await controller.Cancel(7, job, default) is OkObjectResult && http.LastPath!.EndsWith("/cancel"), "Scan: authorized cancellation forwarded");
         Console.WriteLine("PASS: scan gateway staff scope, cross-artifact save rejection, unfinished job rejection, internal auth failure.");
     }
 }
@@ -61,11 +72,11 @@ public class ScanScopeProxy : DispatchProxy
 class ScanHttp : HttpMessageHandler, IHttpClientFactory
 {
     public byte[] Model = "glTF-test-model"u8.ToArray(); public int Approvals;
-    public int Calls; public string? Key; public string Json = "{}"; public HttpStatusCode Status = HttpStatusCode.OK;
+    public int Calls; public string? Key, LastPath; public string Json = "{}"; public HttpStatusCode Status = HttpStatusCode.OK;
     public HttpClient CreateClient(string name) => new(this, false);
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
-        Calls++; Key = request.Headers.GetValues("X-Service-Key").Single();
+        Calls++; Key = request.Headers.GetValues("X-Service-Key").Single(); LastPath = request.RequestUri!.AbsolutePath;
         if (request.RequestUri!.AbsolutePath.EndsWith("/approve")) Approvals++;
         HttpContent content = request.RequestUri.AbsolutePath.EndsWith("/model") ? new StreamContent(new ScanNetworkStream(Model)) : new StringContent(Json, System.Text.Encoding.UTF8, "application/json");
         if (request.RequestUri.AbsolutePath.EndsWith("/model")) content.Headers.ContentLength = Model.Length;

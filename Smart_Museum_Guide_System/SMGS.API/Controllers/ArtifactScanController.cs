@@ -151,6 +151,14 @@ public class ArtifactScanController(IAccountAdminService scopes, IArtifactAssetS
         return StatusCode(result.StatusCode, result);
     }, ct);
 
+    [HttpPost("{jobId:guid}/cancel")]
+    public Task<IActionResult> Cancel(int artifactId, Guid jobId, CancellationToken ct) => Authorized(artifactId, async () => {
+        await Job(artifactId, jobId, ct);
+        using var response = await Send(HttpMethod.Post, $"/api/v1/scans/{jobId}/cancel", ct);
+        var job = await response.Content.ReadFromJsonAsync<JsonObject>(ct) ?? throw new JsonException();
+        return Ok(ResponseDto<JsonObject>.Success(job, "Đã hủy tác vụ dựng 3D; bộ ảnh và log được giữ lại."));
+    }, ct);
+
     [HttpPost("{jobId:guid}/discard")]
     public Task<IActionResult> Discard(int artifactId, Guid jobId, CancellationToken ct) => Authorized(artifactId, async () => {
         await Job(artifactId, jobId, ct);
