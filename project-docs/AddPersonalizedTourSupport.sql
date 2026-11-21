@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     "BuyerId" uuid NOT NULL,
     "MuseumId" integer NOT NULL,
     "ProductId" integer NOT NULL,
+    "VisitDate" date NOT NULL,
     "ProductName" text NOT NULL,
     "ProductKind" text NOT NULL,
     "Amount" numeric(18,2) NOT NULL,
@@ -108,6 +109,8 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     "PaidAt" timestamp with time zone,
     "ExpiresAt" timestamp with time zone,
     "GroupKeyHash" character varying(64),
+    "RefundedAmount" numeric(18,2) NOT NULL DEFAULT 0,
+    "CancelledAt" timestamp with time zone,
     CONSTRAINT "PK_purchase_orders" PRIMARY KEY ("Id"),
     CONSTRAINT "FK_purchase_orders_Users_BuyerId" FOREIGN KEY ("BuyerId") REFERENCES "Users" ("Id") ON DELETE RESTRICT,
     CONSTRAINT "FK_purchase_orders_commerce_products_ProductId" FOREIGN KEY ("ProductId") REFERENCES commerce_products ("Id") ON DELETE RESTRICT,
@@ -169,6 +172,20 @@ CREATE TABLE IF NOT EXISTS purchase_invoices (
     "IssuedAt" timestamp with time zone NOT NULL,
     CONSTRAINT "PK_purchase_invoices" PRIMARY KEY ("Id"),
     CONSTRAINT "FK_purchase_invoices_purchase_orders_OrderId" FOREIGN KEY ("OrderId") REFERENCES purchase_orders ("Id") ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS wallet_transactions (
+    "Id" uuid NOT NULL,
+    "UserId" uuid NOT NULL,
+    "OrderId" uuid,
+    "Amount" numeric(18,2) NOT NULL,
+    "Currency" character varying(3) NOT NULL,
+    "Type" character varying(20) NOT NULL,
+    "Description" character varying(500) NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_wallet_transactions" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_wallet_transactions_Users_UserId" FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE RESTRICT,
+    CONSTRAINT "FK_wallet_transactions_purchase_orders_OrderId" FOREIGN KEY ("OrderId") REFERENCES purchase_orders ("Id") ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS map_nodes (
@@ -443,6 +460,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS "IX_purchase_invoices_OrderId" ON purchase_inv
 CREATE INDEX IF NOT EXISTS "IX_purchase_orders_BuyerId_CreatedAt" ON purchase_orders ("BuyerId", "CreatedAt");
 
 CREATE UNIQUE INDEX IF NOT EXISTS "IX_purchase_orders_GroupKeyHash" ON purchase_orders ("GroupKeyHash");
+CREATE INDEX IF NOT EXISTS "IX_wallet_transactions_UserId_CreatedAt" ON wallet_transactions ("UserId", "CreatedAt");
+CREATE INDEX IF NOT EXISTS "IX_wallet_transactions_OrderId" ON wallet_transactions ("OrderId") WHERE "OrderId" IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS "IX_purchase_orders_MuseumId_PaidAt" ON purchase_orders ("MuseumId", "PaidAt");
 

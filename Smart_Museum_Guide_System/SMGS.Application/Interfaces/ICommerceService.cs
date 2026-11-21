@@ -12,6 +12,9 @@ public interface ICommerceService
     Task<ProductResponse> ConfigureProduct(int museumId, int? id, ProductRequest request, Guid staff, bool admin);
     Task<OrderResponse> CreateOrder(OrderRequest request, Guid buyer);
     Task<IReadOnlyList<OrderResponse>> Orders(Guid buyer, int page, int pageSize);
+    Task<CancellationResponse> CancelOrder(Guid orderId, Guid buyer);
+    Task<WalletResponse> Wallet(Guid user);
+    Task<PaymentAttempt> PayWithWallet(Guid orderId, Guid buyer);
     Task<PaymentAttempt> StartPayment(Guid orderId, Guid buyer);
     Task<SePayPaymentResponse> StartSePayPayment(Guid orderId, Guid buyer);
     Task<SePayWebhookResponse> SePayWebhook(byte[] rawBody, string signature, string timestamp);

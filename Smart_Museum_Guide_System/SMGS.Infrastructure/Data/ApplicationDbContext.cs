@@ -18,6 +18,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
     public DbSet<MuseumPass> MuseumPasses => Set<MuseumPass>();
     public DbSet<PurchaseInvoice> PurchaseInvoices => Set<PurchaseInvoice>();
+    public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
     public DbSet<ArtifactContent> ArtifactContents => Set<ArtifactContent>();
     public DbSet<ArtifactContentVersion> ArtifactContentVersions => Set<ArtifactContentVersion>();
     public DbSet<Artifact> Artifacts => Set<Artifact>();

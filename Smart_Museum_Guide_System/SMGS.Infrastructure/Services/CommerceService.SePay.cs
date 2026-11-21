@@ -76,6 +76,9 @@ public partial class CommerceService
         await using var tx = await db.Database.BeginTransactionAsync();
         var order = await LockOrder(found.OrderId);
         var attempt = await db.PaymentAttempts.SingleAsync(a => a.Id == found.Id);
+        if (order.VisitDate < DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(now.UtcDateTime,
+                TimeZoneInfo.FindSystemTimeZoneById(OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh"))))
+            return new(true, false, "Ngày tham quan đã qua; khoản tiền cần được đối soát.");
         if (order.Currency != "VND" || order.Amount != payload.TransferAmount)
             return new(true, false, "Số tiền không khớp đơn hàng; cần đối soát.");
         if (attempt.Status == "succeeded" && attempt.Reference == reference)

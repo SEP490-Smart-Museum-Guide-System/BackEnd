@@ -71,6 +71,15 @@ public class CommerceController(ICommerceService service) : ControllerBase
     [HttpGet("orders/me")]
     public async Task<IActionResult> Orders(int page = 1, int pageSize = 20) => Result(await service.Orders(UserId, page, pageSize));
 
+    [HttpPost("orders/{orderId:guid}/cancel")]
+    public async Task<IActionResult> CancelOrder(Guid orderId) => Result(await service.CancelOrder(orderId, UserId));
+
+    [HttpGet("wallet/me")]
+    public async Task<IActionResult> Wallet() => Result(await service.Wallet(UserId));
+
+    [HttpPost("orders/{orderId:guid}/payments/wallet")]
+    public async Task<IActionResult> PayWithWallet(Guid orderId) => Result(await service.PayWithWallet(orderId, UserId));
+
     [Authorize(Roles = Managers), HttpGet("museums/{museumId:int}/orders")]
     public async Task<IActionResult> MuseumOrders(int museumId, int page = 1, int pageSize = 20) =>
         Result(await service.MuseumOrders(museumId, UserId, Admin, page, pageSize));

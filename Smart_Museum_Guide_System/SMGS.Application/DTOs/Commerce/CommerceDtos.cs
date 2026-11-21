@@ -20,7 +20,7 @@ public class ProductRequest
     [Required, RegularExpression("^[A-Z]{3}$")] public string Currency { get; set; } = "VND";
     [Range(1, 1000)] public int Seats { get; set; } = 1;
     [Range(1, 87600)] public int? ValidityHours { get; set; }
-    [RegularExpression("^payment$")] public string? ValidityStartsAt { get; set; }
+    [RegularExpression("^visit_date$")] public string? ValidityStartsAt { get; set; }
     [Required, MinLength(1), MaxLength(200)] public int[] ResourceIds { get; set; } = [];
     public bool IsActive { get; set; }
 }
@@ -28,6 +28,7 @@ public class ProductRequest
 public class OrderRequest
 {
     [Range(1, int.MaxValue)] public int ProductId { get; set; }
+    public DateOnly VisitDate { get; set; }
     [Required, StringLength(200, MinimumLength = 1)] public string BuyerName { get; set; } = "";
     // Business-defined invoice fields, preserved as a snapshot without claiming a legal e-invoice schema.
     public Dictionary<string, string> BuyerDetails { get; set; } = [];
@@ -48,7 +49,7 @@ public class RedeemKeyRequest
 public record ProductResponse(int Id, int MuseumId, string Name, string Kind, decimal Price,
     string Currency, int Seats, int? ValidityHours, string? ValidityStartsAt, int[] ResourceIds, bool IsActive);
 public record OrderResponse(Guid Id, int MuseumId, string ProductName, string ProductKind, decimal Amount,
-    string Currency, int Seats, int ValidityHours, string ValidityStartsAt, int[] ResourceIds, string BuyerName,
+    string Currency, int Seats, int ValidityHours, string ValidityStartsAt, DateOnly VisitDate, int[] ResourceIds, string BuyerName,
     Dictionary<string, string> BuyerDetails, string Status, DateTime CreatedAt, DateTime? PaidAt, DateTime? ExpiresAt);
 public record GroupKeyResponse(string Key, int RemainingClaims);
 public record RevenueResponse(string Currency, int PaidOrders, decimal Revenue, int FailedAttempts);
@@ -61,6 +62,9 @@ public record PassResponse(Guid Id, Guid OrderId, int MuseumId, string ProductNa
 public record ManagedOrderResponse(OrderResponse Order, IReadOnlyList<PaymentAttemptResponse> Transactions,
     PurchaseInvoice? Invoice);
 public record PaymentAttemptResponse(Guid Id, string Status, string? Reference, string? FailureReason, DateTime CreatedAt, DateTime? CompletedAt);
+public record WalletBalance(string Currency, decimal Balance);
+public record WalletResponse(IReadOnlyList<WalletBalance> Balances, IReadOnlyList<WalletTransaction> Transactions);
+public record CancellationResponse(Guid OrderId, string Status, decimal RefundAmount, decimal WalletBalance, string Message);
 
 public class CommerceException(string message, int statusCode = 400) : Exception(message)
 {
