@@ -9,6 +9,45 @@ public record UpdateTourRequest([Range(1, int.MaxValue)] int Revision, [Required
 public record CreateTourVersionRequest(int? CopyFromVersionId, TourRequest? Content);
 public record ApproveTourVersionRequest(DateTime? PublicAt, [StringLength(1000)] string? Note);
 public record RejectTourVersionRequest([Required, StringLength(1000)] string Note);
+public record TourVersionStopDetailDto(
+    int OrderNo,
+    int ArtifactId,
+    string ArtifactName,
+    string? ArtifactCode,
+    string? QrCode,
+    int? GalleryId,
+    string? GalleryName,
+    IReadOnlyList<string> TopicNames);
+public record TourVersionReviewItemDto(
+    int VersionId,
+    int TourId,
+    int MuseumId,
+    string MuseumName,
+    int VersionNo,
+    string Title,
+    string Description,
+    int EstimatedMinutes,
+    string Status,
+    DateTime? PublicAt,
+    Guid CreatedBy,
+    DateTime CreatedAt,
+    Guid? SubmittedBy,
+    DateTime? SubmittedAt,
+    Guid? ReviewedBy,
+    DateTime? ReviewedAt,
+    string? ReviewNote,
+    int StopCount,
+    IReadOnlyList<TourVersionStopDetailDto> Stops);
+public record TourVersionStatusSummaryDto(
+    int MuseumId,
+    int TotalTours,
+    int TotalVersions,
+    int DraftCount,
+    int SubmittedCount,
+    int ApprovedCount,
+    int PublicCount,
+    int ScheduledApprovalCount,
+    int RejectedCount);
 public record TourRecommendRequest(int[]? TopicIds, [Range(1, 1440)] int AvailableMinutes);
 public record SaveRouteRequest([Range(1, int.MaxValue)] int TourVersionId, int[]? TopicIds, [Range(1, 1440)] int AvailableMinutes);
 public record RecommendedTourDto(

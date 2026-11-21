@@ -58,6 +58,10 @@ var rejectAttr = typeof(TourController).GetMethod(nameof(TourController.RejectVe
 var submitAttr = typeof(TourController).GetMethod(nameof(TourController.SubmitVersion))!.GetCustomAttribute<AuthorizeAttribute>()!;
 var createDraftAttr = typeof(TourController).GetMethod(nameof(TourController.CreateVersionDraft))!.GetCustomAttribute<AuthorizeAttribute>()!;
 var updateDraftAttr = typeof(TourController).GetMethod(nameof(TourController.UpdateVersionDraft))!.GetCustomAttribute<AuthorizeAttribute>()!;
+var reviewQueueAttr = typeof(TourController).GetMethod(nameof(TourController.ReviewQueue))!.GetCustomAttribute<AuthorizeAttribute>()!;
+var statusSummaryAttr = typeof(TourController).GetMethod(nameof(TourController.StatusSummary))!.GetCustomAttribute<AuthorizeAttribute>()!;
+var versionDetailAttr = typeof(TourController).GetMethod(nameof(TourController.GetVersionDetail))!.GetCustomAttribute<AuthorizeAttribute>()!;
+var cloneDraftAttr = typeof(TourController).GetMethod(nameof(TourController.CloneVersionToDraft))!.GetCustomAttribute<AuthorizeAttribute>()!;
 var saveRouteAttr = typeof(TourController).GetMethod(nameof(TourController.SaveRoute))!.GetCustomAttribute<AuthorizeAttribute>()!;
 
 Check(approveAttr.Roles == RoleNames.Admin + "," + RoleNames.Curator, "TC-015: ApproveVersion requires Curator or Admin role");
@@ -65,6 +69,10 @@ Check(rejectAttr.Roles == RoleNames.Admin + "," + RoleNames.Curator, "TC-015: Re
 Check(submitAttr.Roles == RoleNames.Admin + "," + RoleNames.MuseumStaff, "TC-015: SubmitVersion requires MuseumStaff or Admin role");
 Check(createDraftAttr.Roles == RoleNames.Admin + "," + RoleNames.MuseumStaff, "TC-015: CreateVersionDraft requires MuseumStaff or Admin role");
 Check(updateDraftAttr.Roles == RoleNames.Admin + "," + RoleNames.MuseumStaff, "TC-015: UpdateVersionDraft requires MuseumStaff or Admin role");
+Check(reviewQueueAttr.Roles == RoleNames.Admin + "," + RoleNames.MuseumStaff + "," + RoleNames.Curator, "TC-015: ReviewQueue requires Admin, MuseumStaff or Curator role");
+Check(statusSummaryAttr.Roles == RoleNames.Admin + "," + RoleNames.MuseumStaff + "," + RoleNames.Curator, "TC-015: StatusSummary requires Admin, MuseumStaff or Curator role");
+Check(versionDetailAttr.Roles == RoleNames.Admin + "," + RoleNames.MuseumStaff + "," + RoleNames.Curator, "TC-015: GetVersionDetail requires Admin, MuseumStaff or Curator role");
+Check(cloneDraftAttr.Roles == RoleNames.Admin + "," + RoleNames.MuseumStaff, "TC-015: CloneVersionToDraft requires MuseumStaff or Admin role");
 Check(saveRouteAttr.Roles == RoleNames.Visitor, "TC-019: SaveRoute requires Visitor role");
 
 // TC-024: Chuyển trạng thái hợp lệ Draft -> Submitted -> Approved và Draft -> Submitted -> Rejected.

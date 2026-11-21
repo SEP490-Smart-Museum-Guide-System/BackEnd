@@ -12,8 +12,8 @@ using SMGS.Infrastructure.Data;
 namespace SMGS.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261120072806_AddMuseumPresence")]
-    partial class AddMuseumPresence
+    [Migration("20261121092720_Min")]
+    partial class Min
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1511,6 +1511,9 @@ namespace SMGS.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1543,6 +1546,10 @@ namespace SMGS.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<decimal>("RefundedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<string>("ResourceIdsJson")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1560,6 +1567,9 @@ namespace SMGS.Infrastructure.Migrations
                     b.Property<string>("ValidityStartsAt")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateOnly>("VisitDate")
+                        .HasColumnType("date");
 
                     b.HasKey("Id");
 
@@ -2365,6 +2375,50 @@ namespace SMGS.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("visit_items", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.WalletTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .HasFilter("\"OrderId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("wallet_transactions", (string)null);
                 });
 
             modelBuilder.Entity("SMGS.Infrastructure.Identity.ApplicationUser", b =>
@@ -3231,6 +3285,20 @@ namespace SMGS.Infrastructure.Migrations
                     b.HasOne("SMGS.Domain.Entities.Visit", null)
                         .WithMany()
                         .HasForeignKey("VisitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.WalletTransaction", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.PurchaseOrder", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

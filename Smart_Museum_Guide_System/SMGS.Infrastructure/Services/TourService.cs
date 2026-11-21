@@ -554,6 +554,171 @@ public class TourService(ApplicationDbContext db, TimeProvider? clock = null) : 
             .ToListAsync();
     }
 
+    public async Task<TourVersionReviewItemDto> GetVersionDetailAsync(int versionId, Guid user, bool admin)
+    {
+        var version = await db.Set<TourVersion>()
+            .AsNoTracking()
+            .Include(v => v.Items.OrderBy(i => i.OrderNo))
+            .SingleOrDefaultAsync(v => v.Id == versionId)
+            ?? throw new ExperienceException("Không tìm thấy phiên bản tour.", 404);
+
+        var tour = await db.Set<Tour>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(t => t.Id == version.TourId)
+            ?? throw new ExperienceException("Không tìm thấy tour.", 404);
+
+        await ExperienceAccess.Museum(db, tour.MuseumId, user, admin);
+
+        var museumName = await db.Museums
+            .AsNoTracking()
+            .Where(m => m.Id == tour.MuseumId)
+            .Select(m => m.Name)
+            .FirstOrDefaultAsync() ?? string.Empty;
+
+        var items = await BuildReviewItemsAsync([version], new Dictionary<int, (int MuseumId, string MuseumName)>
+        {
+            [tour.Id] = (tour.MuseumId, museumName)
+        });
+
+        return items[0];
+    }
+
+    public async Task<IReadOnlyList<TourVersionReviewItemDto>> ListReviewQueueAsync(
+        int museumId,
+        string? status,
+        Guid user,
+        bool admin,
+        int page,
+        int pageSize)
+    {
+        await ExperienceAccess.Museum(db, museumId, user, admin);
+
+        var museum = await db.Museums
+            .AsNoTracking()
+            .SingleOrDefaultAsync(m => m.Id == museumId && m.IsActive)
+            ?? throw new ExperienceException("Không tìm thấy bảo tàng.", 404);
+
+        var normalizedStatus = string.IsNullOrWhiteSpace(status)
+            ? TourVersionStatuses.Submitted
+            : status.Trim().ToLowerInvariant();
+
+        if (normalizedStatus != "all" &&
+            normalizedStatus != TourVersionStatuses.Draft &&
+            normalizedStatus != TourVersionStatuses.Submitted &&
+            normalizedStatus != TourVersionStatuses.Approved &&
+            normalizedStatus != TourVersionStatuses.Rejected)
+        {
+            throw new ExperienceException("Trạng thái lọc không hợp lệ (chấp nhận: draft, submitted, approved, rejected, all).", 400);
+        }
+
+        var (skip, take) = ExperienceAccess.Page(page, pageSize);
+
+        var tourIds = await db.Set<Tour>()
+            .AsNoTracking()
+            .Where(t => t.MuseumId == museumId)
+            .Select(t => t.Id)
+            .ToArrayAsync();
+
+        if (tourIds.Length == 0)
+        {
+            return [];
+        }
+
+        var query = db.Set<TourVersion>()
+            .AsNoTracking()
+            .Where(v => tourIds.Contains(v.TourId));
+
+        if (normalizedStatus != "all")
+        {
+            query = query.Where(v => v.Status == normalizedStatus);
+        }
+
+        var versions = await query
+            .OrderByDescending(v => v.SubmittedAt ?? v.CreatedAt)
+            .ThenByDescending(v => v.Id)
+            .Skip(skip)
+            .Take(take)
+            .Include(v => v.Items.OrderBy(i => i.OrderNo))
+            .ToListAsync();
+
+        if (versions.Count == 0)
+        {
+            return [];
+        }
+
+        var tourMap = tourIds.ToDictionary(id => id, _ => (museumId, museum.Name));
+        return await BuildReviewItemsAsync(versions, tourMap);
+    }
+
+    public async Task<TourVersionStatusSummaryDto> GetStatusSummaryAsync(int museumId, Guid user, bool admin)
+    {
+        await ExperienceAccess.Museum(db, museumId, user, admin);
+
+        if (!await db.Museums.AnyAsync(m => m.Id == museumId && m.IsActive))
+        {
+            throw new ExperienceException("Không tìm thấy bảo tàng.", 404);
+        }
+
+        var tourIds = await db.Set<Tour>()
+            .AsNoTracking()
+            .Where(t => t.MuseumId == museumId)
+            .Select(t => t.Id)
+            .ToArrayAsync();
+
+        if (tourIds.Length == 0)
+        {
+            return new TourVersionStatusSummaryDto(
+                MuseumId: museumId,
+                TotalTours: 0,
+                TotalVersions: 0,
+                DraftCount: 0,
+                SubmittedCount: 0,
+                ApprovedCount: 0,
+                PublicCount: 0,
+                ScheduledApprovalCount: 0,
+                RejectedCount: 0);
+        }
+
+        var versions = await db.Set<TourVersion>()
+            .AsNoTracking()
+            .Where(v => tourIds.Contains(v.TourId))
+            .Select(v => new { v.Status, v.PublicAt })
+            .ToListAsync();
+
+        var now = UtcNow;
+        var draftCount = versions.Count(v => v.Status == TourVersionStatuses.Draft);
+        var submittedCount = versions.Count(v => v.Status == TourVersionStatuses.Submitted);
+        var approvedCount = versions.Count(v => v.Status == TourVersionStatuses.Approved);
+        var publicCount = versions.Count(v => v.Status == TourVersionStatuses.Approved && v.PublicAt != null && v.PublicAt <= now);
+        var scheduledCount = versions.Count(v => v.Status == TourVersionStatuses.Approved && v.PublicAt != null && v.PublicAt > now);
+        var rejectedCount = versions.Count(v => v.Status == TourVersionStatuses.Rejected);
+
+        return new TourVersionStatusSummaryDto(
+            MuseumId: museumId,
+            TotalTours: tourIds.Length,
+            TotalVersions: versions.Count,
+            DraftCount: draftCount,
+            SubmittedCount: submittedCount,
+            ApprovedCount: approvedCount,
+            PublicCount: publicCount,
+            ScheduledApprovalCount: scheduledCount,
+            RejectedCount: rejectedCount);
+    }
+
+    public async Task<TourVersion> CloneVersionToDraftAsync(int versionId, Guid user, bool admin)
+    {
+        var source = await db.Set<TourVersion>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(v => v.Id == versionId)
+            ?? throw new ExperienceException("Không tìm thấy phiên bản nguồn để nhân bản.", 404);
+
+        return await CreateVersionDraftAsync(
+            source.TourId,
+            new CreateTourVersionRequest(CopyFromVersionId: versionId, Content: null),
+            user,
+            admin);
+    }
+
     // =========================================================================
     // WF-02 (F05): Gợi ý lộ trình theo sở thích + thời gian & lưu lộ trình (SavedRoute)
     // =========================================================================
@@ -907,4 +1072,89 @@ public class TourService(ApplicationDbContext db, TimeProvider? clock = null) : 
             Score: route.Score,
             Explanation: route.Explanation,
             SavedAt: route.SavedAt);
+
+    private async Task<IReadOnlyList<TourVersionReviewItemDto>> BuildReviewItemsAsync(
+        IReadOnlyList<TourVersion> versions,
+        IReadOnlyDictionary<int, (int MuseumId, string MuseumName)> tourMeta)
+    {
+        var allArtifactIds = versions
+            .SelectMany(v => v.Items.Select(i => i.ArtifactId))
+            .Distinct()
+            .ToArray();
+
+        var artifacts = allArtifactIds.Length == 0
+            ? []
+            : await db.Artifacts
+                .AsNoTracking()
+                .Include(a => a.Gallery)
+                .Include(a => a.ArtifactTopics)
+                    .ThenInclude(at => at.Topic)
+                .Where(a => allArtifactIds.Contains(a.Id))
+                .ToDictionaryAsync(a => a.Id);
+
+        return versions
+            .Select(v =>
+            {
+                var (museumId, museumName) = tourMeta.TryGetValue(v.TourId, out var meta)
+                    ? meta
+                    : (0, string.Empty);
+
+                var stops = v.Items
+                    .OrderBy(i => i.OrderNo)
+                    .Select(i =>
+                    {
+                        if (artifacts.TryGetValue(i.ArtifactId, out var art))
+                        {
+                            var topics = art.ArtifactTopics?
+                                .Where(at => at.Topic is { IsActive: true })
+                                .OrderBy(at => at.Topic.Name)
+                                .Select(at => at.Topic.Name)
+                                .ToList() ?? [];
+
+                            return new TourVersionStopDetailDto(
+                                OrderNo: i.OrderNo,
+                                ArtifactId: i.ArtifactId,
+                                ArtifactName: art.Name,
+                                ArtifactCode: art.Code,
+                                QrCode: art.QrCode,
+                                GalleryId: art.GalleryId,
+                                GalleryName: art.Gallery?.Name,
+                                TopicNames: topics);
+                        }
+
+                        return new TourVersionStopDetailDto(
+                            OrderNo: i.OrderNo,
+                            ArtifactId: i.ArtifactId,
+                            ArtifactName: $"Hiện vật #{i.ArtifactId}",
+                            ArtifactCode: null,
+                            QrCode: null,
+                            GalleryId: null,
+                            GalleryName: null,
+                            TopicNames: []);
+                    })
+                    .ToList();
+
+                return new TourVersionReviewItemDto(
+                    VersionId: v.Id,
+                    TourId: v.TourId,
+                    MuseumId: museumId,
+                    MuseumName: museumName,
+                    VersionNo: v.VersionNo,
+                    Title: v.Title,
+                    Description: v.Description,
+                    EstimatedMinutes: v.EstimatedMinutes,
+                    Status: v.Status,
+                    PublicAt: v.PublicAt,
+                    CreatedBy: v.CreatedBy,
+                    CreatedAt: v.CreatedAt,
+                    SubmittedBy: v.SubmittedBy,
+                    SubmittedAt: v.SubmittedAt,
+                    ReviewedBy: v.ReviewedBy,
+                    ReviewedAt: v.ReviewedAt,
+                    ReviewNote: v.ReviewNote,
+                    StopCount: stops.Count,
+                    Stops: stops);
+            })
+            .ToList();
+    }
 }

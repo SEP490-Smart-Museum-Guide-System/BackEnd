@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace SMGS.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCurrentSchema : Migration
+    public partial class Min : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -467,6 +467,7 @@ namespace SMGS.Infrastructure.Migrations
                     BuyerId = table.Column<Guid>(type: "uuid", nullable: false),
                     MuseumId = table.Column<int>(type: "integer", nullable: false),
                     ProductId = table.Column<int>(type: "integer", nullable: false),
+                    VisitDate = table.Column<DateOnly>(type: "date", nullable: false),
                     ProductName = table.Column<string>(type: "text", nullable: false),
                     ProductKind = table.Column<string>(type: "text", nullable: false),
                     Amount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
@@ -481,7 +482,9 @@ namespace SMGS.Infrastructure.Migrations
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     PaidAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    GroupKeyHash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true)
+                    GroupKeyHash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    RefundedAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    CancelledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -695,6 +698,36 @@ namespace SMGS.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "wallet_transactions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    OrderId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Amount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Currency = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false),
+                    Type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_wallet_transactions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_wallet_transactions_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_wallet_transactions_purchase_orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "purchase_orders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "saved_routes",
                 columns: table => new
                 {
@@ -848,6 +881,50 @@ namespace SMGS.Infrastructure.Migrations
                         principalTable: "indoor_maps",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "museum_presence",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    MuseumId = table.Column<int>(type: "integer", nullable: false),
+                    VisitId = table.Column<int>(type: "integer", nullable: true),
+                    MapId = table.Column<int>(type: "integer", nullable: false),
+                    MapRevision = table.Column<int>(type: "integer", nullable: false),
+                    MarkerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RequestId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ObservedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_museum_presence", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_museum_presence_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_museum_presence_indoor_maps_MapId",
+                        column: x => x.MapId,
+                        principalTable: "indoor_maps",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_museum_presence_museums_MuseumId",
+                        column: x => x.MuseumId,
+                        principalTable: "museums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_museum_presence_visits_VisitId",
+                        column: x => x.VisitId,
+                        principalTable: "visits",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -1841,6 +1918,32 @@ namespace SMGS.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_museum_presence_MapId",
+                table: "museum_presence",
+                column: "MapId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_museum_presence_MuseumId",
+                table: "museum_presence",
+                column: "MuseumId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_museum_presence_UserId_MuseumId_ObservedAt",
+                table: "museum_presence",
+                columns: new[] { "UserId", "MuseumId", "ObservedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_museum_presence_UserId_RequestId",
+                table: "museum_presence",
+                columns: new[] { "UserId", "RequestId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_museum_presence_VisitId",
+                table: "museum_presence",
+                column: "VisitId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_museums_CityCode",
                 table: "museums",
                 column: "CityCode");
@@ -2232,6 +2335,17 @@ namespace SMGS.Infrastructure.Migrations
                 name: "IX_visits_VisitorId_MuseumId_Status",
                 table: "visits",
                 columns: new[] { "VisitorId", "MuseumId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_wallet_transactions_OrderId",
+                table: "wallet_transactions",
+                column: "OrderId",
+                filter: "\"OrderId\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_wallet_transactions_UserId_CreatedAt",
+                table: "wallet_transactions",
+                columns: new[] { "UserId", "CreatedAt" });
         }
 
         /// <inheritdoc />
@@ -2263,6 +2377,9 @@ namespace SMGS.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "museum_passes");
+
+            migrationBuilder.DropTable(
+                name: "museum_presence");
 
             migrationBuilder.DropTable(
                 name: "payment_attempts");
@@ -2310,6 +2427,9 @@ namespace SMGS.Infrastructure.Migrations
                 name: "visit_items");
 
             migrationBuilder.DropTable(
+                name: "wallet_transactions");
+
+            migrationBuilder.DropTable(
                 name: "artifact_contents");
 
             migrationBuilder.DropTable(
@@ -2317,9 +2437,6 @@ namespace SMGS.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "map_nodes");
-
-            migrationBuilder.DropTable(
-                name: "purchase_orders");
 
             migrationBuilder.DropTable(
                 name: "question_options");
@@ -2343,16 +2460,19 @@ namespace SMGS.Infrastructure.Migrations
                 name: "tour_version_items");
 
             migrationBuilder.DropTable(
-                name: "indoor_maps");
+                name: "purchase_orders");
 
             migrationBuilder.DropTable(
-                name: "commerce_products");
+                name: "indoor_maps");
 
             migrationBuilder.DropTable(
                 name: "questions");
 
             migrationBuilder.DropTable(
                 name: "daily_quiz_entries");
+
+            migrationBuilder.DropTable(
+                name: "commerce_products");
 
             migrationBuilder.DropTable(
                 name: "quizzes");
