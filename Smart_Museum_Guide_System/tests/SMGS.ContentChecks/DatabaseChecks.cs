@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Npgsql;
 using SMGS.Application.DTOs.Account;
 using SMGS.Application.DTOs.Artifact;
+using SMGS.Application.DTOs.Artifact.Request;
 using SMGS.Application.DTOs.ArtifactContent.Request;
 using SMGS.Application.DTOs.IndoorMap;
 using SMGS.Application.DTOs.Topic;
@@ -90,6 +91,40 @@ internal static class DatabaseChecks
             var curatorUser = await db.Users.SingleAsync(u => u.Email == "curator@museum.vn");
             var museum = await db.Museums.FirstAsync();
             var seededArtifact = await db.Artifacts.FirstAsync(a => a.Code == "HV-001");
+
+            var codeMuseum = new Museum { Name = "Artifact code test" };
+            var topic = new Topic { Museum = codeMuseum, Name = "Chủ đề kiểm thử", IsActive = true };
+            db.Topics.Add(topic);
+            await db.SaveChangesAsync();
+
+            var first = await artifactService.CreateAsync(new CreateArtifactRequestDto
+            {
+                MuseumId = codeMuseum.Id, Name = "First", TopicIds = [topic.Id, topic.Id]
+            });
+            Check(first.StatusCode == 201 && first.Data?.Code == "HV001" &&
+                first.Data.Topics.Select(t => t.Id).SequenceEqual([topic.Id]), "Create must return the generated code and assigned topic.");
+
+            var invalidTopic = await artifactService.CreateAsync(new CreateArtifactRequestDto
+            {
+                MuseumId = museum.Id, Name = "Invalid topic", TopicIds = [topic.Id]
+            });
+            Check(invalidTopic.StatusCode == 400 && !await db.Artifacts.AnyAsync(a => a.Name == "Invalid topic"),
+                "A topic from another museum must prevent creation.");
+
+            await artifactService.DeleteAsync(first.Data!.Id);
+            async Task<string?> CreateConcurrentArtifact()
+            {
+                await using var concurrentDb = Open();
+                var service = new ArtifactService(new ArtifactRepository(concurrentDb),
+                    new ArtifactContentRepository(concurrentDb), new QrCodeService());
+                return (await service.CreateAsync(new CreateArtifactRequestDto
+                {
+                    MuseumId = codeMuseum.Id, Name = "Concurrent"
+                })).Data?.Code;
+            }
+            var codes = await Task.WhenAll(CreateConcurrentArtifact(), CreateConcurrentArtifact());
+            Check(codes.Order().SequenceEqual(["HV002", "HV003"]),
+                "Concurrent creates must get distinct codes and count inactive artifacts.");
 
             // =========================================================================
             // 1. TEST CD-01: Quản trị tài khoản và phân quyền

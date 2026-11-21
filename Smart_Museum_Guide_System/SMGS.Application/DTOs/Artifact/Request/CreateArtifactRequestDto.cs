@@ -9,6 +9,8 @@ public class CreateArtifactRequestDto
 
     public int? GalleryId { get; set; }
 
+    public int[]? TopicIds { get; set; }
+
     [StringLength(100, ErrorMessage = "Mã nội bộ tối đa 100 ký tự.")]
     public string? Code { get; set; }
 

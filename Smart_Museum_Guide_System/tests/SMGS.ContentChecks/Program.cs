@@ -177,7 +177,6 @@ sealed class Artifacts : IArtifactRepository
     public Task<Artifact?> GetByIdAsync(int id) => Task.FromResult(id == 1 ? Item : null);
     public Task<(IList<Artifact> Items, int TotalCount)> GetPagedAsync(int? museum, int? gallery, string? keyword, bool? active, int page, int size) => throw new NotSupportedException();
     public Task<bool> ExistsByQrCodeAsync(string qr, int? excludeId = null) => throw new NotSupportedException();
-    public Task<bool> ExistsByCodeAsync(int museum, string code, int? excludeId = null) => throw new NotSupportedException();
-    public Task<Artifact> CreateAsync(Artifact artifact) => throw new NotSupportedException();
-    public Task UpdateAsync(Artifact artifact) => throw new NotSupportedException();
+    public Task<(Artifact? Created, string? Error)> CreateAsync(Artifact artifact, IReadOnlyCollection<int> topicIds) => throw new NotSupportedException();
+    public Task<bool> UpdateAsync(Artifact artifact, bool checkCode = false) => throw new NotSupportedException();
 }

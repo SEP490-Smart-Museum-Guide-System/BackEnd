@@ -11,8 +11,7 @@ public interface IArtifactRepository
         int? museumId, int? galleryId, int? topicId, string? keyword, bool? isActive, int page, int pageSize)
         => GetPagedAsync(museumId, galleryId, keyword, isActive, page, pageSize);
     Task<bool> ExistsByQrCodeAsync(string qrCode, int? excludeId = null);
-    Task<bool> ExistsByCodeAsync(int museumId, string code, int? excludeId = null);
     Task<Artifact?> GetByQrCodeAsync(string qrCode) => Task.FromResult<Artifact?>(null);
-    Task<Artifact> CreateAsync(Artifact artifact);
-    Task UpdateAsync(Artifact artifact);
+    Task<(Artifact? Created, string? Error)> CreateAsync(Artifact artifact, IReadOnlyCollection<int> topicIds);
+    Task<bool> UpdateAsync(Artifact artifact, bool checkCode = false);
 }

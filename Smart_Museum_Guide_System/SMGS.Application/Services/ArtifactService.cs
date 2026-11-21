@@ -45,13 +45,6 @@ public class ArtifactService(
 
     public async Task<ResponseDto<ArtifactResponseDto>> CreateAsync(CreateArtifactRequestDto dto)
     {
-        if (!string.IsNullOrWhiteSpace(dto.Code))
-        {
-            var code = dto.Code.Trim();
-            if (await artifactRepo.ExistsByCodeAsync(dto.MuseumId, code))
-                return ResponseDto<ArtifactResponseDto>.Fail("Mã hiện vật đã tồn tại trong bảo tàng này.", 400);
-        }
-
         var qrCode = dto.QrCode?.Trim();
         if (string.IsNullOrWhiteSpace(qrCode))
         {
@@ -79,7 +72,10 @@ public class ArtifactService(
             CreatedAt = DateTime.UtcNow
         };
 
-        var created = await artifactRepo.CreateAsync(artifact);
+        var (created, error) = await artifactRepo.CreateAsync(artifact, dto.TopicIds ?? []);
+        if (created is null)
+            return ResponseDto<ArtifactResponseDto>.Fail(error!, 400);
+
         return ResponseDto<ArtifactResponseDto>.Success(MapToDto(created), "Tạo hiện vật thành công.", 201);
     }
 
@@ -88,13 +84,6 @@ public class ArtifactService(
         var artifact = await artifactRepo.GetByIdAsync(id);
         if (artifact is null)
             return ResponseDto<ArtifactResponseDto>.Fail("Không tìm thấy hiện vật.", 404);
-
-        if (!string.IsNullOrWhiteSpace(dto.Code))
-        {
-            var code = dto.Code.Trim();
-            if (await artifactRepo.ExistsByCodeAsync(artifact.MuseumId, code, excludeId: id))
-                return ResponseDto<ArtifactResponseDto>.Fail("Mã hiện vật đã tồn tại trong bảo tàng này.", 400);
-        }
 
         if (!string.IsNullOrWhiteSpace(dto.QrCode))
         {
@@ -113,7 +102,9 @@ public class ArtifactService(
         artifact.MapIcon = dto.MapIcon?.Trim();
         artifact.AccessLevel = dto.AccessLevel;
 
-        await artifactRepo.UpdateAsync(artifact);
+        if (!await artifactRepo.UpdateAsync(artifact, checkCode: true))
+            return ResponseDto<ArtifactResponseDto>.Fail("Mã hiện vật đã tồn tại trong bảo tàng này.", 400);
+
         return ResponseDto<ArtifactResponseDto>.Success(MapToDto(artifact), "Cập nhật hiện vật thành công.");
     }
 
