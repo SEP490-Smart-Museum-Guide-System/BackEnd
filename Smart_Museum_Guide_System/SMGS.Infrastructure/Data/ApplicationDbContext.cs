@@ -43,6 +43,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<MapNode> MapNodes => Set<MapNode>();
     public DbSet<MapMarker> MapMarkers => Set<MapMarker>();
     public DbSet<MapEdge> MapEdges => Set<MapEdge>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -315,6 +316,27 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasIndex(e => e.Status);
             entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(e => e.VisitorId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(e => e.AssignedTo).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Notification
+        builder.Entity<Notification>(entity =>
+        {
+            entity.ToTable("notifications");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.Type).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.Body).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.ReferenceType).HasMaxLength(50);
+            entity.Property(e => e.ReferenceId).HasMaxLength(100);
+            entity.Property(e => e.ActionUrl).HasMaxLength(500);
+            entity.Property(e => e.IsRead).HasDefaultValue(false);
+            entity.Property(e => e.ReadAt).HasColumnType("timestamptz");
+            entity.Property(e => e.CreatedAt).HasColumnType("timestamptz");
+            entity.HasIndex(e => new { e.RecipientId, e.IsRead, e.CreatedAt });
+            entity.HasIndex(e => new { e.RecipientId, e.CreatedAt });
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(e => e.RecipientId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Museum>().WithMany().HasForeignKey(e => e.MuseumId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

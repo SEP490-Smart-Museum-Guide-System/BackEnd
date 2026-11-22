@@ -11,8 +11,12 @@ using Microsoft.Extensions.Configuration;
 using Npgsql;
 using SMGS.API.Controllers;
 using SMGS.Application.DTOs.Commerce;
+using SMGS.Application.DTOs.Notification;
+using SMGS.Application.Interfaces;
+using SMGS.Application.Services;
 using SMGS.Domain.Constants;
 using SMGS.Domain.Entities;
+using SMGS.Domain.Interfaces;
 using SMGS.Infrastructure.Data;
 using SMGS.Infrastructure.Identity;
 using SMGS.Infrastructure.Services;
@@ -52,7 +56,12 @@ Check(!CommerceService.VerifySePaySignature(signedBody, signature, signingTimest
 Check(!CommerceService.VerifySePaySignature(signedBody, "sha256=" + new string('Z', 64), signingTimestamp, testSecret, signingTime), "Reject malformed hex.");
 Check(!CommerceService.VerifySePaySignature(signedBody, signature, signingTimestamp, "", signingTime), "Reject missing secret.");
 Check(typeof(SePayController).GetMethod("Webhook")!.IsDefined(typeof(AllowAnonymousAttribute)), "SePay webhook authenticates with HMAC, not JWT.");
-Console.WriteLine("SePay signature and endpoint checks passed.");
+Check(typeof(NotificationsController).IsDefined(typeof(AuthorizeAttribute))
+    && !typeof(NotificationsController).GetMethods().Any(m => m.IsDefined(typeof(AllowAnonymousAttribute))),
+    "NotificationsController requires authenticated user.");
+foreach (var method in new[] { "GetMine", "GetUnreadCount", "MarkAsRead", "MarkAllAsRead", "Delete" })
+    Check(typeof(NotificationsController).GetMethod(method) is not null, $"NotificationsController.{method} exists.");
+Console.WriteLine("SePay signature, endpoint and NotificationsController checks passed.");
 if (!args.Contains("--database")) return;
 
 var api = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../SMGS.API"));

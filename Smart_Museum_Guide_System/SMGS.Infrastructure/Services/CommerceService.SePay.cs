@@ -90,6 +90,7 @@ public partial class CommerceService
         attempt.Status = "succeeded"; attempt.Reference = reference; attempt.CompletedAt = now.UtcDateTime;
         CompleteOrder(order, now.UtcDateTime);
         await db.SaveChangesAsync(); await tx.CommitAsync();
+        await NotifyOrderPaidAsync(order);
         return new(true, true, "Thanh toán thành công.");
     }
 }

@@ -7,7 +7,9 @@ using SMGS.Domain.Interfaces;
 
 namespace SMGS.Application.Services;
 
-public class ComplaintService(IComplaintRepository complaintRepo) : IComplaintService
+public class ComplaintService(
+    IComplaintRepository complaintRepo,
+    INotificationPublisher? notifications = null) : IComplaintService
 {
     // ─────────────────────────── Visitor ───────────────────────────
 
@@ -26,6 +28,18 @@ public class ComplaintService(IComplaintRepository complaintRepo) : IComplaintSe
             Status = ComplaintStatus.New,
             CreatedAt = DateTime.UtcNow
         });
+
+        if (notifications is not null)
+        {
+            await notifications.NotifySystemStaffAsync(
+                visitorId,
+                NotificationTypes.ComplaintCreated,
+                $"Yêu cầu hỗ trợ mới: {created.Subject}",
+                $"Khách tham quan vừa gửi một khiếu nại / yêu cầu hỗ trợ mới cần xử lý: \"{created.Subject}\".",
+                NotificationReferenceTypes.Complaint,
+                created.Id.ToString(),
+                $"/complaints/{created.Id}");
+        }
 
         return ResponseDto<ComplaintResponseDto>.Success(MapToDto(created), "Đã gửi yêu cầu hỗ trợ.", 201);
     }
@@ -103,6 +117,29 @@ public class ComplaintService(IComplaintRepository complaintRepo) : IComplaintSe
             complaint.ResolvedAt ??= DateTime.UtcNow;
 
         await complaintRepo.UpdateAsync(complaint);
+
+        if (notifications is not null && complaint.VisitorId != Guid.Empty)
+        {
+            var statusLabel = complaint.Status switch
+            {
+                ComplaintStatus.InProgress => "Đang được xử lý",
+                ComplaintStatus.Resolved => "Đã được giải quyết",
+                ComplaintStatus.Closed => "Đã đóng",
+                _ => complaint.Status
+            };
+            var noteSuffix = string.IsNullOrWhiteSpace(complaint.ResolutionNote)
+                ? string.Empty
+                : $" Ghi chú: {complaint.ResolutionNote}";
+            await notifications.NotifyUserAsync(
+                complaint.VisitorId,
+                NotificationTypes.ComplaintStatusUpdated,
+                $"Cập nhật yêu cầu hỗ trợ: {statusLabel}",
+                $"Yêu cầu hỗ trợ \"{complaint.Subject}\" của bạn đã chuyển sang trạng thái: {statusLabel}.{noteSuffix}",
+                NotificationReferenceTypes.Complaint,
+                complaint.Id.ToString(),
+                $"/complaints/me/{complaint.Id}");
+        }
+
         return ResponseDto<ComplaintResponseDto>.Success(MapToDto(complaint), "Đã cập nhật trạng thái.");
     }
 

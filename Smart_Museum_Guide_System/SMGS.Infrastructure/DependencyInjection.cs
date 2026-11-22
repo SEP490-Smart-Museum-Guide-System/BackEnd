@@ -146,6 +146,11 @@ public static class DependencyInjection
         services.AddScoped<IGamificationService, GamificationService>();
         services.AddScoped<IFeedbackService, FeedbackService>();
         services.AddScoped<IComplaintService, ComplaintService>();
+        services.AddSignalR();
+        services.AddSingleton<INotificationRealtimeDispatcher, SignalRNotificationDispatcher>();
+        services.AddScoped<NotificationService>();
+        services.AddScoped<INotificationService>(sp => sp.GetRequiredService<NotificationService>());
+        services.AddScoped<INotificationPublisher>(sp => sp.GetRequiredService<NotificationService>());
         return services;
     }
 }

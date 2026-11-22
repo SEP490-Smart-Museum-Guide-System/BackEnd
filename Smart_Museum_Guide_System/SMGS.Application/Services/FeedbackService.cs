@@ -7,7 +7,10 @@ using SMGS.Domain.Interfaces;
 
 namespace SMGS.Application.Services;
 
-public class FeedbackService(IFeedbackRepository feedbackRepo, IVisitRepository visitRepo) : IFeedbackService
+public class FeedbackService(
+    IFeedbackRepository feedbackRepo,
+    IVisitRepository visitRepo,
+    INotificationPublisher? notifications = null) : IFeedbackService
 {
     /// <summary>
     /// Khoảng thời gian khách được phép sửa feedback kể từ lúc tạo.
@@ -127,6 +130,19 @@ public class FeedbackService(IFeedbackRepository feedbackRepo, IVisitRepository 
             existing.UpdatedAt = DateTime.UtcNow;
             await feedbackRepo.UpdateResponseAsync(existing);
             feedback.StaffResponse = existing;
+        }
+
+        if (notifications is not null && feedback.Visit is not null && feedback.Visit.VisitorId != Guid.Empty)
+        {
+            await notifications.NotifyUserAsync(
+                feedback.Visit.VisitorId,
+                NotificationTypes.FeedbackResponded,
+                "Bảo tàng đã phản hồi đánh giá của bạn",
+                $"Nhân viên bảo tàng đã gửi phản hồi cho đánh giá chuyến tham quan của bạn: \"{content}\"",
+                NotificationReferenceTypes.VisitFeedback,
+                feedback.VisitId.ToString(),
+                $"/feedbacks/visit/{feedback.VisitId}",
+                feedback.Visit.MuseumId);
         }
 
         return ResponseDto<FeedbackResponseDto>.Success(MapToDto(feedback, forVisitor: false), "Đã lưu phản hồi.");
