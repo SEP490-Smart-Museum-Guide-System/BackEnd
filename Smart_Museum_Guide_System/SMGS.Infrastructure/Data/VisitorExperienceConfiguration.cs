@@ -69,6 +69,12 @@ public static class VisitorExperienceConfiguration
             e.HasOne<TourItem>().WithMany().HasForeignKey(x => x.TourItemId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<TourVersionItem>().WithMany().HasForeignKey(x => x.TourVersionItemId).OnDelete(DeleteBehavior.Restrict);
         });
+        b.Entity<ArtifactDetailView>(e => {
+            e.ToTable("artifact_detail_views");
+            e.HasKey(x => x.RequestId);
+            e.Property(x => x.RequestId).ValueGeneratedNever();
+            e.HasOne<Artifact>().WithMany().HasForeignKey(x => x.ArtifactId).OnDelete(DeleteBehavior.Cascade);
+        });
         b.Entity<RecognitionHistory>(e => {
             e.ToTable("recognition_history"); e.Property(x => x.Method).HasMaxLength(20);
             e.HasIndex(x => new { x.UserId, x.RequestId }).IsUnique();

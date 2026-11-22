@@ -435,6 +435,24 @@ namespace SMGS.Infrastructure.Migrations
                     b.ToTable("artifact_content_versions", (string)null);
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactDetailView", b =>
+                {
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ArtifactId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ViewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("RequestId");
+
+                    b.HasIndex("ArtifactId");
+
+                    b.ToTable("artifact_detail_views", (string)null);
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.ArtifactMedia", b =>
                 {
                     b.Property<int>("Id")
@@ -1830,6 +1848,9 @@ namespace SMGS.Infrastructure.Migrations
                     b.Property<int?>("ArtifactId")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("ConfirmedQrScan")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsSuccess")
                         .HasColumnType("boolean");
 
@@ -2608,6 +2629,15 @@ namespace SMGS.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Content");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactDetailView", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Artifact", null)
+                        .WithMany()
+                        .HasForeignKey("ArtifactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.ArtifactMedia", b =>

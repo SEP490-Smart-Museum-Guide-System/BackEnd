@@ -14,7 +14,7 @@ public class RecognitionService(ApplicationDbContext db, IVisitProgressService p
         var (skip, take) = ExperienceAccess.Page(page, pageSize);
         // Group verified history so repeat/concurrent scans always produce one collection entry.
         var discoveries = db.Set<RecognitionHistory>().AsNoTracking()
-            .Where(h => h.UserId == user && h.IsSuccess && h.Method == "qr" && h.ArtifactId != null)
+            .Where(h => h.UserId == user && h.IsSuccess && (h.Method == "qr" || h.Method == "image") && h.ArtifactId != null)
             .GroupBy(h => h.ArtifactId)
             .Select(g => new { ArtifactId = g.Key, FirstDiscoveredAt = g.Min(h => h.RecognizedAt) });
         var collection = from discovery in discoveries
@@ -41,13 +41,15 @@ public class RecognitionService(ApplicationDbContext db, IVisitProgressService p
 
     public async Task<ScanResult> RecordQrAsync(ScanQrRequest request, Guid user)
     {
+        if (request.Method is not (null or "qr" or "image"))
+            throw new ExperienceException("Phương thức nhận diện không hợp lệ.");
         if (request.RequestId == Guid.Empty || string.IsNullOrWhiteSpace(request.QrCode) || request.QrCode.Length > 200)
             throw new ExperienceException("Cần QR hợp lệ và RequestId UUID để chống gửi trùng.");
         await using var tx = await db.Database.BeginTransactionAsync(); await ExperienceAccess.LockUser(db, user);
         var old = await db.Set<RecognitionHistory>().SingleOrDefaultAsync(x => x.UserId == user && x.RequestId == request.RequestId);
         if (old is not null) {
             var oldCode = await db.Artifacts.Where(a => a.Id == old.ArtifactId).Select(a => a.QrCode).SingleOrDefaultAsync();
-            if (old.VisitId != request.VisitId || oldCode != request.QrCode.Trim()) throw new ExperienceException("RequestId đã được dùng cho lần quét khác.", 409);
+            if (old.Method != (request.Method ?? "qr") || old.VisitId != request.VisitId || oldCode != request.QrCode.Trim()) throw new ExperienceException("RequestId đã được dùng cho lần quét khác.", 409);
             return new(old.Id, old.ArtifactId!.Value, old.VisitId, old.RecognizedAt);
         }
         var artifact = await db.Artifacts.SingleOrDefaultAsync(a => a.QrCode == request.QrCode.Trim() && a.IsActive && a.Museum!.IsActive)
@@ -55,6 +57,7 @@ public class RecognitionService(ApplicationDbContext db, IVisitProgressService p
         var now = clock.GetUtcNow().UtcDateTime;
         if (request.VisitId is int vid) await progress.RecordQrVisitAsync(user, vid, artifact.Id, now);
         var history = new RecognitionHistory { UserId = user, VisitId = request.VisitId, ArtifactId = artifact.Id, RecognizedAt = now,
+            Method = request.Method ?? "qr", ConfirmedQrScan = request.Method == "qr",
             IsSuccess = true, RequestId = request.RequestId };
         db.Add(history); await db.SaveChangesAsync();
         await daily.UnlockAsync(history); await rewards.AwardScanPointsAsync(user, artifact.Id);

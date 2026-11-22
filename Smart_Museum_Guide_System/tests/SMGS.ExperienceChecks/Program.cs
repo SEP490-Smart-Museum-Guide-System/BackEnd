@@ -65,6 +65,11 @@ var createSchema = $"CREATE SCHEMA \"{schema}\"";
 var dropSchema = $"DROP SCHEMA \"{schema}\" CASCADE";
 await setup.Database.ExecuteSqlRawAsync(createSchema);
 try {
+    if (args.Contains("--museum-discovery")) {
+        await setup.Database.MigrateAsync();
+        await MuseumDiscoveryChecks.Run(setup, Open, Recognition);
+        return;
+    }
     if (args.Contains("--collection")) {
         await CollectionChecks.Run(setup, Recognition);
         return;

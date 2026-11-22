@@ -11,4 +11,5 @@ public sealed record PresenceRouteRequest(int MapId, Guid? TargetNodeId, int? Ar
 public sealed record GpsAssessment(string Status, double? DistanceMeters, double AccuracyMeters, double RadiusMeters, string Message);
 public sealed record MuseumPresenceResult(int MuseumId, string Status, string Source, DateTime? ConfirmedAt,
     bool IsFresh, string? Label, int? GalleryId, string? GalleryName, int? FloorId, string? FloorName,
-    int? MapId, int? MapRevision, Guid? MarkerId, Guid? NodeId, double? X, double? Y, int? ArtifactId);
+    int? MapId, int? MapRevision, Guid? MarkerId, Guid? NodeId, double? X, double? Y, int? ArtifactId, string? BuildingName = null);
+

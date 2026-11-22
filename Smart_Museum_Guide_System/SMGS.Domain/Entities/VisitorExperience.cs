@@ -30,6 +30,12 @@ public class VisitItem
     public int? TourVersionItemId { get; set; }
     public DateTime LastVisitedAt { get; set; }
 }
+public class ArtifactDetailView
+{
+    public Guid RequestId { get; set; }
+    public int ArtifactId { get; set; }
+    public DateTime ViewedAt { get; set; }
+}
 public class RecognitionHistory
 {
     public long Id { get; set; }
@@ -37,6 +43,7 @@ public class RecognitionHistory
     public int? VisitId { get; set; }
     public int? ArtifactId { get; set; }
     public string Method { get; set; } = "qr";
+    public bool ConfirmedQrScan { get; set; }
     public bool IsSuccess { get; set; }
     public DateTime RecognizedAt { get; set; }
     public Guid RequestId { get; set; }

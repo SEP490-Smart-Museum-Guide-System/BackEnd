@@ -373,10 +373,19 @@ public partial class CommerceService(ApplicationDbContext db,
         var r = await db.CommerceResources.AsNoTracking().SingleOrDefaultAsync(r => r.Id == resourceId)
             ?? throw new CommerceException("Không tìm thấy dịch vụ.", 404);
         if (r.AccessLevel == "free") return new(true, "free");
+        var ids = await GrantedResourceIds(db, r.MuseumId, user);
+        return new(ids.Contains(resourceId), "premium");
+    }
+
+    public static async Task<int[]> GrantedResourceIds(ApplicationDbContext db, int museumId, Guid? user)
+    {
+        if (user == null) return [];
+        var today = LocalToday();
         var scopes = await (from p in db.MuseumPasses join o in db.PurchaseOrders on p.OrderId equals o.Id
-            where p.UserId == user && p.RevokedAt == null && o.MuseumId == r.MuseumId && o.Status == "paid" && o.CancelledAt == null && o.VisitDate == LocalToday() && o.ExpiresAt > DateTime.UtcNow
+            where p.UserId == user && p.RevokedAt == null && o.MuseumId == museumId && o.Status == "paid"
+                && o.CancelledAt == null && o.VisitDate == today && o.ExpiresAt > DateTime.UtcNow
             select o.ResourceIdsJson).ToListAsync();
-        return new(scopes.Any(s => ResourceIds(s).Contains(resourceId)), "premium");
+        return scopes.SelectMany(ResourceIds).Distinct().ToArray();
     }
 
     public async Task<bool> CanReadArtifact(int artifactId, Guid? user)

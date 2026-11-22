@@ -119,9 +119,22 @@ public sealed class MuseumPresenceService(ApplicationDbContext db, TimeProvider 
         await CheckVisit(user, museumId, visitId);
         var checkpoint = await db.Set<MuseumPresence>().AsNoTracking().Where(p => p.UserId == user && p.MuseumId == museumId
             && (visitId == null || p.VisitId == null || p.VisitId == visitId)).OrderByDescending(p => p.ObservedAt).ThenByDescending(p => p.Id).FirstOrDefaultAsync();
+        var snapshots = await db.IndoorMaps.AsNoTracking()
+            .Where(m => m.MuseumId == museumId && m.PublishedJson != null)
+            .Select(m => m.PublishedJson!).ToListAsync();
+        var anchors = snapshots.Select(s => JsonSerializer.Deserialize<MapDocument>(s)!)
+            .SelectMany(m => m.Markers.Where(p => p.IsActive && p.ArtifactId != null &&
+                p.NodeId != null && m.Nodes.Any(n => n.Id == p.NodeId))
+                .Select(p => (Map: m, Marker: p)))
+            .GroupBy(p => p.Marker.ArtifactId!.Value)
+            .Where(g => g.Count() == 1).ToDictionary(g => g.Key, g => g.Single());
+        var anchoredIds = anchors.Keys.ToArray();
+        var galleryIds = from g in db.Galleries join f in db.Floors on g.FloorId equals f.Id
+            join b in db.Buildings on f.BuildingId equals b.Id where b.MuseumId == museumId select g.Id;
         var recognition = await (from r in db.Set<RecognitionHistory>().AsNoTracking()
             join a in db.Artifacts on r.ArtifactId equals a.Id
-            where r.UserId == user && r.IsSuccess && a.IsActive && a.MuseumId == museumId
+            where r.UserId == user && r.IsSuccess && r.ConfirmedQrScan && a.IsActive && a.MuseumId == museumId
+                && (anchoredIds.Contains(a.Id) || (a.GalleryId.HasValue && galleryIds.Contains(a.GalleryId.Value)))
                 && (visitId == null || r.VisitId == visitId)
             orderby r.RecognizedAt descending, r.Id descending
             select new { r.RecognizedAt, Artifact = a }).FirstOrDefaultAsync();
@@ -138,25 +151,25 @@ public sealed class MuseumPresenceService(ApplicationDbContext db, TimeProvider 
             }
             catch (ExperienceException) { /* Preserve last observation but never route against a removed anchor. */ }
         }
-        else if (artifact != null)
+        else if (artifact != null && anchors.TryGetValue(artifact.Id, out var anchor))
         {
-            var snapshots = await db.IndoorMaps.AsNoTracking().Where(m => m.MuseumId == museumId && m.PublishedJson != null
-                && (preferredMapId == null || m.Id == preferredMapId)).Select(m => m.PublishedJson!).ToListAsync();
-            var matches = snapshots.Select(s => JsonSerializer.Deserialize<MapDocument>(s)).Where(m => m != null)
-                .SelectMany(m => m!.Markers.Where(p => p.IsActive && p.ArtifactId == artifact.Id && p.NodeId != null && m.Nodes.Any(n => n.Id == p.NodeId))
-                    .Select(p => (Map: m, Marker: p))).ToList();
-            if (matches.Count == 1) (map, marker) = matches[0];
+            (map, marker) = anchor;
         }
         var galleryId = marker?.GalleryId ?? artifact?.GalleryId;
         var room = await (from g in db.Galleries.AsNoTracking() join f in db.Floors on g.FloorId equals f.Id
             join b in db.Buildings on f.BuildingId equals b.Id where g.Id == galleryId && b.MuseumId == museumId
-            select new { g.Name, FloorId = f.Id, FloorName = f.Name }).FirstOrDefaultAsync();
+            select new { g.Name, FloorId = f.Id, FloorName = f.Name, BuildingName = b.Name }).FirstOrDefaultAsync();
         var floorId = room?.FloorId ?? map?.FloorId;
-        var floorName = room?.FloorName ?? await db.Floors.Where(f => f.Id == floorId).Select(f => f.Name).FirstOrDefaultAsync();
+        var floor = room == null && floorId != null
+            ? await (from f in db.Floors join b in db.Buildings on f.BuildingId equals b.Id
+                where f.Id == floorId && b.MuseumId == museumId
+                select new { FloorName = f.Name, BuildingName = b.Name }).FirstOrDefaultAsync()
+            : null;
+        var floorName = room?.FloorName ?? floor?.FloorName;
         var fresh = at.HasValue && at <= Now && Now - at.Value <= LocationLifetime && (!useCheckpoint || marker != null);
         return new(museumId, at == null ? "unknown" : fresh ? "confirmed" : "last_known", at == null ? "none" : useCheckpoint ? "checkpoint_qr" : "artifact_qr",
             at, fresh, marker?.Label ?? artifact?.Name, galleryId, room?.Name, floorId, floorName, map?.Id, map?.Revision,
-            marker?.Id, marker?.NodeId, marker?.X, marker?.Y, artifact?.Id);
+            marker?.Id, marker?.NodeId, marker?.X, marker?.Y, artifact?.Id, room?.BuildingName ?? floor?.BuildingName);
     }
     public async Task<object> Route(int museumId, Guid user, PresenceRouteRequest r)
     {
@@ -178,3 +191,5 @@ public sealed class MuseumPresenceService(ApplicationDbContext db, TimeProvider 
         catch (IndoorMapException e) { throw new ExperienceException(e.Message, e.StatusCode); }
     }
 }
+
+

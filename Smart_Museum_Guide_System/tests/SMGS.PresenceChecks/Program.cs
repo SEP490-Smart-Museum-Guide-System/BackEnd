@@ -123,10 +123,14 @@ try
     await Denied(async () => await Run(s => s.Route(museum.Id, visitor, new(map.Id, null, artifact.Id, visit.Id))), 422);
     clock.Advance(TimeSpan.FromSeconds(1));
     setup.Add(new RecognitionHistory { UserId = visitor, VisitId = visit.Id, ArtifactId = artifact.Id, IsSuccess = true,
-        Method = "qr", RequestId = Guid.NewGuid(), RecognizedAt = clock.GetUtcNow().UtcDateTime });
+        Method = "qr", ConfirmedQrScan = true, RequestId = Guid.NewGuid(), RecognizedAt = clock.GetUtcNow().UtcDateTime });
+    await setup.SaveChangesAsync();
+    clock.Advance(TimeSpan.FromSeconds(1));
+    setup.Add(new RecognitionHistory { UserId = visitor, VisitId = visit.Id, ArtifactId = artifact.Id, IsSuccess = true,
+        Method = "image", RequestId = Guid.NewGuid(), RecognizedAt = clock.GetUtcNow().UtcDateTime });
     await setup.SaveChangesAsync();
     var recognized = await Run(s => s.Current(museum.Id, visitor, visit.Id));
-    Check(recognized.ArtifactId == artifact.Id && recognized.MapId == map.Id && recognized.GalleryId == gallery.Id,
+    Check(recognized.ArtifactId == artifact.Id && recognized.MapId == map.Id && recognized.GalleryId == gallery.Id && recognized.ConfirmedAt < clock.GetUtcNow().UtcDateTime,
         "a newer artifact recognition replaces older checkpoint and supplies room/map");
     clock.Advance(TimeSpan.FromSeconds(1));
     await Run(s => s.ScanAny(visitor, new(roomQr, Guid.NewGuid(), visit.Id)));
@@ -168,3 +172,5 @@ sealed class PresenceClock(DateTimeOffset now) : TimeProvider
     public override DateTimeOffset GetUtcNow() => value;
     public void Advance(TimeSpan duration) => value += duration;
 }
+
+

@@ -111,7 +111,7 @@ public record SavedRouteDto(
     double Score,
     string Explanation,
     DateTime SavedAt);
-public record ScanQrRequest([Required, StringLength(200)] string QrCode, int? VisitId, Guid RequestId);
+public record ScanQrRequest([Required, StringLength(200)] string QrCode, int? VisitId, Guid RequestId, string? Method = null);
 public record EarnedBadge(int Id, string Name);
 public record ScanResult(long RecognitionId, int ArtifactId, int? VisitId, DateTime RecognizedAt)
 {
