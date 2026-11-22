@@ -83,13 +83,18 @@ public class ArtifactScanController(IAccountAdminService scopes, IArtifactAssetS
     [RequestFormLimits(MultipartBodyLengthLimit = 550L * 1024 * 1024)]
     public Task<IActionResult> Create(int artifactId, List<IFormFile> images,
         IFormFile? metadata, IFormFile? referenceObj,
-        [FromForm] string mode = "auto", CancellationToken ct = default) => Authorized(artifactId, async () => {
+        [FromForm] string mode = "auto", CancellationToken ct = default,
+        [FromForm] string quality = "balanced", [FromForm] string captureOrder = "unordered") => Authorized(artifactId, async () => {
+        if (quality is not ("balanced" or "detailed" or "preview") || captureOrder is not ("ordered" or "unordered"))
+            throw new ScanError(422, "Chất lượng hoặc thứ tự ảnh không hợp lệ.");
         if (images.Count is < 5 or > 200) throw new ScanError(422, "Chọn 5–200 ảnh của cùng một hiện vật.");
         if (images.Sum(f => f.Length) + (metadata?.Length ?? 0) + (referenceObj?.Length ?? 0) > 500L * 1024 * 1024)
             throw new ScanError(413, "Bộ dữ liệu tối đa 500 MiB.");
         using var form = new MultipartFormDataContent();
         form.Add(new StringContent(artifactId.ToString()), "artifact_id");
         form.Add(new StringContent(mode), "mode");
+        form.Add(new StringContent(quality), "quality");
+        form.Add(new StringContent(captureOrder), "capture_order");
         void Add(IFormFile file, string field) {
             var part = new StreamContent(file.OpenReadStream());
             part.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");

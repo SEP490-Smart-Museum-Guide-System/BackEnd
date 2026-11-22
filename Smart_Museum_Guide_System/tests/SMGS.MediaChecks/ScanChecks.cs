@@ -60,6 +60,11 @@ static class ScanChecks
         state.Allowed = true;
         http.Json = "{\"artifactId\":7,\"status\":\"CANCELLED\"}";
         Check(await controller.Cancel(7, job, default) is OkObjectResult && http.LastPath!.EndsWith("/cancel"), "Scan: authorized cancellation forwarded");
+        var photos = Enumerable.Range(0, 5).Select(i => (IFormFile)new FormFile(new MemoryStream([1, 2, 3]), 0, 3, "images", $"{i}.jpg")).ToList();
+        Check(await controller.Create(7, photos, null, null, quality: "preview", captureOrder: "ordered") is ObjectResult { StatusCode: 202 }, "Scan: quality upload accepted");
+        Check(http.Fields["quality"] == "preview" && http.Fields["capture_order"] == "ordered", "Scan: quality and capture order forwarded to AI");
+        previousCalls = http.Calls;
+        Check(await controller.Create(7, photos, null, null, quality: "invalid") is ObjectResult { StatusCode: 422 } && http.Calls == previousCalls, "Scan: invalid quality never reaches AI");
         Console.WriteLine("PASS: scan gateway staff scope, cross-artifact save rejection, unfinished job rejection, internal auth failure.");
     }
 }
@@ -73,14 +78,19 @@ class ScanHttp : HttpMessageHandler, IHttpClientFactory
 {
     public byte[] Model = "glTF-test-model"u8.ToArray(); public int Approvals;
     public int Calls; public string? Key, LastPath; public string Json = "{}"; public HttpStatusCode Status = HttpStatusCode.OK;
+    public Dictionary<string, string> Fields = new();
     public HttpClient CreateClient(string name) => new(this, false);
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
         Calls++; Key = request.Headers.GetValues("X-Service-Key").Single(); LastPath = request.RequestUri!.AbsolutePath;
+        if (request.Content is MultipartFormDataContent multipart)
+            foreach (var part in multipart)
+                if (part.Headers.ContentDisposition?.FileName is null)
+                    Fields[part.Headers.ContentDisposition!.Name!.Trim('"')] = await part.ReadAsStringAsync(ct);
         if (request.RequestUri!.AbsolutePath.EndsWith("/approve")) Approvals++;
         HttpContent content = request.RequestUri.AbsolutePath.EndsWith("/model") ? new StreamContent(new ScanNetworkStream(Model)) : new StringContent(Json, System.Text.Encoding.UTF8, "application/json");
         if (request.RequestUri.AbsolutePath.EndsWith("/model")) content.Headers.ContentLength = Model.Length;
-        return Task.FromResult(new HttpResponseMessage(Status) { Content = content });
+        return new HttpResponseMessage(Status) { Content = content };
     }
 }
 class ScanNetworkStream(byte[] bytes) : Stream
