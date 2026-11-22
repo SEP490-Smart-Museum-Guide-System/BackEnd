@@ -40,12 +40,27 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
 builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
     .Configure<IOptions<JwtSettings>>((options, settings) =>
-        options.TokenValidationParameters = settings.Value.CreateValidationParameters());
+    {
+        options.TokenValidationParameters = settings.Value.CreateValidationParameters();
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/notifications"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
 builder.Services.AddAuthorization();
 builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
 {
     var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
-    if (origins.Length > 0) policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod();
+    if (origins.Length > 0) policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
 }));
 builder.Services.AddRateLimiter(options =>
 {
@@ -83,6 +98,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+await NotificationSchemaBootstrapper.EnsureNotificationsTableAsync(app.Services);
 if (app.Environment.IsDevelopment()) await DataSeeder.SeedDevelopmentAccountsAsync(app.Services);
 if (args.Contains("--seed"))
 {
@@ -119,4 +135,5 @@ app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notifications");
 app.Run();

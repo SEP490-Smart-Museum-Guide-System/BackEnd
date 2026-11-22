@@ -7,7 +7,11 @@ using SMGS.Domain.Entities;
 using SMGS.Domain.Interfaces;
 namespace SMGS.Application.Services;
 
-public class ArtifactContentService(IArtifactContentRepository repository, IArtifactRepository artifacts, ICommerceService? commerce = null) : IArtifactContentService
+public class ArtifactContentService(
+    IArtifactContentRepository repository,
+    IArtifactRepository artifacts,
+    ICommerceService? commerce = null,
+    INotificationPublisher? notifications = null) : IArtifactContentService
 {
     public async Task<ResponseDto<PaginatedResponseDto<ArtifactContentResponseDto>>> GetAllAsync(
         int? museumId, int? artifactId, string? status, int page, int pageSize, Guid? scopeUserId = null)
@@ -84,6 +88,18 @@ public class ArtifactContentService(IArtifactContentRepository repository, IArti
             CreatedBy = userId
         };
         if (!await repository.CreateAsync(artifactId, dto.LanguageCode.Trim().ToLowerInvariant(), version)) return Conflict();
+        if (notifications is not null)
+        {
+            await notifications.NotifyArtifactCuratorsAsync(
+                artifactId,
+                userId,
+                NotificationTypes.ContentSubmitted,
+                $"Nội dung hiện vật chờ duyệt: {artifact.Name}",
+                $"Phiên bản v{version.VersionNo} ({version.Content.LanguageCode.ToUpperInvariant()}) của hiện vật \"{artifact.Name}\" vừa được gửi chờ Curator phê duyệt.",
+                NotificationReferenceTypes.ArtifactContent,
+                version.Id.ToString(),
+                $"/artifact-contents/{version.Id}");
+        }
         var message = dto.IsAiGenerated
             ? "Đã gửi nội dung AI chờ Curator duyệt."
             : "Đã lưu phiên bản nội dung & narration thủ công chờ Curator duyệt.";
@@ -98,6 +114,27 @@ public class ArtifactContentService(IArtifactContentRepository repository, IArti
         if (!version.Content.Artifact.IsActive) return ResponseDto<ArtifactContentResponseDto>.Fail("Hiện vật đã bị vô hiệu hóa.", 409);
         if (!approve && string.IsNullOrWhiteSpace(dto.Note)) return ResponseDto<ArtifactContentResponseDto>.Fail("Vui lòng nhập lý do từ chối.");
         if (!await repository.ReviewAsync(version, userId, approve, dto.Note?.Trim())) return Conflict();
+        if (notifications is not null && version.CreatedBy != Guid.Empty && version.CreatedBy != userId)
+        {
+            var artifactName = version.Content.Artifact.Name;
+            var lang = version.Content.LanguageCode.ToUpperInvariant();
+            var type = approve ? NotificationTypes.ContentApproved : NotificationTypes.ContentRejected;
+            var title = approve
+                ? $"Nội dung hiện vật đã được duyệt: {artifactName}"
+                : $"Nội dung hiện vật bị từ chối: {artifactName}";
+            var body = approve
+                ? $"Phiên bản v{version.VersionNo} ({lang}) của hiện vật \"{artifactName}\" đã được phê duyệt và xuất bản."
+                : $"Phiên bản v{version.VersionNo} ({lang}) của hiện vật \"{artifactName}\" đã bị từ chối. Lý do: {version.ReviewNote}";
+            await notifications.NotifyUserAsync(
+                version.CreatedBy,
+                type,
+                title,
+                body,
+                NotificationReferenceTypes.ArtifactContent,
+                version.Id.ToString(),
+                $"/artifacts/{version.Content.ArtifactId}/contents/versions",
+                version.Content.Artifact.MuseumId);
+        }
         return ResponseDto<ArtifactContentResponseDto>.Success(Map(version), approve ? "Đã duyệt và xuất bản nội dung." : "Đã từ chối nội dung.");
     }
     private static ResponseDto<ArtifactContentResponseDto> Missing() => ResponseDto<ArtifactContentResponseDto>.Fail("Không tìm thấy nội dung.", 404);
