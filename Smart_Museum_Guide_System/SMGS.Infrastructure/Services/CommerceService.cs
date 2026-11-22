@@ -11,7 +11,8 @@ namespace SMGS.Infrastructure.Services;
 
 public partial class CommerceService(ApplicationDbContext db,
     Microsoft.Extensions.Options.IOptions<SePayOptions>? sepayOptions = null,
-    TimeProvider? timeProvider = null) : ICommerceService
+    TimeProvider? timeProvider = null,
+    INotificationPublisher? notifications = null) : ICommerceService
 {
     public Task EnsureMuseumManagement(int museumId, Guid staff, bool admin) => StaffAccess(museumId, staff, admin);
     private async Task StaffAccess(int museum, Guid user, bool admin)
@@ -149,6 +150,7 @@ public partial class CommerceService(ApplicationDbContext db,
         });
         CompleteOrder(order, attempt.CompletedAt.Value);
         await db.SaveChangesAsync(); await tx.CommitAsync();
+        await NotifyOrderPaidAsync(order);
         return attempt;
     }
 
@@ -229,7 +231,26 @@ public partial class CommerceService(ApplicationDbContext db,
         {
             CompleteOrder(o, a.CompletedAt.Value);
         }
-        await db.SaveChangesAsync(); await tx.CommitAsync(); return a;
+        await db.SaveChangesAsync(); await tx.CommitAsync();
+        if (r.Succeeded)
+        {
+            await NotifyOrderPaidAsync(o);
+        }
+        return a;
+    }
+
+    private async Task NotifyOrderPaidAsync(PurchaseOrder o)
+    {
+        if (notifications is null || o.BuyerId == Guid.Empty) return;
+        await notifications.NotifyUserAsync(
+            o.BuyerId,
+            NotificationTypes.PaymentSucceeded,
+            $"Thanh toán thành công: {o.ProductName}",
+            $"Đơn hàng \"{o.ProductName}\" ({o.Amount:N0} {o.Currency}) cho ngày tham quan {o.VisitDate:dd/MM/yyyy} đã thanh toán thành công. Vé / Pass của bạn đã sẵn sàng!",
+            NotificationReferenceTypes.PurchaseOrder,
+            o.Id.ToString(),
+            $"/commerce/orders/{o.Id}/invoice",
+            o.MuseumId);
     }
 
     private void CompleteOrder(PurchaseOrder o, DateTime paidAt)

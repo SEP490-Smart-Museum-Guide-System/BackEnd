@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using SMGS.API.Controllers;
 using SMGS.Application.DTOs.ArtifactContent.Request;
+using SMGS.Application.Interfaces;
 using SMGS.Application.Services;
 using SMGS.Domain.Constants;
 using SMGS.Domain.Entities;
@@ -65,8 +66,10 @@ Check(typeof(ArtifactAssetsController).GetMethod("ListMedia") is not null
 // CD-06A manual narration + versioning + review workflow checks
 var repository = new ContentRepository();
 var artifacts = new Artifacts();
-var service = new ArtifactContentService(repository, artifacts);
+var notifSpy = new ContentNotificationSpy();
+var service = new ArtifactContentService(repository, artifacts, null, notifSpy);
 var user = Guid.NewGuid();
+var reviewer = Guid.NewGuid();
 Check((await service.GetByIdAsync(99)).StatusCode == 404, "Missing version should be 404.");
 Check((await service.ReviewAsync(99, new(), user, true)).StatusCode == 404, "Missing review should be 404.");
 Check((await service.GetAllAsync(null, null, "invalid", 1, 10)).StatusCode == 400, "Unknown status should be rejected.");
@@ -80,21 +83,24 @@ Check((await service.SubmitAsync(1, dto, Guid.Empty)).StatusCode == 401, "Missin
 var submitted = await service.SubmitAsync(1, dto, user);
 Check(submitted.StatusCode == 201 && submitted.Data is { Title: "Title", Description: "Content", LanguageCode: "vi", IsCurrent: false, IsAiGenerated: true, Status: ContentStatuses.PendingReview }, "Submission must be normalized and pending, never public.");
 Check(submitted.Data!.CreatedBy == user, "Creator comes from authenticated caller.");
-Check((await service.ReviewAsync(1, new() { Note = "  " }, user, false)).StatusCode == 400, "Rejection requires a reason.");
+Check(notifSpy.CuratorNotifs == 1, "Submitting content must notify assigned curators.");
+Check((await service.ReviewAsync(1, new() { Note = "  " }, reviewer, false)).StatusCode == 400, "Rejection requires a reason.");
 Check(repository.Reviews == 0, "Invalid reviews must not write.");
 repository.Conflict = true;
-Check((await service.ReviewAsync(1, new(), user, true)).StatusCode == 409, "Concurrent review should return 409.");
+Check((await service.ReviewAsync(1, new(), reviewer, true)).StatusCode == 409, "Concurrent review should return 409.");
 repository.Conflict = false;
-var approved = await service.ReviewAsync(1, new() { Note = " Checked " }, user, true);
-Check(approved.Data is { Status: ContentStatuses.Published, IsCurrent: true, ReviewNote: "Checked" } && approved.Data.ReviewedBy == user, "Approval records reviewer and publication.");
+var approved = await service.ReviewAsync(1, new() { Note = " Checked " }, reviewer, true);
+Check(approved.Data is { Status: ContentStatuses.Published, IsCurrent: true, ReviewNote: "Checked" } && approved.Data.ReviewedBy == reviewer, "Approval records reviewer and publication.");
+Check(notifSpy.UserNotifs.Any(x => x.RecipientId == user && x.Type == NotificationTypes.ContentApproved), "Approval must notify content creator.");
 Check((await service.GetPublishedAsync(1, "vi")).StatusCode == 200, "Free content remains available.");
 artifacts.Item.AccessLevel = "premium";
 Check((await service.GetPublishedAsync(1, "vi")).StatusCode == 403, "Premium content must fail closed without an entitlement provider.");
 artifacts.Item.AccessLevel = "free";
-Check((await service.ReviewAsync(1, new(), user, true)).StatusCode == 409, "Already reviewed versions cannot be approved again.");
+Check((await service.ReviewAsync(1, new(), reviewer, true)).StatusCode == 409, "Already reviewed versions cannot be approved again.");
 await service.SubmitAsync(1, dto, user);
-var rejected = await service.ReviewAsync(2, new() { Note = " Incorrect date " }, user, false);
+var rejected = await service.ReviewAsync(2, new() { Note = " Incorrect date " }, reviewer, false);
 Check(rejected.Data is { Status: ContentStatuses.Rejected, IsCurrent: false, ReviewNote: "Incorrect date", PublishedAt: null }, "Rejection must never publish.");
+Check(notifSpy.UserNotifs.Any(x => x.RecipientId == user && x.Type == NotificationTypes.ContentRejected), "Rejection must notify content creator.");
 
 // Manual narration submission & approval check
 var manualDto = new SubmitArtifactContentRequestDto
@@ -179,4 +185,20 @@ sealed class Artifacts : IArtifactRepository
     public Task<bool> ExistsByQrCodeAsync(string qr, int? excludeId = null) => throw new NotSupportedException();
     public Task<(Artifact? Created, string? Error)> CreateAsync(Artifact artifact, IReadOnlyCollection<int> topicIds) => throw new NotSupportedException();
     public Task<bool> UpdateAsync(Artifact artifact, bool checkCode = false) => throw new NotSupportedException();
+}
+sealed class ContentNotificationSpy : INotificationPublisher
+{
+    public int CuratorNotifs { get; private set; }
+    public List<(Guid RecipientId, string Type)> UserNotifs { get; } = new();
+    public Task NotifyUserAsync(Guid recipientId, string type, string title, string body, string? referenceType = null, string? referenceId = null, string? actionUrl = null, int? museumId = null)
+    {
+        UserNotifs.Add((recipientId, type));
+        return Task.CompletedTask;
+    }
+    public Task NotifyArtifactCuratorsAsync(int artifactId, Guid excludeUserId, string type, string title, string body, string? referenceType = null, string? referenceId = null, string? actionUrl = null)
+    {
+        CuratorNotifs++;
+        return Task.CompletedTask;
+    }
+    public Task NotifySystemStaffAsync(Guid excludeUserId, string type, string title, string body, string? referenceType = null, string? referenceId = null, string? actionUrl = null) => Task.CompletedTask;
 }

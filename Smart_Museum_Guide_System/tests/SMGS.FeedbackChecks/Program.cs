@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using SMGS.API.Controllers;
 using SMGS.Application.DTOs.Complaint.Request;
 using SMGS.Application.DTOs.Feedback.Request;
+using SMGS.Application.DTOs.Notification;
+using SMGS.Application.Interfaces;
 using SMGS.Application.Services;
 using SMGS.Domain.Constants;
 using SMGS.Domain.Entities;
@@ -31,6 +33,14 @@ Check(Roles(typeof(FeedbacksController), "Moderate") == $"{RoleNames.Staff},{Rol
 Check(Roles(typeof(FeedbacksController), "GetAll") == $"{RoleNames.Staff},{RoleNames.Admin}", "Xem toàn bộ feedback dành cho System Staff/Admin.");
 Check(Roles(typeof(ComplaintsController), "Create") == RoleNames.Visitor, "Chỉ Visitor gửi khiếu nại.");
 Check(Roles(typeof(ComplaintsController), "UpdateStatus") == RoleNames.Staff, "Chỉ System Staff xử lý khiếu nại.");
+Check(typeof(NotificationsController).IsDefined(typeof(AuthorizeAttribute)), "NotificationsController phải yêu cầu đăng nhập.");
+Check(!typeof(NotificationsController).GetMethods().Any(m => m.IsDefined(typeof(AllowAnonymousAttribute))), "NotificationsController không được có AllowAnonymous.");
+Check(typeof(NotificationsController).GetMethod("GetMine") is not null
+    && typeof(NotificationsController).GetMethod("GetUnreadCount") is not null
+    && typeof(NotificationsController).GetMethod("MarkAsRead") is not null
+    && typeof(NotificationsController).GetMethod("MarkAllAsRead") is not null
+    && typeof(NotificationsController).GetMethod("Delete") is not null,
+    "NotificationsController phải đủ 5 endpoints chuẩn.");
 
 // ───────────────────────── 2. Validation DTO ─────────────────────────
 static bool Valid(object o) => Validator.TryValidateObject(o, new ValidationContext(o), new List<ValidationResult>(), true);
@@ -61,7 +71,8 @@ Check((await visitService.CompleteAsync(visitId, other)).StatusCode == 404, "Ng�
 
 // ───────────────────────── 4. Feedback ─────────────────────────
 var feedbacks = new FakeFeedbacks(visits);
-var feedbackService = new FeedbackService(feedbacks, visits);
+var notifSpy = new FakeNotificationPublisher();
+var feedbackService = new FeedbackService(feedbacks, visits, notifSpy);
 var good = new CreateFeedbackRequestDto { VisitId = visitId, OverallRating = 5, TourRating = 4, Comment = "  Rất hay  " };
 
 Check((await feedbackService.CreateAsync(visitor, good)).StatusCode == 400, "[Q23] Chưa hoàn thành tour thì không được đánh giá.");
@@ -89,6 +100,8 @@ var staff = Guid.NewGuid();
 Check((await feedbackService.RespondAsync(feedbackId, staff, new() { Content = "   " })).StatusCode == 400, "Phản hồi rỗng phải bị từ chối.");
 var responded = await feedbackService.RespondAsync(feedbackId, staff, new() { Content = " Cảm ơn bạn " });
 Check(responded.StatusCode == 200 && responded.Data!.StaffResponse is { Content: "Cảm ơn bạn" }, "Lưu phản hồi của nhân viên.");
+Check(notifSpy.Events.Any(e => e.RecipientId == visitor && e.Type == NotificationTypes.FeedbackResponded && e.ReferenceType == NotificationReferenceTypes.VisitFeedback),
+    "Phản hồi feedback phải bắn thông báo FEEDBACK_RESPONDED cho Visitor.");
 var reResponded = await feedbackService.RespondAsync(feedbackId, staff, new() { Content = "Cảm ơn nhiều" });
 Check(feedbacks.Responses.Count == 1 && reResponded.Data!.StaffResponse!.Content == "Cảm ơn nhiều" && reResponded.Data.StaffResponse.UpdatedAt is not null, "Phản hồi lần 2 là sửa, không tạo bản mới.");
 
@@ -103,10 +116,11 @@ Check((await feedbackService.GetAllAsync(null, -5, 1000)).Data is { Page: 1, Pag
 
 // ───────────────────────── 5. Complaint ─────────────────────────
 var complaints = new FakeComplaints();
-var complaintService = new ComplaintService(complaints);
+var complaintService = new ComplaintService(complaints, notifSpy);
 Check((await complaintService.CreateAsync(visitor, new() { Subject = "  ", Body = "x" })).StatusCode == 400, "Tiêu đề rỗng phải bị từ chối.");
 var complaint = await complaintService.CreateAsync(visitor, new() { Subject = " Thanh toán lỗi ", Body = " Bị trừ tiền 2 lần " });
 Check(complaint.StatusCode == 201 && complaint.Data is { Status: ComplaintStatus.New, Subject: "Thanh toán lỗi" }, "Tạo khiếu nại ở trạng thái New.");
+Check(notifSpy.SystemStaffCalls == 1, "Khiếu nại mới phải bắn thông báo COMPLAINT_CREATED tới System Staff.");
 var cid = complaint.Data!.Id;
 Check((await complaintService.GetMineByIdAsync(cid, other)).StatusCode == 404, "Khách khác không xem được khiếu nại.");
 Check((await complaintService.UpdateStatusAsync(cid, staff, new() { Status = ComplaintStatus.Resolved })).StatusCode == 400, "New → Resolved không hợp lệ.");
@@ -114,6 +128,8 @@ var assigned = await complaintService.AssignToMeAsync(cid, staff);
 Check(assigned.Data is { Status: ComplaintStatus.InProgress } && assigned.Data.AssignedTo == staff, "Nhận xử lý → InProgress.");
 var resolved = await complaintService.UpdateStatusAsync(cid, staff, new() { Status = ComplaintStatus.Resolved, ResolutionNote = " Đã hoàn tiền " });
 Check(resolved.Data is { Status: ComplaintStatus.Resolved, ResolutionNote: "Đã hoàn tiền" } && resolved.Data.ResolvedAt is not null, "Giải quyết lưu ghi chú và thời điểm.");
+Check(notifSpy.Events.Any(e => e.RecipientId == visitor && e.Type == NotificationTypes.ComplaintStatusUpdated && e.ReferenceId == cid.ToString()),
+    "Cập nhật trạng thái khiếu nại phải bắn thông báo COMPLAINT_STATUS_UPDATED cho Visitor.");
 Check((await complaintService.AssignToMeAsync(cid, staff)).StatusCode == 400, "Không nhận lại khiếu nại đã xong.");
 Check((await complaintService.UpdateStatusAsync(cid, staff, new() { Status = ComplaintStatus.InProgress })).StatusCode == 200, "Resolved → InProgress (mở lại).");
 Check((await complaintService.UpdateStatusAsync(cid, staff, new() { Status = ComplaintStatus.Closed })).StatusCode == 200, "InProgress → Closed.");
@@ -191,4 +207,21 @@ sealed class FakeMuseums : IMuseumRepository
     public Task<bool> ExistsByNameAsync(string name, int? excludeId = null) => throw new NotSupportedException();
     public Task<Museum> CreateAsync(Museum museum) => throw new NotSupportedException();
     public Task UpdateAsync(Museum museum) => throw new NotSupportedException();
+}
+
+sealed class FakeNotificationPublisher : INotificationPublisher
+{
+    public List<(Guid RecipientId, string Type, string? ReferenceType, string? ReferenceId)> Events { get; } = new();
+    public int SystemStaffCalls { get; private set; }
+    public Task NotifyUserAsync(Guid recipientId, string type, string title, string body, string? referenceType = null, string? referenceId = null, string? actionUrl = null, int? museumId = null)
+    {
+        Events.Add((recipientId, type, referenceType, referenceId));
+        return Task.CompletedTask;
+    }
+    public Task NotifyArtifactCuratorsAsync(int artifactId, Guid excludeUserId, string type, string title, string body, string? referenceType = null, string? referenceId = null, string? actionUrl = null) => Task.CompletedTask;
+    public Task NotifySystemStaffAsync(Guid excludeUserId, string type, string title, string body, string? referenceType = null, string? referenceId = null, string? actionUrl = null)
+    {
+        SystemStaffCalls++;
+        return Task.CompletedTask;
+    }
 }
