@@ -24,6 +24,9 @@ internal static class StaffAiChecks
         source.SavedText = "Nguồn đã xuất bản của bảo tàng.";
         await service.GenerateAsync(17, user, true, request);
         Check(source.LastAdmin && model.Last!.SourceText.Contains(source.SavedText), "Admin source scope or saved content missing.");
+        request.LanguageCode = "en";
+        var english = await service.GenerateAsync(17, user, true, request);
+        Check(english.Data?.LanguageCode == "en" && model.Last?.LanguageCode == "en", "English draft lost requested language.");
         model.Fail = true;
         Check((await service.GenerateAsync(17, user, false, request)).StatusCode == 503, "Model failure became mock output.");
         model.Fail = false; model.Body = "{\"title\":\"T\",\"narrationText\":\"\",\"evidenceQuotes\":[]}";

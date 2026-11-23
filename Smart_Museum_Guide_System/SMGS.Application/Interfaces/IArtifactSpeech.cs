@@ -4,5 +4,5 @@ public record SpeechAudio(byte[] Bytes);
 
 public interface IArtifactSpeech
 {
-    Task<SpeechAudio> GenerateAsync(string text, CancellationToken cancellationToken = default);
+    Task<SpeechAudio> GenerateAsync(string text, CancellationToken cancellationToken = default, string languageCode = "vi");
 }

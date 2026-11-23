@@ -98,7 +98,7 @@ class SpeechSourceFixture : IStaffAiSource {
 }
 class SpeechFixture : IArtifactSpeech {
     public string? Text; public int Calls;
-    public Task<SpeechAudio> GenerateAsync(string text, CancellationToken cancellationToken = default) {
+    public Task<SpeechAudio> GenerateAsync(string text, CancellationToken cancellationToken = default, string languageCode = "vi") {
         Calls++; Text = text;
         var bytes = new byte[46]; "RIFF"u8.CopyTo(bytes); "WAVE"u8.CopyTo(bytes.AsSpan(8));
         return Task.FromResult(new SpeechAudio(bytes));

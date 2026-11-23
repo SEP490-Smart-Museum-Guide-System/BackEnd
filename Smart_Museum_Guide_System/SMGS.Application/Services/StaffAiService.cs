@@ -10,7 +10,7 @@ public class StaffAiService(IStaffAiSource source, IStaffAiModel model) : IStaff
     public async Task<ResponseDto<StaffAiResult>> GenerateAsync(int artifactId, Guid user, bool admin, StaffAiRequest r, CancellationToken cancellationToken = default)
     {
         if (user == Guid.Empty) return ResponseDto<StaffAiResult>.Fail("Vui lòng đăng nhập.", 401);
-        if (artifactId <= 0 || r.Mode is not ("narration" or "quiz") || r.SourceText is null || r.SourceText.Length > 6000
+        if (artifactId <= 0 || r.LanguageCode is not ("vi" or "en") || r.Mode is not ("narration" or "quiz") || r.SourceText is null || r.SourceText.Length > 6000
             || r.Audience is not ("children" or "general" or "scholar") || r.Tone is not ("vivid" or "inspiring" or "academic")
             || r.Difficulty is not ("easy" or "medium" or "hard") || r.ExcludeQuestions is null || r.ExcludeQuestions.Length > 5
             || r.ExcludeQuestions.Any(q => string.IsNullOrWhiteSpace(q) || q.Length > 1000))
@@ -25,9 +25,9 @@ public class StaffAiService(IStaffAiSource source, IStaffAiModel model) : IStaff
         var used = saved with { Text = text };
         try
         {
-            var draft = await model.GenerateAsync(new(artifactId, saved.ArtifactName, text, r.Mode, r.Audience, r.Tone, r.Difficulty, r.ExcludeQuestions), cancellationToken);
+            var draft = await model.GenerateAsync(new(artifactId, saved.ArtifactName, text, r.Mode, r.Audience, r.Tone, r.Difficulty, r.ExcludeQuestions, r.LanguageCode), cancellationToken);
             ValidateDraft(draft, r.Mode);
-            return ResponseDto<StaffAiResult>.Success(new(artifactId, r.Mode, "vi", true, used, draft), "Đã tạo bản nháp AI. Cần kiểm tra và thẩm định trước khi xuất bản.");
+            return ResponseDto<StaffAiResult>.Success(new(artifactId, r.Mode, r.LanguageCode, true, used, draft), "Đã tạo bản nháp AI. Cần kiểm tra và thẩm định trước khi xuất bản.");
         }
         catch (GuideException e) { return ResponseDto<StaffAiResult>.Fail(e.Message, e.StatusCode); }
         catch (Exception e) when (e is JsonException or InvalidOperationException or KeyNotFoundException or FormatException)

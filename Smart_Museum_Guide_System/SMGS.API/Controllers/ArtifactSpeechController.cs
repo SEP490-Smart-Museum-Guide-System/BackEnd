@@ -11,6 +11,7 @@ namespace SMGS.API.Controllers;
 
 public class SpeechPreviewRequest
 {
+    [Required, RegularExpression("^(vi|en)$")] public string LanguageCode { get; set; } = "vi";
     [Required, StringLength(12000, MinimumLength = 1)] public string Text { get; set; } = "";
 }
 
@@ -28,8 +29,9 @@ public class ArtifactSpeechController(IStaffAiSource source, IArtifactSpeech spe
         await source.GetAsync(artifactId, UserId, Admin, cancellationToken);
         try
         {
-            var audio = await speech.GenerateAsync(request.Text.Trim(), cancellationToken);
+            var audio = await speech.GenerateAsync(request.Text.Trim(), cancellationToken, request.LanguageCode);
             Response.Headers.CacheControl = "private, no-store";
+            Response.Headers.ContentLanguage = request.LanguageCode;
             return File(audio.Bytes, "audio/wav");
         }
         catch (GuideException e) { return StatusCode(e.StatusCode, ResponseDto<object>.Fail(e.Message, e.StatusCode)); }
