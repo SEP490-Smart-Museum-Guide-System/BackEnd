@@ -59,13 +59,9 @@ public static class DependencyInjection
             client.MaxResponseContentBufferSize = 1024 * 1024;
             client.DefaultRequestHeaders.UserAgent.ParseAdd("SMGS/1.0");
         }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
-        services.AddHttpClient<IOutdoorRoutingService, OsrmRoutingService>(client =>
+        services.AddHttpClient<IOutdoorRoutingService, VietMapRoutingService>(client =>
         {
-            var baseUrl = configuration["Osrm:BaseUrl"] ?? throw new InvalidOperationException("Configure Osrm:BaseUrl.");
-            if (!Uri.TryCreate(baseUrl.TrimEnd('/') + "/", UriKind.Absolute, out var uri)
-                || (uri.Scheme != "https" && uri.Scheme != "http"))
-                throw new InvalidOperationException("Osrm:BaseUrl must be an HTTP(S) URL.");
-            client.BaseAddress = uri;
+            client.BaseAddress = new Uri("https://maps.vietmap.vn/");
             client.Timeout = TimeSpan.FromSeconds(10);
             client.MaxResponseContentBufferSize = 8 * 1024 * 1024;
             client.DefaultRequestHeaders.UserAgent.ParseAdd("SMGS/1.0");

@@ -421,3 +421,4 @@ FodyWeavers.xsd
 /.local-tools/
 **/App_Data/indoor-maps/
 **/App_Data/museum-images/
+/Smart_Museum_Guide_System/SMGS.API/vietmap.local.json

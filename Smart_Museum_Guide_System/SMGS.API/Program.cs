@@ -11,6 +11,8 @@ using SMGS.Infrastructure.Services;
 using SMGS.API.Localization;
 
 var builder = WebApplication.CreateBuilder(args);
+if (string.IsNullOrEmpty(builder.Configuration["VietMap:ApiKey"]))
+    builder.Configuration.AddJsonFile("vietmap.local.json", optional: true);
 
 builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
 {

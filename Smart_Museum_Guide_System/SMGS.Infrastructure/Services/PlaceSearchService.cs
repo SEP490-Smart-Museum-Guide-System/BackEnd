@@ -5,7 +5,7 @@ using SMGS.Application.DTOs.Navigation;
 
 namespace SMGS.Infrastructure.Services;
 
-public class PlaceSearchService(HttpClient client)
+public class PlaceSearchService(HttpClient client, Microsoft.Extensions.Configuration.IConfiguration? configuration = null)
 {
     public async Task<ResponseDto<List<PlaceResponseDto>>> SearchAsync(string? query, CancellationToken cancellationToken = default)
     {
@@ -17,6 +17,8 @@ public class PlaceSearchService(HttpClient client)
             var region = System.Text.RegularExpressions.Regex.Match(query,
                 @"^(?:bảo tàng|bao tang)\s+(?:ở|tại|o|tai)\s+(.+)$",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (!region.Success && configuration?["VietMap:ApiKey"] is string key)
+                return await SearchVietMapAsync(query, Uri.EscapeDataString(key), cancellationToken);
             var path = region.Success
                 ? $"api/?q={Uri.EscapeDataString(region.Groups[1].Value)}&osm_tag=tourism:museum&limit=50"
                 : $"api/?q={Uri.EscapeDataString(query)}&limit=6";
@@ -51,5 +53,30 @@ public class PlaceSearchService(HttpClient client)
         {
             return ResponseDto<List<PlaceResponseDto>>.Fail("Không kết nối được dịch vụ tìm địa điểm. Vui lòng thử lại.", 502);
         }
+    }
+
+    private async Task<ResponseDto<List<PlaceResponseDto>>> SearchVietMapAsync(string query, string key, CancellationToken token)
+    {
+        const string api = "https://maps.vietmap.vn/api/";
+        using var response = await client.GetAsync($"{api}autocomplete/v4?text={Uri.EscapeDataString(query)}&apikey={key}", token);
+        response.EnsureSuccessStatusCode();
+        using var suggestions = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
+        var places = new List<PlaceResponseDto>();
+        foreach (var item in suggestions.RootElement.EnumerateArray().Take(6))
+        {
+            var reference = item.GetProperty("ref_id").GetString();
+            if (string.IsNullOrWhiteSpace(reference)) continue;
+            using var detail = await client.GetAsync($"{api}place/v4?refid={Uri.EscapeDataString(reference)}&apikey={key}", token);
+            detail.EnsureSuccessStatusCode();
+            using var json = JsonDocument.Parse(await detail.Content.ReadAsStringAsync(token));
+            var place = json.RootElement;
+            var address = place.GetProperty("display").GetString() ?? "";
+            var name = item.TryGetProperty("name", out var value) ? value.GetString() : null;
+            var lat = place.GetProperty("lat").GetDouble();
+            var lng = place.GetProperty("lng").GetDouble();
+            if (Math.Abs(lat) <= 90 && Math.Abs(lng) <= 180)
+                places.Add(new(string.IsNullOrWhiteSpace(name) ? address : name, address, lat, lng));
+        }
+        return ResponseDto<List<PlaceResponseDto>>.Success(places);
     }
 }

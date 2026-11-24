@@ -18,6 +18,8 @@ public class OutdoorRouteRequestDto
     [Required] public string TravelMode { get; set; } = "DRIVE";
 }
 
+public record RouteStepDto(int PointIndex, int Sign, string Text);
+
 public class OutdoorRouteResponseDto
 {
     public int MuseumId { get; set; }
@@ -25,5 +27,6 @@ public class OutdoorRouteResponseDto
     public string TravelMode { get; set; } = "DRIVE";
     public double DistanceMeters { get; set; }
     public double DurationSeconds { get; set; }
+    public List<RouteStepDto> Steps { get; set; } = [];
     public List<CoordinateDto> RoutePoints { get; set; } = [];
 }
