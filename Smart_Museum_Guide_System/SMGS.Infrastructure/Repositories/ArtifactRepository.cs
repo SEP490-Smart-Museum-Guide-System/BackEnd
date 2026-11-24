@@ -13,6 +13,8 @@ public class ArtifactRepository(ApplicationDbContext db) : IArtifactRepository
         .Include(a => a.Museum)
         .Include(a => a.Gallery)
         .Include(a => a.Model3D)
+        .Include(a => a.Translations)
+        .Include(a => a.Museum).ThenInclude(m => m!.Translations)
         .Include(a => a.MediaItems)
         .Include(a => a.ArtifactTopics)
             .ThenInclude(at => at.Topic);
@@ -48,6 +50,7 @@ public class ArtifactRepository(ApplicationDbContext db) : IArtifactRepository
             var kw = keyword.Trim().ToLower();
             query = query.Where(a =>
                 a.Name.ToLower().Contains(kw) ||
+                a.Translations.Any(t => t.Name.ToLower().Contains(kw)) ||
                 (a.Code != null && a.Code.ToLower().Contains(kw)) ||
                 (a.QrCode != null && a.QrCode.ToLower().Contains(kw)));
         }

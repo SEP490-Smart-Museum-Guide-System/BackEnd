@@ -10,7 +10,7 @@ public class MuseumRepository(ApplicationDbContext db) : IMuseumRepository
     public async Task<(IList<MuseumDiscoveryItem> Items, int TotalCount)> DiscoverAsync(
         MuseumDiscoveryQuery request, CancellationToken cancellationToken = default)
     {
-        var museums = db.Museums.AsNoTracking().AsQueryable();
+        var museums = db.Museums.AsNoTracking().Include(m => m.Translations).AsQueryable();
         if (request.IsActive.HasValue)
             museums = museums.Where(m => m.IsActive == request.IsActive.Value);
         if (request.CityCode is not null)
@@ -19,7 +19,9 @@ public class MuseumRepository(ApplicationDbContext db) : IMuseumRepository
         {
             var keyword = request.Keyword.Trim().ToLower();
             museums = museums.Where(m => m.Name.ToLower().Contains(keyword)
-                || (m.Address != null && m.Address.ToLower().Contains(keyword)));
+                || (m.Address != null && m.Address.ToLower().Contains(keyword))
+                || m.Translations.Any(t => t.Name.ToLower().Contains(keyword)
+                    || (t.Address != null && t.Address.ToLower().Contains(keyword))));
         }
 
         var total = await museums.CountAsync(cancellationToken);
@@ -49,13 +51,13 @@ public class MuseumRepository(ApplicationDbContext db) : IMuseumRepository
 
     public async Task<Museum?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        return await db.Museums.FindAsync([id], cancellationToken);
+        return await db.Museums.Include(m => m.Translations).FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
     }
 
     public async Task<(IList<Museum> Items, int TotalCount)> GetPagedAsync(
         string? keyword, bool? isActive, int page, int pageSize)
     {
-        var query = db.Museums.AsQueryable();
+        var query = db.Museums.Include(m => m.Translations).AsQueryable();
 
         if (isActive.HasValue)
             query = query.Where(m => m.IsActive == isActive.Value);
@@ -64,7 +66,9 @@ public class MuseumRepository(ApplicationDbContext db) : IMuseumRepository
         {
             var kw = keyword.Trim().ToLower();
             query = query.Where(m => m.Name.ToLower().Contains(kw)
-                                  || (m.Address != null && m.Address.ToLower().Contains(kw)));
+                                  || (m.Address != null && m.Address.ToLower().Contains(kw))
+                                  || m.Translations.Any(t => t.Name.ToLower().Contains(kw)
+                                      || (t.Address != null && t.Address.ToLower().Contains(kw))));
         }
 
         var totalCount = await query.CountAsync();

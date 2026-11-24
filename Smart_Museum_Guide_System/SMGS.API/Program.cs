@@ -8,6 +8,7 @@ using SMGS.Application.DTOs.Common;
 using SMGS.Infrastructure;
 using SMGS.Infrastructure.Data;
 using SMGS.Infrastructure.Services;
+using SMGS.API.Localization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -132,6 +133,7 @@ if (!app.Environment.IsDevelopment()) app.UseHttpsRedirection();
 app.UseRouting();
 app.UseCors("Frontend");
 app.UseAuthentication();
+app.UseMiddleware<RequestLanguageMiddleware>();
 app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();

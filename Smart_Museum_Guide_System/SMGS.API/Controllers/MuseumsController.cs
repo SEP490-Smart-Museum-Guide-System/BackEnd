@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 using SMGS.Application.DTOs.Common;
 using SMGS.Application.DTOs.Museum.Request;
 using SMGS.Application.DTOs.Museum.Response;
@@ -22,7 +23,7 @@ public class MuseumsController(IMuseumService museumService) : ControllerBase
     public async Task<IActionResult> GetAll(
         [FromQuery] DiscoverMuseumsRequestDto request, CancellationToken cancellationToken)
     {
-        var response = await museumService.DiscoverAsync(request, User.IsInRole(RoleNames.Admin), cancellationToken);
+        var response = await museumService.DiscoverAsync(request, User.IsInRole(RoleNames.Admin), cancellationToken, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
         return StatusCode(response.StatusCode, response);
     }
 
@@ -39,7 +40,7 @@ public class MuseumsController(IMuseumService museumService) : ControllerBase
     [ProducesResponseType(typeof(ResponseDto<MuseumResponseDto>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(int id)
     {
-        var response = await museumService.GetByIdAsync(id);
+        var response = await museumService.GetByIdAsync(id, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
         if (response.Data is { IsActive: false } && !User.IsInRole(RoleNames.Admin))
             return NotFound(ResponseDto<MuseumResponseDto>.Fail("Không tìm thấy bảo tàng.", 404));
         return StatusCode(response.StatusCode, response);

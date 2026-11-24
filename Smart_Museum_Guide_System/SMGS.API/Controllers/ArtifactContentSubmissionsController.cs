@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SMGS.Application.DTOs.ArtifactContent.Request;
@@ -37,9 +38,9 @@ public class ArtifactContentSubmissionsController(IArtifactContentService servic
     /// <summary>Chỉ trả về phiên bản đang xuất bản của ngôn ngữ được chọn.</summary>
     [AllowAnonymous]
     [HttpGet("published")]
-    public async Task<IActionResult> GetPublished(int artifactId, [FromQuery] string languageCode = "vi")
+    public async Task<IActionResult> GetPublished(int artifactId, [FromQuery] string? languageCode = null)
     {
-        var response = await service.GetPublishedAsync(artifactId, languageCode,
+        var response = await service.GetPublishedAsync(artifactId, languageCode ?? CultureInfo.CurrentUICulture.TwoLetterISOLanguageName,
             Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null);
         return StatusCode(response.StatusCode, response);
     }

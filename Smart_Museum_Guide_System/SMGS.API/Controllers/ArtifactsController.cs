@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SMGS.Application.DTOs.Artifact.Request;
@@ -54,7 +55,7 @@ public class ArtifactsController(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
     {
-        var response = await artifactService.GetAllAsync(museumId, galleryId, keyword, isActive, page, pageSize, topicId);
+        var response = await artifactService.GetAllAsync(museumId, galleryId, keyword, isActive, page, pageSize, topicId, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
         return StatusCode(response.StatusCode, response);
     }
 
@@ -67,7 +68,7 @@ public class ArtifactsController(
     [ProducesResponseType(typeof(ResponseDto<ArtifactResponseDto>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(int id)
     {
-        var response = await artifactService.GetByIdAsync(id);
+        var response = await artifactService.GetByIdAsync(id, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
         return StatusCode(response.StatusCode, response);
     }
 
@@ -139,7 +140,8 @@ public class ArtifactsController(
     public async Task<IActionResult> Scan(string qrCode)
     {
         var response = await artifactService.ScanAsync(qrCode,
-            Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null);
+            Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null,
+            CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
         return StatusCode(response.StatusCode, response);
     }
 

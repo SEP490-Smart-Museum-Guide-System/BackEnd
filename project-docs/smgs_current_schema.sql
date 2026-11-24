@@ -1847,6 +1847,7 @@ BEGIN
     VALUES ('20261119055701_InitialCurrentSchema', '8.0.0');
     END IF;
 END $EF$;
+
 COMMIT;
 
 START TRANSACTION;
@@ -1914,6 +1915,56 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261120072806_AddMuseumPresence') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
     VALUES ('20261120072806_AddMuseumPresence', '8.0.0');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261124000000_AddUserPreferredLanguage') THEN
+        ALTER TABLE "Users" ADD "PreferredLanguage" character varying(2) NOT NULL DEFAULT 'vi';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261124000000_AddUserPreferredLanguage') THEN
+        INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+        VALUES ('20261124000000_AddUserPreferredLanguage', '8.0.0');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261124052254_AddMuseumAndArtifactTranslations') THEN
+        CREATE TABLE museum_translations (
+            "Id" integer GENERATED ALWAYS AS IDENTITY,
+            "MuseumId" integer NOT NULL,
+            "LanguageCode" character varying(2) NOT NULL,
+            "Name" character varying(200) NOT NULL,
+            "Description" text,
+            "Address" character varying(500),
+            "OpeningHours" character varying(500),
+            CONSTRAINT "PK_museum_translations" PRIMARY KEY ("Id"),
+            CONSTRAINT "FK_museum_translations_museums_MuseumId" FOREIGN KEY ("MuseumId") REFERENCES museums ("Id") ON DELETE CASCADE
+        );
+        CREATE UNIQUE INDEX "IX_museum_translations_MuseumId_LanguageCode" ON museum_translations ("MuseumId", "LanguageCode");
+        CREATE TABLE artifact_translations (
+            "Id" integer GENERATED ALWAYS AS IDENTITY,
+            "ArtifactId" integer NOT NULL,
+            "LanguageCode" character varying(2) NOT NULL,
+            "Name" character varying(300) NOT NULL,
+            CONSTRAINT "PK_artifact_translations" PRIMARY KEY ("Id"),
+            CONSTRAINT "FK_artifact_translations_artifacts_ArtifactId" FOREIGN KEY ("ArtifactId") REFERENCES artifacts ("Id") ON DELETE CASCADE
+        );
+        CREATE UNIQUE INDEX "IX_artifact_translations_ArtifactId_LanguageCode" ON artifact_translations ("ArtifactId", "LanguageCode");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261124052254_AddMuseumAndArtifactTranslations') THEN
+        INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+        VALUES ('20261124052254_AddMuseumAndArtifactTranslations', '8.0.0');
     END IF;
 END $EF$;
 COMMIT;

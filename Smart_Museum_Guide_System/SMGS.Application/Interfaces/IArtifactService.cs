@@ -7,9 +7,9 @@ namespace SMGS.Application.Interfaces;
 public interface IArtifactService
 {
     Task<ResponseDto<PaginatedResponseDto<ArtifactResponseDto>>> GetAllAsync(
-        int? museumId, int? galleryId, string? keyword, bool? isActive, int page, int pageSize, int? topicId = null);
+        int? museumId, int? galleryId, string? keyword, bool? isActive, int page, int pageSize, int? topicId = null, string languageCode = "vi");
 
-    Task<ResponseDto<ArtifactResponseDto>> GetByIdAsync(int id);
+    Task<ResponseDto<ArtifactResponseDto>> GetByIdAsync(int id, string languageCode = "vi");
     Task<ResponseDto<ArtifactResponseDto>> CreateAsync(CreateArtifactRequestDto dto);
     Task<ResponseDto<ArtifactResponseDto>> UpdateAsync(int id, UpdateArtifactRequestDto dto);
     Task<ResponseDto<object>> DeleteAsync(int id);
@@ -22,7 +22,7 @@ public interface IArtifactService
     /// <summary>
     /// Quét QR code → trả về thông tin chi tiết hiện vật + nội dung đã xuất bản.
     /// </summary>
-    Task<ResponseDto<ArtifactScanResponseDto>> ScanAsync(string qrCode, Guid? userId = null);
+    Task<ResponseDto<ArtifactScanResponseDto>> ScanAsync(string qrCode, Guid? userId = null, string languageCode = "vi");
 
     /// <summary>
     /// Sinh/tái sinh QR code cho hiện vật (dành cho admin/staff khi cần regenerate).

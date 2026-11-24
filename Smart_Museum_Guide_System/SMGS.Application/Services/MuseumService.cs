@@ -11,7 +11,7 @@ namespace SMGS.Application.Services;
 public class MuseumService(IMuseumRepository museumRepo) : IMuseumService
 {
     public async Task<ResponseDto<PaginatedResponseDto<MuseumResponseDto>>> DiscoverAsync(
-        DiscoverMuseumsRequestDto request, bool canViewInactive, CancellationToken cancellationToken = default)
+        DiscoverMuseumsRequestDto request, bool canViewInactive, CancellationToken cancellationToken = default, string languageCode = "vi")
     {
         if (!CityCatalog.IsValid(request.CityCode)
             || request.Latitude.HasValue != request.Longitude.HasValue
@@ -31,13 +31,13 @@ public class MuseumService(IMuseumRepository museumRepo) : IMuseumService
         }, cancellationToken);
         return ResponseDto<PaginatedResponseDto<MuseumResponseDto>>.Success(new()
         {
-            Items = items.Select(item => { var dto = MapToDto(item.Museum); dto.DistanceKm = item.DistanceKm; return dto; }).ToList(),
+            Items = items.Select(item => { var dto = MapToDto(item.Museum, languageCode); dto.DistanceKm = item.DistanceKm; return dto; }).ToList(),
             Page = request.Page, PageSize = request.PageSize, TotalCount = total
         });
     }
 
     public async Task<ResponseDto<PaginatedResponseDto<MuseumResponseDto>>> GetAllAsync(
-        string? keyword, bool? isActive, int page, int pageSize)
+        string? keyword, bool? isActive, int page, int pageSize, string languageCode = "vi")
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 10;
@@ -47,7 +47,7 @@ public class MuseumService(IMuseumRepository museumRepo) : IMuseumService
 
         var result = new PaginatedResponseDto<MuseumResponseDto>
         {
-            Items = items.Select(MapToDto).ToList(),
+            Items = items.Select(item => MapToDto(item, languageCode)).ToList(),
             Page = page,
             PageSize = pageSize,
             TotalCount = totalCount
@@ -56,13 +56,13 @@ public class MuseumService(IMuseumRepository museumRepo) : IMuseumService
         return ResponseDto<PaginatedResponseDto<MuseumResponseDto>>.Success(result);
     }
 
-    public async Task<ResponseDto<MuseumResponseDto>> GetByIdAsync(int id)
+    public async Task<ResponseDto<MuseumResponseDto>> GetByIdAsync(int id, string languageCode = "vi")
     {
         var museum = await museumRepo.GetByIdAsync(id);
         if (museum is null)
             return ResponseDto<MuseumResponseDto>.Fail("Không tìm thấy bảo tàng.", 404);
 
-        return ResponseDto<MuseumResponseDto>.Success(MapToDto(museum));
+        return ResponseDto<MuseumResponseDto>.Success(MapToDto(museum, languageCode));
     }
 
     public async Task<ResponseDto<MuseumResponseDto>> CreateAsync(CreateMuseumRequestDto dto)
@@ -129,18 +129,24 @@ public class MuseumService(IMuseumRepository museumRepo) : IMuseumService
         return ResponseDto<object>.Success(null!, "Đã vô hiệu hóa bảo tàng thành công.");
     }
 
-    private static MuseumResponseDto MapToDto(Museum museum) => new()
+    private static MuseumResponseDto MapToDto(Museum museum, string languageCode = "vi")
     {
-        Id = museum.Id,
-        Name = museum.Name,
-        Description = museum.Description,
-        Address = museum.Address,
-        CityCode = museum.CityCode,
-        Latitude = museum.Latitude,
-        Longitude = museum.Longitude,
-        OpeningHours = museum.OpeningHours,
-        CoverImageUrl = museum.CoverImageUrl,
-        IsActive = museum.IsActive,
-        CreatedAt = museum.CreatedAt
-    };
+        var lang = languageCode.Equals("en", StringComparison.OrdinalIgnoreCase) ? "en" : "vi";
+        var translation = lang == "en" ? museum.Translations.FirstOrDefault(t => t.LanguageCode == "en") : null;
+        return new MuseumResponseDto
+        {
+            Id = museum.Id,
+            LanguageCode = translation is null ? "vi" : "en",
+            Name = translation?.Name ?? museum.Name,
+            Description = translation?.Description ?? museum.Description,
+            Address = translation?.Address ?? museum.Address,
+            CityCode = museum.CityCode,
+            Latitude = museum.Latitude,
+            Longitude = museum.Longitude,
+            OpeningHours = translation?.OpeningHours ?? museum.OpeningHours,
+            CoverImageUrl = museum.CoverImageUrl,
+            IsActive = museum.IsActive,
+            CreatedAt = museum.CreatedAt
+        };
+    }
 }

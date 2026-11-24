@@ -3,6 +3,7 @@ namespace SMGS.Application.DTOs.Museum.Response;
 public class MuseumResponseDto
 {
     public int Id { get; set; }
+    public string LanguageCode { get; set; } = "vi";
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Address { get; set; }

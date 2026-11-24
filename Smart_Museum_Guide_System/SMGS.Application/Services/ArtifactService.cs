@@ -15,7 +15,7 @@ public class ArtifactService(
     IQrCodeService qrCodeService, ICommerceService? commerce = null) : IArtifactService
 {
     public async Task<ResponseDto<PaginatedResponseDto<ArtifactResponseDto>>> GetAllAsync(
-        int? museumId, int? galleryId, string? keyword, bool? isActive, int page, int pageSize, int? topicId = null)
+        int? museumId, int? galleryId, string? keyword, bool? isActive, int page, int pageSize, int? topicId = null, string languageCode = "vi")
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 10;
@@ -25,7 +25,7 @@ public class ArtifactService(
 
         var result = new PaginatedResponseDto<ArtifactResponseDto>
         {
-            Items = items.Select(MapToDto).ToList(),
+            Items = items.Select(item => MapToDto(item, languageCode)).ToList(),
             Page = page,
             PageSize = pageSize,
             TotalCount = totalCount
@@ -34,13 +34,13 @@ public class ArtifactService(
         return ResponseDto<PaginatedResponseDto<ArtifactResponseDto>>.Success(result);
     }
 
-    public async Task<ResponseDto<ArtifactResponseDto>> GetByIdAsync(int id)
+    public async Task<ResponseDto<ArtifactResponseDto>> GetByIdAsync(int id, string languageCode = "vi")
     {
         var artifact = await artifactRepo.GetByIdAsync(id);
         if (artifact is null)
             return ResponseDto<ArtifactResponseDto>.Fail("Không tìm thấy hiện vật.", 404);
 
-        return ResponseDto<ArtifactResponseDto>.Success(MapToDto(artifact));
+        return ResponseDto<ArtifactResponseDto>.Success(MapToDto(artifact, languageCode));
     }
 
     public async Task<ResponseDto<ArtifactResponseDto>> CreateAsync(CreateArtifactRequestDto dto)
@@ -134,7 +134,7 @@ public class ArtifactService(
         return ResponseDto<byte[]>.Success(pngBytes);
     }
 
-    public async Task<ResponseDto<ArtifactScanResponseDto>> ScanAsync(string qrCode, Guid? userId = null)
+    public async Task<ResponseDto<ArtifactScanResponseDto>> ScanAsync(string qrCode, Guid? userId = null, string languageCode = "vi")
     {
         if (string.IsNullOrWhiteSpace(qrCode))
             return ResponseDto<ArtifactScanResponseDto>.Fail("Mã QR không hợp lệ.", 400);
@@ -150,10 +150,12 @@ public class ArtifactService(
         {
             Id = artifact.Id,
             MuseumId = artifact.MuseumId,
-            MuseumName = artifact.Museum?.Name ?? string.Empty,
+            MuseumName = LocalizedMuseumName(artifact.Museum, languageCode),
+            MuseumNameLanguageCode = LocalizedMuseumCode(artifact.Museum, languageCode),
             GalleryId = artifact.GalleryId,
             Code = artifact.Code,
-            Name = artifact.Name,
+            Name = LocalizedArtifactName(artifact, languageCode),
+            LanguageCode = LocalizedArtifactCode(artifact, languageCode),
             QrCode = artifact.QrCode,
             AccessLevel = artifact.AccessLevel,
             MapX = artifact.MapX,
@@ -239,13 +241,14 @@ public class ArtifactService(
                 CreatedAt = m.CreatedAt
             }).ToList() ?? [];
 
-    private static ArtifactResponseDto MapToDto(Artifact artifact) => new()
+    private static ArtifactResponseDto MapToDto(Artifact artifact, string languageCode = "vi") => new()
     {
         Id = artifact.Id,
         MuseumId = artifact.MuseumId,
         GalleryId = artifact.GalleryId,
         Code = artifact.Code,
-        Name = artifact.Name,
+        Name = LocalizedArtifactName(artifact, languageCode),
+        LanguageCode = LocalizedArtifactCode(artifact, languageCode),
         QrCode = artifact.QrCode,
         MapNodeId = artifact.MapNodeId,
         MapX = artifact.MapX,
@@ -258,4 +261,21 @@ public class ArtifactService(
         Model3D = artifact.Model3D is not null ? Map3D(artifact.Model3D) : null,
         Media = MapMediaList(artifact)
     };
+
+    private static string LocalizedArtifactName(Artifact artifact, string languageCode) =>
+        languageCode.Equals("en", StringComparison.OrdinalIgnoreCase)
+            ? artifact.Translations.FirstOrDefault(t => t.LanguageCode == "en")?.Name ?? artifact.Name
+            : artifact.Name;
+
+    private static string LocalizedArtifactCode(Artifact artifact, string languageCode) =>
+        languageCode.Equals("en", StringComparison.OrdinalIgnoreCase) && artifact.Translations.Any(t => t.LanguageCode == "en") ? "en" : "vi";
+
+    private static string LocalizedMuseumName(Museum? museum, string languageCode) => museum is null
+        ? string.Empty
+        : languageCode.Equals("en", StringComparison.OrdinalIgnoreCase)
+            ? museum.Translations.FirstOrDefault(t => t.LanguageCode == "en")?.Name ?? museum.Name
+            : museum.Name;
+
+    private static string LocalizedMuseumCode(Museum? museum, string languageCode) =>
+        languageCode.Equals("en", StringComparison.OrdinalIgnoreCase) && museum?.Translations.Any(t => t.LanguageCode == "en") == true ? "en" : "vi";
 }

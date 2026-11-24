@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -34,8 +35,15 @@ public class MuseumDiscoveryController(ApplicationDbContext db, ICommerceService
                 + db.Set<ArtifactDetailView>().LongCount(v => v.ArtifactId == a.Id)
             where score > 0
             orderby score descending, a.Id
-            select new { a.Id, a.Name, ImageId = a.MediaItems.Where(m => m.MediaType == "image")
-                .OrderBy(m => m.SortOrder).ThenBy(m => m.Id).Select(m => (int?)m.Id).FirstOrDefault() }
+            select new
+            {
+                a.Id,
+                Name = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en"
+                    ? a.Translations.Where(t => t.LanguageCode == "en").Select(t => t.Name).FirstOrDefault() ?? a.Name
+                    : a.Name,
+                ImageId = a.MediaItems.Where(m => m.MediaType == "image")
+                    .OrderBy(m => m.SortOrder).ThenBy(m => m.Id).Select(m => (int?)m.Id).FirstOrDefault()
+            }
         ).Take(3).ToListAsync(token);
         var topArtifacts = ranked.Select(a => new { a.Id, a.Name,
             ImageUrl = a.ImageId is int image ? $"/api/artifacts/{a.Id}/media/{image}/file" : null });

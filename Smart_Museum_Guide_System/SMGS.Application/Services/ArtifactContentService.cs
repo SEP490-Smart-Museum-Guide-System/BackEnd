@@ -39,6 +39,8 @@ public class ArtifactContentService(
         var allowed = commerce != null ? await commerce.CanReadArtifact(artifactId, userId) : artifact.AccessLevel == "free";
         if (!allowed) return ResponseDto<ArtifactContentResponseDto>.Fail("Cần pass còn hiệu lực cho nội dung premium này.", 403);
         var version = await repository.GetPublishedAsync(artifactId, languageCode.Trim().ToLowerInvariant());
+        if (version is null && languageCode.StartsWith("en", StringComparison.OrdinalIgnoreCase))
+            version = await repository.GetPublishedAsync(artifactId, "vi");
         return version is null ? Missing() : ResponseDto<ArtifactContentResponseDto>.Success(Map(version));
     }
     public async Task<ResponseDto<List<ArtifactContentResponseDto>>> GetAllPublishedByArtifactAsync(int artifactId, Guid? userId = null)
@@ -142,7 +144,10 @@ public class ArtifactContentService(
     private static ArtifactContentResponseDto Map(ArtifactContentVersion v) => new()
     {
         Id = v.Id, ArtifactId = v.Content.ArtifactId, MuseumId = v.Content.Artifact.MuseumId,
-        ArtifactName = v.Content.Artifact.Name, LanguageCode = v.Content.LanguageCode,
+        ArtifactName = v.Content.LanguageCode == "en"
+            ? v.Content.Artifact.Translations.FirstOrDefault(t => t.LanguageCode == "en")?.Name ?? v.Content.Artifact.Name
+            : v.Content.Artifact.Name,
+        LanguageCode = v.Content.LanguageCode,
         VersionNo = v.VersionNo, Title = v.Title, Description = v.Description,
         NarrationText = v.NarrationText, AudioUrl = v.AudioUrl,
         IsAiGenerated = v.IsAiGenerated, Status = v.Status, IsCurrent = v.IsCurrent,

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,8 +16,11 @@ public class VisitorDirectoryController(ApplicationDbContext db) : ControllerBas
     [HttpGet]
     public async Task<IActionResult> Get(int museumId, CancellationToken token)
     {
+        var languageCode = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
         var museum = await db.Museums.AsNoTracking().Where(m => m.Id == museumId && m.IsActive)
-            .Select(m => new { m.Id, m.Name }).SingleOrDefaultAsync(token);
+            .Select(m => new { m.Id, Name = languageCode == "en"
+                ? m.Translations.Where(t => t.LanguageCode == "en").Select(t => t.Name).FirstOrDefault() ?? m.Name : m.Name })
+            .SingleOrDefaultAsync(token);
         if (museum is null) return NotFound(ResponseDto<object>.Fail("Không tìm thấy bảo tàng.", 404));
         var rooms = await (from g in db.Galleries.AsNoTracking()
             join f in db.Floors on g.FloorId equals f.Id
@@ -25,7 +29,9 @@ public class VisitorDirectoryController(ApplicationDbContext db) : ControllerBas
             orderby b.Name, f.LevelNo, g.Name
             select new { g.Id, g.Name, FloorId = f.Id, FloorName = f.Name, f.LevelNo, BuildingName = b.Name }).ToListAsync(token);
         var artifacts = await db.Artifacts.AsNoTracking().Where(a => a.MuseumId == museumId && a.IsActive)
-            .OrderBy(a => a.Name).Select(a => new { a.Id, a.Name, a.GalleryId }).ToListAsync(token);
+            .Select(a => new { a.Id, Name = languageCode == "en"
+                ? a.Translations.Where(t => t.LanguageCode == "en").Select(t => t.Name).FirstOrDefault() ?? a.Name : a.Name, a.GalleryId })
+            .OrderBy(a => a.Name).ToListAsync(token);
         var snapshots = await db.IndoorMaps.AsNoTracking().Where(m => m.MuseumId == museumId && m.PublishedJson != null)
             .Select(m => new { m.Id, m.PublishedJson }).ToListAsync(token);
         var maps = new List<MapDocument>();

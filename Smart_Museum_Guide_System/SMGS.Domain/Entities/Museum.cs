@@ -14,4 +14,5 @@ public class Museum
     public string? CoverImageUrl { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public ICollection<MuseumTranslation> Translations { get; set; } = new List<MuseumTranslation>();
 }

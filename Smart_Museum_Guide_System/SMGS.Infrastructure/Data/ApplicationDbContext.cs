@@ -11,6 +11,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<Museum> Museums => Set<Museum>();
+    public DbSet<MuseumTranslation> MuseumTranslations => Set<MuseumTranslation>();
+    public DbSet<ArtifactTranslation> ArtifactTranslations => Set<ArtifactTranslation>();
     public DbSet<City> Cities => Set<City>();
     public DbSet<CommerceResource> CommerceResources => Set<CommerceResource>();
     public DbSet<CommerceProduct> CommerceProducts => Set<CommerceProduct>();
@@ -71,6 +73,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<IdentityRoleClaim<Guid>>().ToTable("RoleClaims");
         builder.Entity<ApplicationUser>().Property(user => user.FullName).HasMaxLength(200);
         builder.Entity<ApplicationUser>().Property(user => user.IsActive).HasDefaultValue(true);
+        builder.Entity<ApplicationUser>().Property(user => user.PreferredLanguage).IsRequired().HasMaxLength(2).HasDefaultValue("vi");
         builder.Entity<ApplicationUser>().HasIndex(user => user.NormalizedEmail).IsUnique();
 
         // Museum
@@ -98,6 +101,19 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.CoverImageUrl).HasMaxLength(1000);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).HasColumnType("timestamptz");
+        });
+        builder.Entity<MuseumTranslation>(entity =>
+        {
+            entity.ToTable("museum_translations");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.LanguageCode).IsRequired().HasMaxLength(2);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasColumnType("text");
+            entity.Property(e => e.Address).HasMaxLength(500);
+            entity.Property(e => e.OpeningHours).HasMaxLength(500);
+            entity.HasIndex(e => new { e.MuseumId, e.LanguageCode }).IsUnique();
+            entity.HasOne(e => e.Museum).WithMany(m => m.Translations).HasForeignKey(e => e.MuseumId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Floor
@@ -173,6 +189,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .WithMany(g => g.Artifacts)
                 .HasForeignKey(e => e.GalleryId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+        builder.Entity<ArtifactTranslation>(entity =>
+        {
+            entity.ToTable("artifact_translations");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.LanguageCode).IsRequired().HasMaxLength(2);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(300);
+            entity.HasIndex(e => new { e.ArtifactId, e.LanguageCode }).IsUnique();
+            entity.HasOne(e => e.Artifact).WithMany(a => a.Translations).HasForeignKey(e => e.ArtifactId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Topic (CD-03)

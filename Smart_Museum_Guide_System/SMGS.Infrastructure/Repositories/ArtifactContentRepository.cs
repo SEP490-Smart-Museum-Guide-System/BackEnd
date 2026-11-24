@@ -8,7 +8,8 @@ namespace SMGS.Infrastructure.Repositories;
 
 public class ArtifactContentRepository(ApplicationDbContext db) : IArtifactContentRepository
 {
-    private IQueryable<ArtifactContentVersion> Query => db.ArtifactContentVersions.Include(v => v.Content).ThenInclude(c => c.Artifact);
+    private IQueryable<ArtifactContentVersion> Query => db.ArtifactContentVersions.Include(v => v.Content)
+        .ThenInclude(c => c.Artifact).ThenInclude(a => a.Translations);
     public async Task<(List<ArtifactContentVersion> Items, int TotalCount)> GetPagedAsync(int? museumId, int? artifactId, string? status, int page, int pageSize, Guid? scopeUserId = null)
     {
         var query = Query.AsNoTracking();

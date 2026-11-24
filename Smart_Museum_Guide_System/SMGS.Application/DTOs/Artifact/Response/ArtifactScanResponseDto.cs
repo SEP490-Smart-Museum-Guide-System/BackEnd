@@ -10,9 +10,11 @@ public class ArtifactScanResponseDto
     public int Id { get; set; }
     public int MuseumId { get; set; }
     public string MuseumName { get; set; } = string.Empty;
+    public string MuseumNameLanguageCode { get; set; } = "vi";
     public int? GalleryId { get; set; }
     public string? Code { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string LanguageCode { get; set; } = "vi";
     public string? QrCode { get; set; }
     public string AccessLevel { get; set; } = "free";
     public float? MapX { get; set; }
