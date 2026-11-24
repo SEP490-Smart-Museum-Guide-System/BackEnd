@@ -14,11 +14,12 @@ public sealed class MuseumPresenceService(ApplicationDbContext db, TimeProvider 
     private DateTime Now => clock.GetUtcNow().UtcDateTime;
     private async Task<Museum> Museum(int id) => await db.Museums.AsNoTracking().SingleOrDefaultAsync(m => m.Id == id && m.IsActive)
         ?? throw new ExperienceException("Không tìm thấy bảo tàng.", 404);
-    private async Task CheckVisit(Guid user, int museumId, int? visitId)
+    private async Task<DateTime?> CheckVisit(Guid user, int museumId, int? visitId)
     {
-        if (visitId is not int id) return;
+        if (visitId is not int id) return null;
         var visit = await ExperienceAccess.Visit(db, id, user, true);
         if (visit.MuseumId != museumId) throw new ExperienceException("Lượt tham quan không thuộc bảo tàng này.", 409);
+        return visit.StartedAt;
     }
     private async Task<MapDocument> Map(int museumId, int mapId)
     {
@@ -116,7 +117,7 @@ public sealed class MuseumPresenceService(ApplicationDbContext db, TimeProvider 
     private async Task<MuseumPresenceResult> CurrentCore(int museumId, Guid user, int? visitId, int? preferredMapId)
     {
         await Museum(museumId);
-        await CheckVisit(user, museumId, visitId);
+        var visitStartedAt = await CheckVisit(user, museumId, visitId);
         var checkpoint = await db.Set<MuseumPresence>().AsNoTracking().Where(p => p.UserId == user && p.MuseumId == museumId
             && (visitId == null || p.VisitId == null || p.VisitId == visitId)).OrderByDescending(p => p.ObservedAt).ThenByDescending(p => p.Id).FirstOrDefaultAsync();
         var snapshots = await db.IndoorMaps.AsNoTracking()
@@ -135,7 +136,8 @@ public sealed class MuseumPresenceService(ApplicationDbContext db, TimeProvider 
             join a in db.Artifacts on r.ArtifactId equals a.Id
             where r.UserId == user && r.IsSuccess && r.ConfirmedQrScan && a.IsActive && a.MuseumId == museumId
                 && (anchoredIds.Contains(a.Id) || (a.GalleryId.HasValue && galleryIds.Contains(a.GalleryId.Value)))
-                && (visitId == null || r.VisitId == visitId)
+                && (visitId == null || r.VisitId == visitId ||
+                    (r.VisitId == null && r.RecognizedAt >= visitStartedAt))
             orderby r.RecognizedAt descending, r.Id descending
             select new { r.RecognizedAt, Artifact = a }).FirstOrDefaultAsync();
         var useCheckpoint = checkpoint != null && (recognition == null || checkpoint.ObservedAt >= recognition.RecognizedAt);

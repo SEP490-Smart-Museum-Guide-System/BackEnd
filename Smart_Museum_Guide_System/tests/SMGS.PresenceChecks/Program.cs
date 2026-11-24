@@ -40,7 +40,7 @@ await setup.Database.ExecuteSqlRawAsync(create);
 WebApplication? host = null;
 try
 {
-    await setup.GetService<IMigrator>().MigrateAsync("InitialCurrentSchema");
+    await setup.GetService<IMigrator>().MigrateAsync("20261124000000_AddUserPreferredLanguage");
     var preservedUser = new ApplicationUser { Id = Guid.NewGuid(), UserName = "presence-upgrade-sentinel" };
     var preservedMuseum = new Museum { Name = "Existing museum before presence upgrade" };
     setup.AddRange(preservedUser, preservedMuseum); await setup.SaveChangesAsync();
@@ -122,7 +122,7 @@ try
     Check(upper.MapId == map2.Id && upper.FloorName == floor2.Name, "new floor scan selects the correct published map/floor");
     await Denied(async () => await Run(s => s.Route(museum.Id, visitor, new(map.Id, null, artifact.Id, visit.Id))), 422);
     clock.Advance(TimeSpan.FromSeconds(1));
-    setup.Add(new RecognitionHistory { UserId = visitor, VisitId = visit.Id, ArtifactId = artifact.Id, IsSuccess = true,
+    setup.Add(new RecognitionHistory { UserId = visitor, VisitId = null, ArtifactId = artifact.Id, IsSuccess = true,
         Method = "qr", ConfirmedQrScan = true, RequestId = Guid.NewGuid(), RecognizedAt = clock.GetUtcNow().UtcDateTime });
     await setup.SaveChangesAsync();
     clock.Advance(TimeSpan.FromSeconds(1));
