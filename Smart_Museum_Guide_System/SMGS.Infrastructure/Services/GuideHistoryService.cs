@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using SMGS.Application.DTOs.Common;
 using SMGS.Application.DTOs.Guide;
 using SMGS.Application.Interfaces;
@@ -10,9 +11,33 @@ namespace SMGS.Infrastructure.Services;
 public class GuideHistoryService(
     ApplicationDbContext db,
     IAccountAdminService? accountAdmin = null,
-    TimeProvider? clock = null) : IGuideHistoryService
+    TimeProvider? clock = null,
+    IOptions<GuideModelOptions>? options = null) : IGuideHistoryService
 {
+    public const int DefaultRetentionHours = 24;
+
     private DateTime UtcNow => (clock ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+
+    private int RetentionHours =>
+        options?.Value.HistoryRetentionHours is > 0 and <= 720
+            ? options.Value.HistoryRetentionHours
+            : DefaultRetentionHours;
+
+    private DateTime CutoffUtc => UtcNow.AddHours(-RetentionHours);
+
+    public async Task<int> PurgeExpiredAsync(CancellationToken cancellationToken = default)
+    {
+        var cutoff = CutoffUtc;
+        var expired = await db.GuideChatMessages
+            .Where(m => m.CreatedAt < cutoff)
+            .ToListAsync(cancellationToken);
+
+        if (expired.Count == 0) return 0;
+
+        db.GuideChatMessages.RemoveRange(expired);
+        await db.SaveChangesAsync(cancellationToken);
+        return expired.Count;
+    }
 
     public async Task RecordExchangeAsync(
         Guid userId,
@@ -26,6 +51,17 @@ public class GuideHistoryService(
     {
         if (userId == Guid.Empty || artifactId <= 0 || string.IsNullOrWhiteSpace(question) || string.IsNullOrWhiteSpace(answer))
             return;
+
+        var now = UtcNow;
+        var cutoff = now.AddHours(-RetentionHours);
+
+        var expired = await db.GuideChatMessages
+            .Where(m => m.CreatedAt < cutoff)
+            .ToListAsync(cancellationToken);
+        if (expired.Count > 0)
+        {
+            db.GuideChatMessages.RemoveRange(expired);
+        }
 
         var entry = new GuideChatMessage
         {
@@ -43,7 +79,7 @@ public class GuideHistoryService(
             LanguageCode = source?.LanguageCode is { Length: > 0 } lang
                 ? (lang.Length > 10 ? lang[..10] : lang)
                 : "vi",
-            CreatedAt = UtcNow
+            CreatedAt = now
         };
 
         db.GuideChatMessages.Add(entry);
@@ -58,10 +94,11 @@ public class GuideHistoryService(
     {
         if (userId == Guid.Empty || artifactId <= 0) return [];
         var count = Math.Clamp(maxExchanges, 1, 4);
+        var cutoff = CutoffUtc;
 
         var rows = await db.GuideChatMessages
             .AsNoTracking()
-            .Where(m => m.UserId == userId && m.ArtifactId == artifactId)
+            .Where(m => m.UserId == userId && m.ArtifactId == artifactId && m.CreatedAt >= cutoff)
             .OrderByDescending(m => m.CreatedAt)
             .ThenByDescending(m => m.Id)
             .Take(count)
@@ -88,13 +125,15 @@ public class GuideHistoryService(
         if (artifactId <= 0)
             return ResponseDto<IReadOnlyList<GuideChatMessageDto>>.Fail("Hiện vật không hợp lệ.", 400);
 
+        await PurgeExpiredAsync(cancellationToken);
+        var cutoff = CutoffUtc;
         var take = Math.Clamp(limit, 1, 200);
         var rows = await (from m in db.GuideChatMessages.AsNoTracking()
                           join a in db.Artifacts.AsNoTracking() on m.ArtifactId equals a.Id into aj
                           from a in aj.DefaultIfEmpty()
                           join mu in db.Museums.AsNoTracking() on m.MuseumId equals mu.Id into muj
                           from mu in muj.DefaultIfEmpty()
-                          where m.UserId == userId && m.ArtifactId == artifactId
+                          where m.UserId == userId && m.ArtifactId == artifactId && m.CreatedAt >= cutoff
                           orderby m.CreatedAt descending, m.Id descending
                           select new
                           {
@@ -143,10 +182,13 @@ public class GuideHistoryService(
         if (userId == Guid.Empty)
             return ResponseDto<PaginatedResponseDto<GuideConversationSummaryDto>>.Fail("Vui lòng đăng nhập.", 401);
 
+        await PurgeExpiredAsync(cancellationToken);
+        var cutoff = CutoffUtc;
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
 
-        var baseQuery = db.GuideChatMessages.AsNoTracking().Where(m => m.UserId == userId);
+        var baseQuery = db.GuideChatMessages.AsNoTracking()
+            .Where(m => m.UserId == userId && m.CreatedAt >= cutoff);
         if (museumId.HasValue)
             baseQuery = baseQuery.Where(m => m.MuseumId == museumId.Value);
 
@@ -223,10 +265,13 @@ public class GuideHistoryService(
         if (userId == Guid.Empty)
             return ResponseDto<PaginatedResponseDto<GuideChatMessageDto>>.Fail("Vui lòng đăng nhập.", 401);
 
+        await PurgeExpiredAsync(cancellationToken);
+        var cutoff = CutoffUtc;
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
 
-        var query = db.GuideChatMessages.AsNoTracking().Where(m => m.UserId == userId);
+        var query = db.GuideChatMessages.AsNoTracking()
+            .Where(m => m.UserId == userId && m.CreatedAt >= cutoff);
         if (museumId.HasValue)
             query = query.Where(m => m.MuseumId == museumId.Value);
         if (artifactId.HasValue)
@@ -272,6 +317,7 @@ public class GuideHistoryService(
         if (callerId == Guid.Empty)
             return ResponseDto<PaginatedResponseDto<GuideAdminLogDto>>.Fail("Vui lòng đăng nhập.", 401);
 
+        await PurgeExpiredAsync(cancellationToken);
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
 

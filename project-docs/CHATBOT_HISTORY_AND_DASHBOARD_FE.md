@@ -20,8 +20,8 @@ Header xác thực bắt buộc: `Authorization: Bearer <access_token>`
 - **Method & Endpoint:** `POST /api/artifacts/{artifactId}/guide/messages`
 - **Role:** `Visitor`
 - **Điểm mới:**
-  - Mọi lượt hỏi đáp thành công đều được **Backend tự động lưu vào Database** (`guide_chat_messages`).
-  - Thêm cờ tùy chọn `"useSavedHistory": true` trong request body. Nếu Mobile truyền `"history": []` kèm `"useSavedHistory": true`, Backend sẽ tự động lấy 4 cặp hỏi-đáp gần nhất từ DB của khách tại hiện vật đó làm ngữ cảnh mà Mobile không cần tự giữ mảng `history` ở client.
+  - Mọi lượt hỏi đáp thành công đều được **Backend tự động lưu tạm vào Database trong vòng 24 giờ** (`HistoryRetentionHours = 24`, khớp với thời hạn 1 ngày tham quan của vé). Các tin nhắn quá 24 giờ sẽ được hệ thống tự động dọn dẹp (auto-purge TTL).
+  - Thêm cờ tùy chọn `"useSavedHistory": true` trong request body. Nếu Mobile truyền `"history": []` kèm `"useSavedHistory": true`, Backend sẽ tự động lấy 4 cặp hỏi-đáp gần nhất (trong vòng 24 giờ) từ DB của khách tại hiện vật đó làm ngữ cảnh mà Mobile không cần tự giữ mảng `history` ở client.
 - **Request Body:**
 ```json
 {

@@ -86,7 +86,23 @@ internal static class GuideAndDashboardDbChecks
 
         var historyService = new GuideHistoryService(db);
         var source17 = new GuideSource(91, 2, "Trống đồng Ngọc Lũ", "vi");
+
+        // Seed an expired message (> 24 hours ago) to verify 24h TTL auto-purge
+        db.GuideChatMessages.Add(new GuideChatMessage
+        {
+            UserId = visitorId,
+            ArtifactId = 17,
+            MuseumId = 1,
+            Question = "Câu hỏi từ hôm qua (>24h)",
+            Answer = "Câu trả lời đã hết hạn 24h",
+            Supported = true,
+            LanguageCode = "vi",
+            CreatedAt = DateTime.UtcNow.AddHours(-25)
+        });
+        await db.SaveChangesAsync();
+
         await historyService.RecordExchangeAsync(visitorId, 17, 1, "Trống đồng có hoa văn gì?", "Hoa văn mặt trời và chim Lạc.", true, source17);
+        Check(!await db.GuideChatMessages.AnyAsync(m => m.Question.Contains(">24h")), "Expired >24h chat messages are automatically purged.");
         await historyService.RecordExchangeAsync(visitorId, 17, 1, "Tìm thấy ở đâu?", "Tại Hà Nam.", true, source17);
         await historyService.RecordExchangeAsync(visitorId, 20, 2, "Giá bán bao nhiêu?", "Chưa có thông tin.", false, null);
 

@@ -6,6 +6,42 @@ namespace SMGS.Infrastructure.Data;
 public static class NotificationSchemaBootstrapper
 {
     public const string CreateTableSql = """
+        ALTER TABLE IF EXISTS "Users" ADD COLUMN IF NOT EXISTS "PreferredLanguage" character varying(2) NOT NULL DEFAULT 'vi';
+        ALTER TABLE IF EXISTS "Users" ADD COLUMN IF NOT EXISTS "IsActive" boolean NOT NULL DEFAULT TRUE;
+        ALTER TABLE IF EXISTS "recognition_history" ADD COLUMN IF NOT EXISTS "ConfirmedQrScan" boolean NOT NULL DEFAULT FALSE;
+
+        CREATE TABLE IF NOT EXISTS "artifact_detail_views" (
+            "RequestId" uuid NOT NULL,
+            "ArtifactId" integer NOT NULL,
+            "ViewedAt" timestamp with time zone NOT NULL,
+            CONSTRAINT "PK_artifact_detail_views" PRIMARY KEY ("RequestId"),
+            CONSTRAINT "FK_artifact_detail_views_artifacts_ArtifactId" FOREIGN KEY ("ArtifactId") REFERENCES "artifacts" ("Id") ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS "IX_artifact_detail_views_ArtifactId" ON "artifact_detail_views" ("ArtifactId");
+
+        CREATE TABLE IF NOT EXISTS "museum_translations" (
+            "Id" integer GENERATED ALWAYS AS IDENTITY,
+            "MuseumId" integer NOT NULL,
+            "LanguageCode" character varying(2) NOT NULL,
+            "Name" character varying(200) NOT NULL,
+            "Description" text NULL,
+            "Address" character varying(500) NULL,
+            "OpeningHours" character varying(500) NULL,
+            CONSTRAINT "PK_museum_translations" PRIMARY KEY ("Id"),
+            CONSTRAINT "FK_museum_translations_museums_MuseumId" FOREIGN KEY ("MuseumId") REFERENCES "museums" ("Id") ON DELETE CASCADE
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS "IX_museum_translations_MuseumId_LanguageCode" ON "museum_translations" ("MuseumId", "LanguageCode");
+
+        CREATE TABLE IF NOT EXISTS "artifact_translations" (
+            "Id" integer GENERATED ALWAYS AS IDENTITY,
+            "ArtifactId" integer NOT NULL,
+            "LanguageCode" character varying(2) NOT NULL,
+            "Name" character varying(300) NOT NULL,
+            CONSTRAINT "PK_artifact_translations" PRIMARY KEY ("Id"),
+            CONSTRAINT "FK_artifact_translations_artifacts_ArtifactId" FOREIGN KEY ("ArtifactId") REFERENCES "artifacts" ("Id") ON DELETE CASCADE
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS "IX_artifact_translations_ArtifactId_LanguageCode" ON "artifact_translations" ("ArtifactId", "LanguageCode");
+
         CREATE TABLE IF NOT EXISTS "notifications" (
             "Id" bigint GENERATED ALWAYS AS IDENTITY,
             "RecipientId" uuid NOT NULL,
