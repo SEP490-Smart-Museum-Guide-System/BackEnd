@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SMGS.API.Controllers;
 using SMGS.Application.DTOs.Common;
+using SMGS.Application.DTOs.Dashboard;
 using SMGS.Application.DTOs.Guide;
 using SMGS.Application.Interfaces;
 using SMGS.Domain.Constants;
@@ -23,6 +24,8 @@ internal static class HttpChecks {
         builder.Logging.ClearProviders(); builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.Services.AddControllers().AddApplicationPart(typeof(ArtifactGuideController).Assembly);
         builder.Services.AddSingleton<IArtifactGuideService, GuideFixture>();
+        builder.Services.AddSingleton<IGuideHistoryService, GuideHistoryFixture>();
+        builder.Services.AddSingleton<IDashboardService, DashboardFixture>();
         builder.Services.AddSingleton<IStaffAiService, StudioFixture>();
         var speech = new SpeechFixture();
         builder.Services.AddSingleton<IArtifactSpeech>(speech);
@@ -70,6 +73,27 @@ internal static class HttpChecks {
             var calls = speech.Calls;
             if ((await http.PostAsJsonAsync("/api/artifacts/18/ai/speech-preview", new { text = "Bản đọc" })).StatusCode != HttpStatusCode.Forbidden || speech.Calls != calls) throw new Exception("Cross-museum speech accepted.");
             if ((await http.PostAsJsonAsync(preview, new { text = " " })).StatusCode != HttpStatusCode.BadRequest || speech.Calls != calls) throw new Exception("Empty preview reached model.");
+
+            // Verify new Guide History & Dashboard HTTP role boundaries
+            http.DefaultRequestHeaders.Remove("X-Test-Role");
+            if ((await http.GetAsync(path)).StatusCode != HttpStatusCode.Unauthorized) throw new Exception("Anonymous guide history accepted.");
+            http.DefaultRequestHeaders.Add("X-Test-Role", RoleNames.Visitor);
+            if ((await http.GetAsync(path)).StatusCode != HttpStatusCode.OK) throw new Exception("Visitor GET guide history failed.");
+            if ((await http.DeleteAsync(path)).StatusCode != HttpStatusCode.OK) throw new Exception("Visitor DELETE guide history failed.");
+            if ((await http.GetAsync("/api/guide/conversations/me")).StatusCode != HttpStatusCode.OK) throw new Exception("Visitor conversations/me failed.");
+            if ((await http.GetAsync("/api/guide/messages/me")).StatusCode != HttpStatusCode.OK) throw new Exception("Visitor messages/me failed.");
+            if ((await http.GetAsync("/api/guide/logs")).StatusCode != HttpStatusCode.Forbidden) throw new Exception("Visitor accessed staff guide logs.");
+            if ((await http.GetAsync("/api/dashboard/admin")).StatusCode != HttpStatusCode.Forbidden) throw new Exception("Visitor accessed admin dashboard.");
+
+            http.DefaultRequestHeaders.Remove("X-Test-Role"); http.DefaultRequestHeaders.Add("X-Test-Role", RoleNames.Staff);
+            if ((await http.GetAsync("/api/guide/logs")).StatusCode != HttpStatusCode.OK) throw new Exception("System Staff denied guide logs.");
+            if ((await http.GetAsync("/api/dashboard/staff")).StatusCode != HttpStatusCode.OK) throw new Exception("System Staff denied staff dashboard.");
+            if ((await http.GetAsync("/api/dashboard/admin")).StatusCode != HttpStatusCode.Forbidden) throw new Exception("System Staff accessed admin dashboard.");
+
+            http.DefaultRequestHeaders.Remove("X-Test-Role"); http.DefaultRequestHeaders.Add("X-Test-Role", RoleNames.Admin);
+            if ((await http.GetAsync("/api/dashboard/admin")).StatusCode != HttpStatusCode.OK) throw new Exception("Admin denied admin dashboard.");
+            if ((await http.GetAsync("/api/dashboard/staff")).StatusCode != HttpStatusCode.OK) throw new Exception("Admin denied staff dashboard.");
+            if ((await http.GetAsync("/api/dashboard/museums/1")).StatusCode != HttpStatusCode.OK) throw new Exception("Admin denied museum dashboard.");
         } finally { await app.StopAsync(); }
     }
 }
@@ -85,6 +109,28 @@ class FixtureAuth(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerF
 class GuideFixture : IArtifactGuideService {
     public Task<ResponseDto<GuideAnswer>> AskAsync(int artifactId, Guid userId, GuideMessageRequest request, CancellationToken cancellationToken = default)
         => Task.FromResult(ResponseDto<GuideAnswer>.Success(new(artifactId, "Nội dung kiểm thử.", false, [])));
+}
+class GuideHistoryFixture : IGuideHistoryService {
+    public Task RecordExchangeAsync(Guid userId, int artifactId, int museumId, string question, string answer, bool supported, GuideSource? source, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task<IReadOnlyList<GuideTurn>> GetRecentTurnsAsync(Guid userId, int artifactId, int maxExchanges = 4, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<GuideTurn>>([]);
+    public Task<ResponseDto<IReadOnlyList<GuideChatMessageDto>>> GetArtifactHistoryAsync(int artifactId, Guid userId, int limit = 50, CancellationToken cancellationToken = default)
+        => Task.FromResult(ResponseDto<IReadOnlyList<GuideChatMessageDto>>.Success([]));
+    public Task<ResponseDto<int>> ClearArtifactHistoryAsync(int artifactId, Guid userId, CancellationToken cancellationToken = default)
+        => Task.FromResult(ResponseDto<int>.Success(0));
+    public Task<ResponseDto<PaginatedResponseDto<GuideConversationSummaryDto>>> GetMyConversationsAsync(Guid userId, int? museumId = null, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+        => Task.FromResult(ResponseDto<PaginatedResponseDto<GuideConversationSummaryDto>>.Success(new()));
+    public Task<ResponseDto<PaginatedResponseDto<GuideChatMessageDto>>> GetMyMessagesFeedAsync(Guid userId, int? museumId = null, int? artifactId = null, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+        => Task.FromResult(ResponseDto<PaginatedResponseDto<GuideChatMessageDto>>.Success(new()));
+    public Task<ResponseDto<PaginatedResponseDto<GuideAdminLogDto>>> GetLogsAsync(int? museumId, int? artifactId, bool? supported, int page, int pageSize, Guid callerId, bool isAdminOrSystemStaff, CancellationToken cancellationToken = default)
+        => Task.FromResult(ResponseDto<PaginatedResponseDto<GuideAdminLogDto>>.Success(new()));
+}
+class DashboardFixture : IDashboardService {
+    public Task<ResponseDto<AdminDashboardDto>> GetAdminDashboardAsync(DateTime? fromUtc = null, DateTime? toUtc = null, CancellationToken cancellationToken = default)
+        => Task.FromResult(ResponseDto<AdminDashboardDto>.Success(null!));
+    public Task<ResponseDto<SystemStaffDashboardDto>> GetSystemStaffDashboardAsync(DateTime? fromUtc = null, DateTime? toUtc = null, CancellationToken cancellationToken = default)
+        => Task.FromResult(ResponseDto<SystemStaffDashboardDto>.Success(null!));
+    public Task<ResponseDto<MuseumDashboardDto>> GetMuseumDashboardAsync(int museumId, Guid callerId, bool isAdmin, DateTime? fromUtc = null, DateTime? toUtc = null, CancellationToken cancellationToken = default)
+        => Task.FromResult(ResponseDto<MuseumDashboardDto>.Success(null!));
 }
 class StudioFixture : IStaffAiService {
     public Task<ResponseDto<StaffAiResult>> GenerateAsync(int artifactId, Guid user, bool admin, StaffAiRequest request, CancellationToken token = default)

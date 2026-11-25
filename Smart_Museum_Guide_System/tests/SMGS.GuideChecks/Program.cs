@@ -104,8 +104,9 @@ handler.Failure = new TaskCanceledException(); await ExpectFailure(504);
 await StaffAiChecks.RunAsync();
 await StaffAiConfigChecks.RunAsync();
 await SpeechChecks.RunAsync();
+await HistoryAndDashboardChecks.RunAsync();
 await HttpChecks.RunAsync();
-Console.WriteLine($"PASS: {checks} guide service/provider checks and HTTP authorization/validation checks. No real DB/provider requests.");
+Console.WriteLine($"PASS: {checks} guide service/provider checks, persistent chat history, dashboard analytics and HTTP authorization/validation checks. No real DB/provider requests.");
 
 class ModelFixture : IArtifactGuideModel {
     public int Calls; public GuideContext? Context; public string? Question; public IReadOnlyList<GuideTurn>? History;

@@ -103,7 +103,11 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(55);
             client.MaxResponseContentBufferSize = 256 * 1024;
         }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+        services.AddScoped<GuideHistoryService>();
+        services.AddScoped<IGuideHistoryService>(sp => sp.GetRequiredService<GuideHistoryService>());
+        services.AddScoped<IGuideHistoryStore>(sp => sp.GetRequiredService<GuideHistoryService>());
         services.AddScoped<IArtifactGuideService, ArtifactGuideService>();
+        services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IStaffAiSource, StaffAiSourceReader>();
         services.AddScoped<IStaffAiService, StaffAiService>();
         services.AddOptions<ArtifactSpeechOptions>().Bind(configuration.GetSection(ArtifactSpeechOptions.SectionName));

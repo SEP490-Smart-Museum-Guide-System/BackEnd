@@ -32,6 +32,7 @@ foreach (var item in new[] { (Array.Empty<byte>(), "a.png"), (new byte[16 * 1024
     try { MuseumImageStore.Validate(item.Item1, item.Item2); throw new Exception("Invalid image accepted"); }
     catch (ArgumentException) { }
 }
+await GuideAndDashboardDbChecks.RunAsync();
 var database = "museum-forms-" + Guid.NewGuid().ToString("N");
 var storage = new MemoryStorage();
 var failure = new FailSave();
