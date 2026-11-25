@@ -26,6 +26,28 @@ public static class NotificationSchemaBootstrapper
         CREATE INDEX IF NOT EXISTS "IX_notifications_MuseumId" ON "notifications" ("MuseumId");
         CREATE INDEX IF NOT EXISTS "IX_notifications_RecipientId_CreatedAt" ON "notifications" ("RecipientId", "CreatedAt");
         CREATE INDEX IF NOT EXISTS "IX_notifications_RecipientId_IsRead_CreatedAt" ON "notifications" ("RecipientId", "IsRead", "CreatedAt");
+
+        CREATE TABLE IF NOT EXISTS "guide_chat_messages" (
+            "Id" bigint GENERATED ALWAYS AS IDENTITY,
+            "UserId" uuid NOT NULL,
+            "ArtifactId" integer NOT NULL,
+            "MuseumId" integer NOT NULL,
+            "Question" character varying(1000) NOT NULL,
+            "Answer" character varying(4000) NOT NULL,
+            "Supported" boolean NOT NULL,
+            "ContentVersionId" integer NULL,
+            "ContentVersionNo" integer NULL,
+            "ContentTitle" character varying(300) NULL,
+            "LanguageCode" character varying(10) NOT NULL DEFAULT 'vi',
+            "CreatedAt" timestamp with time zone NOT NULL,
+            CONSTRAINT "PK_guide_chat_messages" PRIMARY KEY ("Id"),
+            CONSTRAINT "FK_guide_chat_messages_Users_UserId" FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE,
+            CONSTRAINT "FK_guide_chat_messages_artifacts_ArtifactId" FOREIGN KEY ("ArtifactId") REFERENCES "artifacts" ("Id") ON DELETE CASCADE,
+            CONSTRAINT "FK_guide_chat_messages_museums_MuseumId" FOREIGN KEY ("MuseumId") REFERENCES "museums" ("Id") ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS "IX_guide_chat_messages_ArtifactId" ON "guide_chat_messages" ("ArtifactId");
+        CREATE INDEX IF NOT EXISTS "IX_guide_chat_messages_UserId_ArtifactId_CreatedAt" ON "guide_chat_messages" ("UserId", "ArtifactId", "CreatedAt");
+        CREATE INDEX IF NOT EXISTS "IX_guide_chat_messages_MuseumId_Supported_CreatedAt" ON "guide_chat_messages" ("MuseumId", "Supported", "CreatedAt");
         """;
 
     public static async Task EnsureNotificationsTableAsync(IServiceProvider services)

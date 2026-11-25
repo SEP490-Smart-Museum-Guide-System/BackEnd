@@ -5,7 +5,10 @@ using SMGS.Domain.Constants;
 
 namespace SMGS.Application.Services;
 
-public class ArtifactGuideService(IArtifactContentService contents, IArtifactGuideModel model) : IArtifactGuideService
+public class ArtifactGuideService(
+    IArtifactContentService contents,
+    IArtifactGuideModel model,
+    IGuideHistoryStore? historyStore = null) : IArtifactGuideService
 {
     public const string InsufficientEvidence = "Nội dung đã xuất bản của hiện vật chưa có thông tin để trả lời câu hỏi này. Bạn có thể hỏi thêm nhân viên bảo tàng.";
 
@@ -36,14 +39,38 @@ public class ArtifactGuideService(IArtifactContentService contents, IArtifactGui
             return ResponseDto<GuideAnswer>.Fail("Nội dung hiện vật quá dài để hỏi đáp lúc này. Vui lòng xem bản thuyết minh.", 422);
         try
         {
+            IReadOnlyList<GuideTurn> effectiveHistory = request.History;
+            if (effectiveHistory.Count == 0 && request.UseSavedHistory && historyStore is not null)
+            {
+                effectiveHistory = await historyStore.GetRecentTurnsAsync(userId, artifactId, 4, cancellationToken);
+            }
+
+            var trimmedQuestion = request.Question.Trim();
             var answer = await model.AnswerAsync(new(artifactId, c.ArtifactName, c.Title, c.Description, c.NarrationText ?? ""),
-                request.Question.Trim(), request.History, cancellationToken);
+                trimmedQuestion, effectiveHistory, cancellationToken);
             if (answer.Supported && (string.IsNullOrWhiteSpace(answer.Answer) || answer.Answer.Length > 4000))
                 return ResponseDto<GuideAnswer>.Fail("Trợ lý trả về nội dung không hợp lệ. Vui lòng thử lại.", 502);
+
+            var finalAnswerText = answer.Supported ? answer.Answer.Trim() : InsufficientEvidence;
+            var source = new GuideSource(c.Id, c.VersionNo, c.Title, c.LanguageCode);
+
+            if (historyStore is not null)
+            {
+                await historyStore.RecordExchangeAsync(
+                    userId,
+                    artifactId,
+                    c.MuseumId,
+                    trimmedQuestion,
+                    finalAnswerText,
+                    answer.Supported,
+                    source,
+                    cancellationToken);
+            }
+
             // Source identity is built from authorized DB content, never a model-invented link or ID.
             return ResponseDto<GuideAnswer>.Success(new(artifactId,
-                answer.Supported ? answer.Answer.Trim() : InsufficientEvidence, answer.Supported,
-                answer.Supported ? [new(c.Id, c.VersionNo, c.Title, c.LanguageCode)] : []));
+                finalAnswerText, answer.Supported,
+                answer.Supported ? [source] : []));
         }
         catch (GuideException e) { return ResponseDto<GuideAnswer>.Fail(e.Message, e.StatusCode); }
     }

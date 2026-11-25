@@ -46,6 +46,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<MapMarker> MapMarkers => Set<MapMarker>();
     public DbSet<MapEdge> MapEdges => Set<MapEdge>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<GuideChatMessage> GuideChatMessages => Set<GuideChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -363,6 +364,24 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasIndex(e => new { e.RecipientId, e.CreatedAt });
             entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(e => e.RecipientId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<Museum>().WithMany().HasForeignKey(e => e.MuseumId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // GuideChatMessage
+        builder.Entity<GuideChatMessage>(entity =>
+        {
+            entity.ToTable("guide_chat_messages");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.Question).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.Answer).IsRequired().HasMaxLength(4000);
+            entity.Property(e => e.ContentTitle).HasMaxLength(300);
+            entity.Property(e => e.LanguageCode).IsRequired().HasMaxLength(10).HasDefaultValue("vi");
+            entity.Property(e => e.CreatedAt).HasColumnType("timestamptz");
+            entity.HasIndex(e => new { e.UserId, e.ArtifactId, e.CreatedAt });
+            entity.HasIndex(e => new { e.MuseumId, e.Supported, e.CreatedAt });
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Artifact>().WithMany().HasForeignKey(e => e.ArtifactId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Museum>().WithMany().HasForeignKey(e => e.MuseumId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
