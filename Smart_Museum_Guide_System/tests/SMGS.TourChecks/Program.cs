@@ -262,7 +262,7 @@ var clock = new TestClock(new DateTimeOffset(2026, 11, 10, 9, 0, 0, TimeSpan.Zer
 var expOptions = Options.Create(new ExperienceOptions { ScanPoints = 3, CorrectAnswerPoints = 5 });
 
 TourService Tours(ApplicationDbContext db) => new(db, clock);
-VisitProgressService Progress(ApplicationDbContext db) => new(db, clock);
+VisitProgressService Progress(ApplicationDbContext db) => new(db, clock, new GamificationService(db, clock, expOptions));
 RecognitionService Recognition(ApplicationDbContext db) => new(
     db,
     Progress(db),

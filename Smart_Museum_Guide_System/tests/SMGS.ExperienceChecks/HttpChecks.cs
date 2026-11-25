@@ -49,6 +49,11 @@ static class HttpChecks
                 using var response = await Send(method, url, user, role, body);
                 if (response.StatusCode != status) throw new Exception($"HTTP {url}: expected {status}, got {response.StatusCode}");
             }
+            const string settings = "/api/gamification/settings";
+            await Expect(HttpMethod.Put, settings, HttpStatusCode.Forbidden, staff, RoleNames.MuseumStaff, new RewardRates(5, 10, 30));
+            await Expect(HttpMethod.Put, settings, HttpStatusCode.BadRequest, staff, RoleNames.Admin, new RewardRates(-1, 10, 30));
+            await Expect(HttpMethod.Put, settings, HttpStatusCode.OK, staff, RoleNames.Admin, new RewardRates(5, 10, 30));
+            await Expect(HttpMethod.Get, settings, HttpStatusCode.OK, staff, RoleNames.Admin);
             await Expect(HttpMethod.Get, "/api/daily-quizzes/today", HttpStatusCode.Unauthorized);
             await Expect(HttpMethod.Get, "/api/daily-quizzes/today", HttpStatusCode.Forbidden, staff, RoleNames.MuseumStaff);
             await Expect(HttpMethod.Get, $"/api/tours/{tourId}", HttpStatusCode.OK);

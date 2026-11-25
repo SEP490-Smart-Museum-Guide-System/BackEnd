@@ -135,6 +135,13 @@ public class PointTransaction
     public long RefId { get; set; }
     public DateTime CreatedAt { get; set; }
 }
+public class RewardSettings
+{
+    public int Id { get; set; }
+    public int ScanPoints { get; set; }
+    public int CorrectAnswerPoints { get; set; }
+    public int TourPoints { get; set; }
+}
 public class Badge
 {
     public int Id { get; set; }

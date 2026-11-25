@@ -14,7 +14,7 @@ namespace SMGS.Infrastructure.Services;
 /// vào phiên bản công khai hiện tại (hoặc phiên bản của SavedRoute).
 /// Việc xuất bản phiên bản mới (v2) tuyệt đối không làm thay đổi tiến độ hay lịch sử của lượt tham quan ở v1.
 /// </summary>
-public class VisitProgressService(ApplicationDbContext db, TimeProvider clock, IPersonalizedTourService? personal = null) : IVisitProgressService
+public class VisitProgressService(ApplicationDbContext db, TimeProvider clock, IGamificationService rewards, IPersonalizedTourService? personal = null) : IVisitProgressService
 {
     public async Task<VisitResponseDto> StartVisitAsync(Guid user, StartVisitRequestDto request)
     {
@@ -289,8 +289,19 @@ public class VisitProgressService(ApplicationDbContext db, TimeProvider clock, I
         visit.Status = VisitStatus.Completed;
         visit.CompletedAt = clock.GetUtcNow().UtcDateTime;
         await db.SaveChangesAsync();
+        var result = Map(visit, versionNo);
+        if (visit.TourId.HasValue || visit.PersonalizedTourId.HasValue)
+        {
+            var previouslyCompleted = await db.Set<Visit>().AnyAsync(v => v.VisitorId == user &&
+                v.Id != visitId && v.Status == VisitStatus.Completed && v.TourId == visit.TourId &&
+                v.PersonalizedTourId == visit.PersonalizedTourId);
+            if (!previouslyCompleted) result.PointsAwarded = await rewards.AwardTourAsync(user, visitId);
+            var badges = await rewards.EvaluateBadgesAsync(user);
+            result.NewBadges = badges.Select(b => new EarnedBadge(b.Id, b.Name)).ToList();
+            await db.SaveChangesAsync();
+        }
         await tx.CommitAsync();
-        return Map(visit, versionNo);
+        return result;
     }
 
     private async Task ValidateActiveArtifactsForVersionAsync(int museumId, int tourVersionId)

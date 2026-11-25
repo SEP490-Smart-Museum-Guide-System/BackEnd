@@ -22,6 +22,16 @@ namespace SMGS.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("SMGS.Domain.Entities.RewardSettings", b =>
+                {
+                    b.Property<int>("Id").HasColumnType("integer");
+                    b.Property<int>("ScanPoints").HasColumnType("integer");
+                    b.Property<int>("CorrectAnswerPoints").HasColumnType("integer");
+                    b.Property<int>("TourPoints").HasColumnType("integer");
+                    b.HasKey("Id");
+                    b.ToTable("RewardSettings");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("Id")

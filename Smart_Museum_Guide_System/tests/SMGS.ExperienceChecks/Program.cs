@@ -58,7 +58,7 @@ var clock = new TestClock(new DateTimeOffset(2026, 11, 1, 5, 0, 0, TimeSpan.Zero
 var options = Options.Create(new ExperienceOptions { ScanPoints = 3, CorrectAnswerPoints = 5 });
 GamificationService Rewards(ApplicationDbContext db) => new(db, clock, options);
 QuizAttemptService Attempts(ApplicationDbContext db) => new(db, Rewards(db), new CommerceService(db), clock, options);
-RecognitionService Recognition(ApplicationDbContext db) => new(db, new VisitProgressService(db, clock), new DailyQuizService(db, clock, options), Rewards(db), clock);
+RecognitionService Recognition(ApplicationDbContext db) => new(db, new VisitProgressService(db, clock, Rewards(db)), new DailyQuizService(db, clock, options), Rewards(db), clock);
 async Task<T> Run<T>(Func<ApplicationDbContext, Task<T>> action) { await using var db = Open(); return await action(db); }
 await using var setup = Open();
 var createSchema = $"CREATE SCHEMA \"{schema}\"";
@@ -134,17 +134,17 @@ try {
     await Reject(async () => await Run(db => new TourService(db).CreateAsync(museum.Id, tourRequest, other, false)), 403);
     await Reject(async () => await Run(db => new TourService(db).CreateAsync(museum.Id, tourRequest with { ArtifactIds = [a.Id, c.Id] }, staff, false)), 400);
     var tour = await Run(db => new TourService(db).CreateAsync(museum.Id, tourRequest, staff, false));
-    await Reject(async () => await Run(db => new VisitProgressService(db, clock).StartVisitAsync(visitor, new() { MuseumId = museum.Id, TourId = tour.Id })), 400);
+    await Reject(async () => await Run(db => new VisitProgressService(db, clock, Rewards(db)).StartVisitAsync(visitor, new() { MuseumId = museum.Id, TourId = tour.Id })), 400);
     await Reject(async () => await Run(db => new TourService(db).PublishAsync(tour.Id, tour.Revision, staff, false)), 409);
     var tourDraft = (await Run(db => new TourService(db).ListVersionsAsync(tour.Id, staff, false))).Single();
     await Run(db => new TourService(db).SubmitVersionAsync(tourDraft.Id, staff, false));
     await Run(db => new TourService(db).ApproveVersionAsync(tourDraft.Id, new(null, null), curator, false));
-    var visit = await Run(db => new VisitProgressService(db, clock).StartVisitAsync(visitor, new() { MuseumId = museum.Id, TourId = tour.Id }));
-    await Reject(async () => await Run(db => new VisitProgressService(db, clock).CompleteTourAsync(visitor, visit.Id)), 409);
-    await Reject(async () => await Run(db => new VisitProgressService(db, clock).GetProgressAsync(other, visit.Id)), 404);
+    var visit = await Run(db => new VisitProgressService(db, clock, Rewards(db)).StartVisitAsync(visitor, new() { MuseumId = museum.Id, TourId = tour.Id }));
+    await Reject(async () => await Run(db => new VisitProgressService(db, clock, Rewards(db)).CompleteTourAsync(visitor, visit.Id)), 409);
+    await Reject(async () => await Run(db => new VisitProgressService(db, clock, Rewards(db)).GetProgressAsync(other, visit.Id)), 404);
     await Reject(async () => await Run(db => new TourService(db).UpdateStopsAsync(tour.Id, new(2, tourRequest), staff, false)), 409);
-    var free = await Run(db => new VisitProgressService(db, clock).StartVisitAsync(other, new() { MuseumId = museum.Id }));
-    Check((await Run(db => new VisitProgressService(db, clock).CompleteTourAsync(other, free.Id))).Status == VisitStatus.Completed, "Free visit completes with zero scans");
+    var free = await Run(db => new VisitProgressService(db, clock, Rewards(db)).StartVisitAsync(other, new() { MuseumId = museum.Id }));
+    Check((await Run(db => new VisitProgressService(db, clock, Rewards(db)).CompleteTourAsync(other, free.Id))).Status == VisitStatus.Completed, "Free visit completes with zero scans");
     var qids = new List<int>();
     for (var i = 0; i < 4; i++) {
         var q = await Run(db => new QuestionBankService(db, clock).CreateAsync(a.Id, new("Question " + i, "Explanation", "vi", [new("Correct", true), new("Wrong", false)]), staff, false));
@@ -169,7 +169,7 @@ try {
     Check(await setup.Set<PointTransaction>().CountAsync() == 1, "One scan award");
     await Reject(async () => await Run(db => Recognition(db).RecordQrAsync(qr with { QrCode = b.QrCode! }, visitor)), 409);
     await Reject(async () => await Run(db => Recognition(db).RecordQrAsync(new(c.QrCode!, visit.Id, Guid.NewGuid()), visitor)), 400);
-    var state = await Run(db => new VisitProgressService(db, clock).GetProgressAsync(visitor, visit.Id));
+    var state = await Run(db => new VisitProgressService(db, clock, Rewards(db)).GetProgressAsync(visitor, visit.Id));
     Check(state.NextArtifactId == b.Id && state.Stops.Count(s => s.LastVisitedAt != null) == 1, "QR updates correct stop");
     var nodeA = Guid.NewGuid(); var nodeB = Guid.NewGuid();
     var map = new IndoorMap { MuseumId = museum.Id, Name = "Published map", PublishedAt = clock.GetUtcNow().UtcDateTime };
@@ -178,12 +178,21 @@ try {
         Markers = [new() { Id = Guid.NewGuid(), Label = "A", ArtifactId = a.Id, NodeId = nodeA }, new() { Id = Guid.NewGuid(), Label = "B", ArtifactId = b.Id, NodeId = nodeB }],
         Edges = [new() { Id = Guid.NewGuid(), FromNodeId = nodeA, ToNodeId = nodeB }] });
     setup.Add(map); await setup.SaveChangesAsync();
-    var route = await Run(db => new VisitorNavigationService(db, new VisitProgressService(db, clock)).RouteToArtifactAsync(visitor, visit.Id, map.Id, null, false));
+    var route = await Run(db => new VisitorNavigationService(db, new VisitProgressService(db, clock, Rewards(db))).RouteToArtifactAsync(visitor, visit.Id, map.Id, null, false));
     Check(route.Revision == 7 && route.Route.NodeIds.SequenceEqual(new[] { nodeA, nodeB }), "Route uses published snapshot, not empty draft graph");
     var secondScan = await Run(db => Recognition(db).RecordQrAsync(new(b.QrCode!, visit.Id, Guid.NewGuid()), visitor));
     Check(secondScan.NewBadges.Any(x => x.Id == badge.Id), "Scan returns newly awarded badge");
-    Check((await Run(db => new VisitProgressService(db, clock).CompleteTourAsync(visitor, visit.Id))).Status == VisitStatus.Completed, "Tour completes after all stops");
+    await Run(async db => { await Rewards(db).SetRatesAsync(new(3, 5, 31)); return true; });
+    var tourBadge = await Run(db => Rewards(db).CreateBadgeAsync(new("TOUR_1", "Tour", museum.Id, "tours_completed", 1)));
+    var completed = await Run(db => new VisitProgressService(db, clock, Rewards(db)).CompleteTourAsync(visitor, visit.Id));
+    Check(completed.Status == VisitStatus.Completed && completed.PointsAwarded == 31 &&
+        completed.NewBadges.Any(b => b.Id == tourBadge.Id), "First tour grants configured points and badge");
     Check(await setup.Set<UserBadge>().CountAsync(x => x.UserId == visitor && x.BadgeId == badge.Id) == 1, "One badge grant");
+    var repeat = await Run(db => new VisitProgressService(db, clock, Rewards(db)).StartVisitAsync(visitor, new() { MuseumId = museum.Id, TourId = tour.Id }));
+    foreach (var artifact in new[] { a, b })
+        await Run(db => Recognition(db).RecordQrAsync(new(artifact.QrCode!, repeat.Id, Guid.NewGuid()), visitor));
+    var finishedAgain = await Run(db => new VisitProgressService(db, clock, Rewards(db)).CompleteTourAsync(visitor, repeat.Id));
+    Check(finishedAgain.PointsAwarded == 0 && finishedAgain.NewBadges.Count == 0, "Repeating a tour grants no extra rewards");
     var entry = await setup.Set<DailyQuizEntry>().SingleAsync();
     await Reject(async () => await Run(db => Attempts(db).StartAsync(new(entry.Id), other)), 404);
     await Reject(async () => await Run(async db => { await new DailyQuizService(db, clock, options).SetDeferredAsync(entry.Id, true, other); return true; }), 404);

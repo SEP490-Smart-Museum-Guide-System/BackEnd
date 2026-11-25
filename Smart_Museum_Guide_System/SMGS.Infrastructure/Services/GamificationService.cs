@@ -17,8 +17,24 @@ public class GamificationService(ApplicationDbContext db, TimeProvider clock, IO
             db.Set<PointTransaction>().Local.Any(p => p.UserId == user && p.Reason == reason && p.RefType == type && p.RefId == id)) return 0;
         db.Add(new PointTransaction { UserId = user, Reason = reason, RefType = type, RefId = id, Points = points, CreatedAt = clock.GetUtcNow().UtcDateTime }); return points;
     }
-    public async Task AwardScanPointsAsync(Guid user, int artifactId) => await Award(user, "scan_artifact", "artifact", artifactId, options.Value.ScanPoints);
-    public Task<int> AwardQuizPointsAsync(Guid user, int questionId) => Award(user, "quiz_correct", "question", questionId, options.Value.CorrectAnswerPoints);
+    public async Task<RewardRates> GetRatesAsync() =>
+        await db.Set<RewardSettings>().Where(x => x.Id == 1)
+            .Select(x => new RewardRates(x.ScanPoints, x.CorrectAnswerPoints, x.TourPoints)).SingleOrDefaultAsync()
+        ?? new RewardRates(options.Value.ScanPoints, options.Value.CorrectAnswerPoints, 30);
+
+    public async Task SetRatesAsync(RewardRates rates) =>
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "RewardSettings" ("Id", "ScanPoints", "CorrectAnswerPoints", "TourPoints")
+            VALUES (1, {rates.ScanPoints}, {rates.CorrectAnswerPoints}, {rates.TourPoints})
+            ON CONFLICT ("Id") DO UPDATE SET "ScanPoints" = excluded."ScanPoints",
+                "CorrectAnswerPoints" = excluded."CorrectAnswerPoints", "TourPoints" = excluded."TourPoints"
+            """);
+
+    public async Task<int> AwardTourAsync(Guid user, int visitId) =>
+        await Award(user, "tour_completed", "visit", visitId, (await GetRatesAsync()).TourPoints);
+
+    public async Task<int> AwardScanPointsAsync(Guid user, int artifactId) => await Award(user, "scan_artifact", "artifact", artifactId, (await GetRatesAsync()).ScanPoints);
+    public async Task<int> AwardQuizPointsAsync(Guid user, int questionId) => await Award(user, "quiz_correct", "question", questionId, (await GetRatesAsync()).CorrectAnswerPoints);
     public async Task<IReadOnlyList<Badge>> EvaluateBadgesAsync(Guid user)
     {
         if (db.Database.CurrentTransaction is null) throw new InvalidOperationException("Badge grants require a user-locked transaction.");
@@ -33,6 +49,10 @@ public class GamificationService(ApplicationDbContext db, TimeProvider clock, IO
             else if (rule.Metric == "quiz_correct") count = await (from answer in db.Set<QuizAttemptAnswer>() join attempt in db.Set<QuizAttempt>() on answer.AttemptId equals attempt.Id
                 join q in db.Set<Question>() on answer.QuestionId equals q.Id join a in db.Artifacts on q.ArtifactId equals a.Id
                 where attempt.UserId == user && answer.IsCorrect && answer.AnsweredAt != null && (badge.MuseumId == null || a.MuseumId == badge.MuseumId) select q.Id).Distinct().CountAsync();
+            else if (rule.Metric == "tours_completed") count = await db.Set<Visit>()
+                .Where(v => v.VisitorId == user && v.Status == VisitStatus.Completed &&
+                    (v.TourId != null || v.PersonalizedTourId != null) && (badge.MuseumId == null || v.MuseumId == badge.MuseumId))
+                .Select(v => new { v.TourId, v.PersonalizedTourId }).Distinct().CountAsync();
             else continue;
             if (count >= rule.Threshold) {
                 db.Add(new UserBadge { UserId = user, BadgeId = badge.Id, AwardedAt = clock.GetUtcNow().UtcDateTime });
@@ -48,7 +68,7 @@ public class GamificationService(ApplicationDbContext db, TimeProvider clock, IO
     }
     public async Task<IReadOnlyList<UserBadge>> GetBadgesAsync(Guid user) => await db.Set<UserBadge>().AsNoTracking().Where(x => x.UserId == user).OrderBy(x => x.BadgeId).ToListAsync();
     public async Task<Badge> CreateBadgeAsync(BadgeRequest request) {
-        if (request.Metric is not ("scan_artifacts" or "quiz_correct") || request.Threshold < 1 || request.Threshold > 100000 || string.IsNullOrWhiteSpace(request.Code) ||
+        if (request.Metric is not ("scan_artifacts" or "quiz_correct" or "tours_completed") || request.Threshold < 1 || request.Threshold > 100000 || string.IsNullOrWhiteSpace(request.Code) ||
             request.Code.Length > 50 || string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 200) throw new ExperienceException("Quy tắc huy hiệu không hợp lệ.");
         if (request.MuseumId is int m && !await db.Museums.AnyAsync(x => x.Id == m)) throw new ExperienceException("Không tìm thấy bảo tàng.", 404);
         var badge = new Badge { Code = request.Code.Trim().ToUpperInvariant(), Name = request.Name.Trim(), MuseumId = request.MuseumId,

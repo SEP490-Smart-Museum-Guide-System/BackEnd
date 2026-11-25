@@ -76,7 +76,10 @@ public interface IQuizAttemptService
 }
 public interface IGamificationService
 {
-    Task AwardScanPointsAsync(Guid user, int artifactId);
+    Task<RewardRates> GetRatesAsync();
+    Task SetRatesAsync(RewardRates rates);
+    Task<int> AwardTourAsync(Guid user, int visitId);
+    Task<int> AwardScanPointsAsync(Guid user, int artifactId);
     Task<int> AwardQuizPointsAsync(Guid user, int questionId);
     Task<IReadOnlyList<Badge>> EvaluateBadgesAsync(Guid user);
     Task<long> GetBalanceAsync(Guid user);

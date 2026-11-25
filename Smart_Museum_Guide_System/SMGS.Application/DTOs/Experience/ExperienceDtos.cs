@@ -115,6 +115,7 @@ public record ScanQrRequest([Required, StringLength(200)] string QrCode, int? Vi
 public record EarnedBadge(int Id, string Name);
 public record ScanResult(long RecognitionId, int ArtifactId, int? VisitId, DateTime RecognizedAt)
 {
+    public int PointsAwarded { get; init; }
     public IReadOnlyList<EarnedBadge> NewBadges { get; init; } = [];
 }
 public record ProgressStop(int ArtifactId, int OrderNo, DateTime? LastVisitedAt);
@@ -142,7 +143,8 @@ public record AttemptResult(long Id, long DailyEntryId, string Status, int Total
     public IReadOnlyList<EarnedBadge> NewBadges { get; init; } = [];
 }
 public record BadgeRequest([Required, StringLength(50)] string Code, [Required, StringLength(200)] string Name,
-    int? MuseumId, [RegularExpression("^(scan_artifacts|quiz_correct)$")] string Metric, [Range(1, 100000)] int Threshold);
+    int? MuseumId, [RegularExpression("^(scan_artifacts|quiz_correct|tours_completed)$")] string Metric, [Range(1, 100000)] int Threshold);
+public record RewardRates([Range(0, 10000)] int ScanPoints, [Range(0, 10000)] int CorrectAnswerPoints, [Range(0, 10000)] int TourPoints);
 public record BadgeRule(string Metric, int Threshold);
 public class ExperienceException(string message, int statusCode = 400) : Exception(message)
 {
@@ -150,7 +152,7 @@ public class ExperienceException(string message, int statusCode = 400) : Excepti
 }
 public class ExperienceOptions
 {
-    [Range(0, 10000)] public int ScanPoints { get; set; }
+    [Range(0, 10000)] public int ScanPoints { get; set; } = 5;
     [Range(0, 10000)] public int CorrectAnswerPoints { get; set; } = 10;
     public string TimeZoneId { get; set; } = "Asia/Ho_Chi_Minh";
 }

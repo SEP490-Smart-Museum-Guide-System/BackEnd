@@ -7,6 +7,41 @@ namespace SMGS.Infrastructure.Services;
 
 public class PlaceSearchService(HttpClient client, Microsoft.Extensions.Configuration.IConfiguration? configuration = null)
 {
+    public async Task<ResponseDto<List<PlaceResponseDto>>> MuseumsInProvinceAsync(string name, CancellationToken token)
+    {
+        var province = JsonSerializer.Serialize("^(Tỉnh |Thành phố )?" + System.Text.RegularExpressions.Regex.Escape(name).Replace(@"\ ", " ") + "$",
+            new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+        var query = $"""
+            [out:json][timeout:20];
+            area["boundary"="administrative"]["admin_level"="4"]["name"~{province},i]->.province;
+            nwr(area.province)["tourism"="museum"];
+            out center;
+            """;
+        try
+        {
+            var endpoint = configuration?["Overpass:Endpoint"] ?? "https://overpass-api.de/api/interpreter";
+            using var response = await client.GetAsync($"{endpoint}?data={Uri.EscapeDataString(query)}", token);
+            response.EnsureSuccessStatusCode();
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
+            if (json.RootElement.TryGetProperty("remark", out _)) throw new HttpRequestException();
+            var museums = new List<PlaceResponseDto>();
+            foreach (var item in json.RootElement.GetProperty("elements").EnumerateArray())
+            {
+                var tags = item.GetProperty("tags");
+                var point = item.TryGetProperty("center", out var center) ? center : item;
+                var title = tags.TryGetProperty("name", out var label) ? label.GetString() : null;
+                var street = tags.TryGetProperty("addr:street", out var address) ? address.GetString() : null;
+                if (point.TryGetProperty("lat", out var lat) && point.TryGetProperty("lon", out var lon))
+                    museums.Add(new(title ?? "Bảo tàng", string.IsNullOrWhiteSpace(street) ? name : $"{street}, {name}", lat.GetDouble(), lon.GetDouble()));
+            }
+            return ResponseDto<List<PlaceResponseDto>>.Success(museums);
+        }
+        catch (Exception e) when (!token.IsCancellationRequested && (e is HttpRequestException or OperationCanceledException or JsonException or KeyNotFoundException))
+        {
+            return ResponseDto<List<PlaceResponseDto>>.Fail("Chưa tải được bảo tàng từ OpenStreetMap.", 502);
+        }
+    }
+
     public async Task<ResponseDto<List<PlaceResponseDto>>> SearchAsync(string? query, CancellationToken cancellationToken = default)
     {
         query = query?.Trim();

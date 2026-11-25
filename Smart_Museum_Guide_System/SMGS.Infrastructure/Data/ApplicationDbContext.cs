@@ -51,6 +51,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.Entity<RewardSettings>().ToTable("RewardSettings").Property(x => x.Id).ValueGeneratedNever();
         IndoorMapConfiguration.Configure(builder);
         CommerceConfiguration.Configure(builder);
         VisitorExperienceConfiguration.Configure(builder);

@@ -173,6 +173,14 @@ public class QuizAttemptController(IQuizAttemptService service) : ExperienceCont
 [Route("api/gamification"), Authorize]
 public class GamificationController(IGamificationService service) : ExperienceControllerBase
 {
+    [HttpGet("settings"), Authorize(Roles = RoleNames.Admin)]
+    public async Task<IActionResult> Settings() => Result(await service.GetRatesAsync());
+    [HttpPut("settings"), Authorize(Roles = RoleNames.Admin)]
+    public async Task<IActionResult> Settings(RewardRates rates)
+    {
+        await service.SetRatesAsync(rates);
+        return Result(rates);
+    }
     [HttpGet("me/points"), Authorize(Roles = RoleNames.Visitor)]
     public async Task<IActionResult> Balance() => Result(new { Points = await service.GetBalanceAsync(UserId) });
     [HttpGet("me/transactions"), Authorize(Roles = RoleNames.Visitor)]

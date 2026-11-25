@@ -29,5 +29,7 @@ public class VisitResponseDto
     public string Status { get; set; } = string.Empty;
     public DateTime StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+    public int PointsAwarded { get; set; }
+    public IReadOnlyList<SMGS.Application.DTOs.Experience.EarnedBadge> NewBadges { get; set; } = [];
     public bool HasFeedback { get; set; }
 }
