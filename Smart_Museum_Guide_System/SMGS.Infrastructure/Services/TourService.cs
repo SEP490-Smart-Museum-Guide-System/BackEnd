@@ -12,7 +12,10 @@ namespace SMGS.Infrastructure.Services;
 /// Dịch vụ quản lý Tour, phiên bản TourVersion (F04) và gợi ý lộ trình theo sở thích + thời gian (F05).
 /// Giữ tương thích ngược với các lời gọi cũ trong hệ thống đồng thời thực thi đầy đủ quy trình kiểm duyệt phiên bản.
 /// </summary>
-public class TourService(ApplicationDbContext db, TimeProvider? clock = null) : ITourService
+public class TourService(
+    ApplicationDbContext db,
+    TimeProvider? clock = null,
+    INotificationPublisher? notifications = null) : ITourService
 {
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
 
@@ -430,6 +433,20 @@ public class TourService(ApplicationDbContext db, TimeProvider? clock = null) : 
 
         await db.SaveChangesAsync();
         await tx.CommitAsync();
+
+        if (notifications is not null)
+        {
+            await notifications.NotifyMuseumCuratorsAsync(
+                tour.MuseumId,
+                user,
+                NotificationTypes.TourSubmitted,
+                $"Phiên bản Tour chờ duyệt: {version.Title}",
+                $"Phiên bản v{version.VersionNo} của tour \"{version.Title}\" vừa được gửi chờ Curator phê duyệt.",
+                NotificationReferenceTypes.TourVersion,
+                version.Id.ToString(),
+                $"/tours/versions/{version.Id}");
+        }
+
         return version;
     }
 
@@ -476,6 +493,21 @@ public class TourService(ApplicationDbContext db, TimeProvider? clock = null) : 
         tour.Revision++;
         await db.SaveChangesAsync();
         await tx.CommitAsync();
+
+        var recipient = version.SubmittedBy ?? version.CreatedBy;
+        if (notifications is not null && recipient != Guid.Empty && recipient != curator)
+        {
+            await notifications.NotifyUserAsync(
+                recipient,
+                NotificationTypes.TourApproved,
+                $"Phiên bản Tour đã được duyệt: {version.Title}",
+                $"Phiên bản v{version.VersionNo} của tour \"{version.Title}\" đã được Curator phê duyệt.",
+                NotificationReferenceTypes.TourVersion,
+                version.Id.ToString(),
+                $"/tours/versions/{version.Id}",
+                tour.MuseumId);
+        }
+
         return version;
     }
 
@@ -510,6 +542,21 @@ public class TourService(ApplicationDbContext db, TimeProvider? clock = null) : 
 
         await db.SaveChangesAsync();
         await tx.CommitAsync();
+
+        var recipient = version.SubmittedBy ?? version.CreatedBy;
+        if (notifications is not null && recipient != Guid.Empty && recipient != curator)
+        {
+            await notifications.NotifyUserAsync(
+                recipient,
+                NotificationTypes.TourRejected,
+                $"Phiên bản Tour bị từ chối: {version.Title}",
+                $"Phiên bản v{version.VersionNo} của tour \"{version.Title}\" đã bị từ chối. Lý do: {version.ReviewNote}",
+                NotificationReferenceTypes.TourVersion,
+                version.Id.ToString(),
+                $"/tours/versions/{version.Id}",
+                tour.MuseumId);
+        }
+
         return version;
     }
 

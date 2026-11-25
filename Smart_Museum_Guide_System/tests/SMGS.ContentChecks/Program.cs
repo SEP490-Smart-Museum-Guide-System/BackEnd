@@ -200,5 +200,6 @@ sealed class ContentNotificationSpy : INotificationPublisher
         CuratorNotifs++;
         return Task.CompletedTask;
     }
+    public Task NotifyMuseumCuratorsAsync(int museumId, Guid excludeUserId, string type, string title, string body, string? referenceType = null, string? referenceId = null, string? actionUrl = null) => Task.CompletedTask;
     public Task NotifySystemStaffAsync(Guid excludeUserId, string type, string title, string body, string? referenceType = null, string? referenceId = null, string? actionUrl = null) => Task.CompletedTask;
 }

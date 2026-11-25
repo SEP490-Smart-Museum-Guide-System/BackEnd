@@ -153,6 +153,7 @@ public class NotificationService(
             .FirstOrDefaultAsync();
         if (artifact is null) return;
 
+        // 1. Tìm tất cả Curator được phân công phạm vi Bảo tàng / Phòng trưng bày / Hiện vật này
         var curatorIds = await (from ur in db.UserRoles.AsNoTracking()
                                 join r in db.Roles.AsNoTracking() on ur.RoleId equals r.Id
                                 join u in db.Users.AsNoTracking() on ur.UserId equals u.Id
@@ -166,8 +167,58 @@ public class NotificationService(
                                           || a.ArtifactId == artifact.Id)
                                 select u.Id).Distinct().ToListAsync();
 
+        // 2. Fallback: Nếu Curator chưa được gán StaffAssignment cụ thể (ví dụ chỉ chạy --seed tạo tài khoản
+        // hoặc Admin tạo Curator mới nhưng chưa gán scope), gửi cho tất cả Curator đang hoạt động trong hệ thống
+        if (curatorIds.Count == 0)
+        {
+            curatorIds = await (from ur in db.UserRoles.AsNoTracking()
+                                join r in db.Roles.AsNoTracking() on ur.RoleId equals r.Id
+                                join u in db.Users.AsNoTracking() on ur.UserId equals u.Id
+                                where r.Name == RoleNames.Curator
+                                      && u.IsActive
+                                      && u.Id != excludeUserId
+                                select u.Id).Distinct().ToListAsync();
+        }
+
         if (curatorIds.Count == 0) return;
         await CreateAndDispatchAsync(curatorIds, type, title, body, referenceType, referenceId, actionUrl, artifact.MuseumId);
+    }
+
+    public async Task NotifyMuseumCuratorsAsync(
+        int museumId,
+        Guid excludeUserId,
+        string type,
+        string title,
+        string body,
+        string? referenceType = null,
+        string? referenceId = null,
+        string? actionUrl = null)
+    {
+        var curatorIds = await (from ur in db.UserRoles.AsNoTracking()
+                                join r in db.Roles.AsNoTracking() on ur.RoleId equals r.Id
+                                join u in db.Users.AsNoTracking() on ur.UserId equals u.Id
+                                join a in db.StaffAssignments.AsNoTracking() on u.Id equals a.UserId
+                                where r.Name == RoleNames.Curator
+                                      && u.IsActive
+                                      && u.Id != excludeUserId
+                                      && a.MuseumId == museumId
+                                      && a.GalleryId == null
+                                      && a.ArtifactId == null
+                                select u.Id).Distinct().ToListAsync();
+
+        if (curatorIds.Count == 0)
+        {
+            curatorIds = await (from ur in db.UserRoles.AsNoTracking()
+                                join r in db.Roles.AsNoTracking() on ur.RoleId equals r.Id
+                                join u in db.Users.AsNoTracking() on ur.UserId equals u.Id
+                                where r.Name == RoleNames.Curator
+                                      && u.IsActive
+                                      && u.Id != excludeUserId
+                                select u.Id).Distinct().ToListAsync();
+        }
+
+        if (curatorIds.Count == 0) return;
+        await CreateAndDispatchAsync(curatorIds, type, title, body, referenceType, referenceId, actionUrl, museumId);
     }
 
     public async Task NotifySystemStaffAsync(

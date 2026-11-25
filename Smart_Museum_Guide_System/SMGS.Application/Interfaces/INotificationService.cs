@@ -35,6 +35,16 @@ public interface INotificationPublisher
         string? referenceId = null,
         string? actionUrl = null);
 
+    Task NotifyMuseumCuratorsAsync(
+        int museumId,
+        Guid excludeUserId,
+        string type,
+        string title,
+        string body,
+        string? referenceType = null,
+        string? referenceId = null,
+        string? actionUrl = null);
+
     Task NotifySystemStaffAsync(
         Guid excludeUserId,
         string type,

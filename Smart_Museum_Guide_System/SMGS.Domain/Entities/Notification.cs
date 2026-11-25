@@ -21,6 +21,9 @@ public static class NotificationTypes
     public const string ContentSubmitted = "CONTENT_SUBMITTED";
     public const string ContentApproved = "CONTENT_APPROVED";
     public const string ContentRejected = "CONTENT_REJECTED";
+    public const string TourSubmitted = "TOUR_SUBMITTED";
+    public const string TourApproved = "TOUR_APPROVED";
+    public const string TourRejected = "TOUR_REJECTED";
     public const string PaymentSucceeded = "PAYMENT_SUCCEEDED";
     public const string FeedbackResponded = "FEEDBACK_RESPONDED";
     public const string ComplaintCreated = "COMPLAINT_CREATED";
@@ -30,6 +33,7 @@ public static class NotificationTypes
 public static class NotificationReferenceTypes
 {
     public const string ArtifactContent = "ArtifactContent";
+    public const string TourVersion = "TourVersion";
     public const string PurchaseOrder = "PurchaseOrder";
     public const string VisitFeedback = "VisitFeedback";
     public const string Complaint = "Complaint";
