@@ -141,21 +141,26 @@ public partial class CommerceService(ApplicationDbContext db,
         if (order.Status != "pending") throw new CommerceException("Đơn hàng đã đóng hoặc đã hủy.", 409);
         if (order.VisitDate < LocalToday()) throw new CommerceException("Ngày tham quan đã qua; không thể thanh toán đơn này.", 409);
         EnsureBookingUsable(order.VisitDate, order.ValidityHours);
+        var alreadyPaidByWallet = -(await db.WalletTransactions.Where(t => t.OrderId == order.Id && t.Type == "payment")
+            .SumAsync(t => (decimal?)t.Amount) ?? 0m);
+        var remaining = Math.Max(0, order.Amount - alreadyPaidByWallet);
         var balance = await db.WalletTransactions.Where(t => t.UserId == buyer && t.Currency == order.Currency)
             .SumAsync(t => (decimal?)t.Amount) ?? 0m;
-        if (balance < order.Amount) throw new CommerceException("Số dư ví không đủ.", 409);
-        var attempt = new PaymentAttempt
+        if (balance < remaining) throw new CommerceException("Số dư ví không đủ để thanh toán phần còn lại.", 409);
+        if (remaining > 0) db.WalletTransactions.Add(new WalletTransaction
         {
-            OrderId = order.Id, Status = "succeeded", Reference = $"WALLET:{Guid.NewGuid():N}",
-            CompletedAt = DateTime.UtcNow
-        };
-        db.PaymentAttempts.Add(attempt);
-        db.WalletTransactions.Add(new WalletTransaction
-        {
-            UserId = buyer, OrderId = order.Id, Amount = -order.Amount, Currency = order.Currency,
+            UserId = buyer, OrderId = order.Id, Amount = -remaining, Currency = order.Currency,
             Type = "payment", Description = $"Thanh toán đơn {order.Id:N}"
         });
-        CompleteOrder(order, attempt.CompletedAt.Value);
+        var paidAt = DateTime.UtcNow;
+        var attempt = await db.PaymentAttempts.SingleOrDefaultAsync(a => a.OrderId == order.Id && a.Status == "pending");
+        if (attempt == null)
+        {
+            attempt = new PaymentAttempt { OrderId = order.Id };
+            db.PaymentAttempts.Add(attempt);
+        }
+        attempt.Status = "succeeded"; attempt.Reference = $"WALLET:{Guid.NewGuid():N}"; attempt.CompletedAt = paidAt;
+        CompleteOrder(order, paidAt);
         await db.SaveChangesAsync(); await tx.CommitAsync();
         await NotifyOrderPaidAsync(order);
         return attempt;
@@ -164,24 +169,32 @@ public partial class CommerceService(ApplicationDbContext db,
     public async Task<CancellationResponse> CancelOrder(Guid orderId, Guid buyer)
     {
         await using var tx = await db.Database.BeginTransactionAsync();
+        await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({buyer.ToString()}, 0))");
         var order = await LockOrder(orderId); Owner(order, buyer);
         if (order.CancelledAt != null || order.Status == "cancelled") throw new CommerceException("Đơn hàng đã được hủy.", 409);
         if (order.Status is not ("pending" or "paid")) throw new CommerceException("Trạng thái đơn không thể hủy.", 409);
 
+        var walletPaid = -(await db.WalletTransactions.Where(t => t.OrderId == order.Id && t.Type == "payment")
+            .SumAsync(t => (decimal?)t.Amount) ?? 0m);
         decimal refund = 0;
         if (order.Status == "paid")
         {
             var daysBefore = order.VisitDate.DayNumber - LocalToday().DayNumber;
             var rate = daysBefore >= 3 ? 1m : daysBefore == 2 ? 0.5m : 0m;
             refund = decimal.Round(order.Amount * rate, 2, MidpointRounding.AwayFromZero);
-            if (refund > 0)
-                db.WalletTransactions.Add(new WalletTransaction
-                {
-                    UserId = buyer, OrderId = order.Id, Amount = refund, Currency = order.Currency,
-                    Type = "refund", Description = $"Hoàn {rate:P0} khi hủy đơn {order.Id:N}"
-                });
             order.RefundedAmount = refund;
         }
+        else
+        {
+            refund = Math.Min(order.Amount, Math.Max(0, walletPaid));
+            order.RefundedAmount = refund;
+        }
+        if (refund > 0)
+            db.WalletTransactions.Add(new WalletTransaction
+            {
+                UserId = buyer, OrderId = order.Id, Amount = refund, Currency = order.Currency,
+                Type = "refund", Description = $"Hoàn tiền ví khi hủy đơn {order.Id:N}"
+            });
         order.Status = "cancelled"; order.CancelledAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         var balance = await db.WalletTransactions.Where(t => t.UserId == buyer && t.Currency == order.Currency)

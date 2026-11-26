@@ -11,7 +11,8 @@ public class SePayOptions
 }
 
 public record SePayPaymentResponse(Guid Id, Guid OrderId, string Status, decimal Amount, string Currency,
-    string Bank, string AccountNumber, string AccountHolder, string TransferContent, string QrUrl);
+    string Bank, string AccountNumber, string AccountHolder, string TransferContent, string QrUrl,
+    bool PaidFromWallet = false);
 
 public class SePayWebhookRequest
 {
