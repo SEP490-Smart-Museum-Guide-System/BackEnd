@@ -1259,6 +1259,10 @@ namespace SMGS.Infrastructure.Migrations
 
             modelBuilder.Entity("SMGS.Domain.Entities.MapNode", b =>
                 {
+                    b.Property<string>("ConnectorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 

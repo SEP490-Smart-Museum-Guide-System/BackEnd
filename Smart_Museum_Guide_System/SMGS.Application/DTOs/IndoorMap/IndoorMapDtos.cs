@@ -10,7 +10,7 @@ public record FloorRequest(int BuildingId, int LevelNo, [Required, StringLength(
 public record GalleryRequest(int FloorId, [Required, StringLength(300)] string Name, [StringLength(2000)] string? Description = null);
 public record CreateMapRequest(int? FloorId, [Required, StringLength(200)] string Name);
 public record AssignmentRequest(Guid UserId);
-public record RouteRequest(int Revision, Guid FromNodeId, Guid ToNodeId, bool AccessibleOnly = false);
+public record RouteRequest(int Revision, Guid FromNodeId, Guid ToNodeId, bool AccessibleOnly = false, int? TargetMapId = null, int? TargetRevision = null);
 public record RouteResult(IReadOnlyList<Guid> NodeIds, double Cost);
 public record MuseumOption(int Id, string Name);
 public record FloorOption(int Id, int BuildingId, string BuildingName, int LevelNo, string? Name);
