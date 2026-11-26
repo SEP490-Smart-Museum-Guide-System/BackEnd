@@ -27,7 +27,7 @@ public partial class CommerceService(ApplicationDbContext db,
     private static ProductResponse Map(CommerceProduct p) => new(p.Id, p.MuseumId, p.Name, p.Kind, p.Price,
         p.Currency, p.Seats, p.ValidityHours, ResourceIds(p.ResourceIdsJson), p.IsActive);
     private static OrderResponse Map(PurchaseOrder o) => new(o.Id, o.MuseumId, o.ProductName, o.ProductKind,
-        o.Amount, o.Currency, o.Seats, o.VisitDate, ResourceIds(o.ResourceIdsJson), o.BuyerName,
+        o.Amount, o.Currency, o.Seats, o.ValidityHours, o.VisitDate, ResourceIds(o.ResourceIdsJson), o.BuyerName,
         JsonSerializer.Deserialize<Dictionary<string, string>>(o.BuyerDetailsJson)!, o.Status, o.CreatedAt, o.PaidAt, o.ExpiresAt);
     private async Task<PurchaseOrder> LockOrder(Guid id) => await db.PurchaseOrders
         .FromSqlInterpolated($"SELECT * FROM purchase_orders WHERE \"Id\" = {id} FOR UPDATE")

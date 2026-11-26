@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using SMGS.Application.DTOs.Commerce;
+using SMGS.Domain.Entities;
 
 namespace SMGS.Infrastructure.Services;
 
