@@ -141,8 +141,34 @@ public class TourService(
                 .Select((a, i) => new TourVersionItem { ArtifactId = a, OrderNo = i + 1 })
                 .ToList();
         }
+        else
+        {
+            var maxVersionNo = await db.Set<TourVersion>()
+                .Where(v => v.TourId == id)
+                .Select(v => (int?)v.VersionNo)
+                .MaxAsync() ?? 0;
+
+            db.Set<TourVersion>().Add(new TourVersion
+            {
+                TourId = id,
+                VersionNo = maxVersionNo + 1,
+                Title = title,
+                Description = description,
+                EstimatedMinutes = request.Tour.EstimatedMinutes,
+                Status = TourVersionStatuses.Draft,
+                CreatedBy = user,
+                CreatedAt = UtcNow,
+                Items = request.Tour.ArtifactIds
+                    .Select((a, i) => new TourVersionItem { ArtifactId = a, OrderNo = i + 1 })
+                    .ToList()
+            });
+        }
 
         await db.SaveChangesAsync();
+        await db.Entry(tour).Collection(x => x.Versions).Query()
+            .OrderByDescending(v => v.VersionNo)
+            .Include(v => v.Items.OrderBy(i => i.OrderNo))
+            .LoadAsync();
         await tx.CommitAsync();
         return tour;
     }
