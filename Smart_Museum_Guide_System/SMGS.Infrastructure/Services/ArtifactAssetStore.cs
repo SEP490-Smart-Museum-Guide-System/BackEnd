@@ -73,6 +73,9 @@ public class ArtifactAssetStore(IConfiguration configuration, IServiceProvider? 
 
     public async Task<Stream> OpenReadAsync(string key, CancellationToken token = default) => await Storage.OpenReadAsync(key, token);
 
+    public async Task<string> GetDownloadUrlAsync(string key, CancellationToken token = default) =>
+        await Storage.GetDownloadUrlAsync(key, token);
+
     public async Task DeleteIfExists(string? key)
     {
         if (string.IsNullOrWhiteSpace(key)) return;
