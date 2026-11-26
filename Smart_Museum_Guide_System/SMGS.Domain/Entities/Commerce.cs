@@ -22,7 +22,6 @@ public class CommerceProduct
     public int Seats { get; set; } = 1;
     // Null means the validity policy has not been confirmed: this product cannot be purchased yet.
     public int? ValidityHours { get; set; }
-    public string? ValidityStartsAt { get; set; }
     public string ResourceIdsJson { get; set; } = "[]";
     public bool IsActive { get; set; }
 }
@@ -40,7 +39,6 @@ public class PurchaseOrder
     public string Currency { get; set; } = "";
     public int Seats { get; set; }
     public int ValidityHours { get; set; }
-    public string ValidityStartsAt { get; set; } = "";
     public string ResourceIdsJson { get; set; } = "[]";
     public string BuyerName { get; set; } = "";
     public string BuyerDetailsJson { get; set; } = "{}";
@@ -82,7 +80,9 @@ public class MuseumPass
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid OrderId { get; set; }
     public Guid UserId { get; set; }
-    public DateTime ClaimedAt { get; set; } = DateTime.UtcNow;
+    // Scheduled local visit date represented as the start of that day in UTC.
+    public DateTime ClaimedAt { get; set; }
+    // Expiration instant: ClaimedAt plus the purchased product's ValidityHours.
     public DateTime? RevokedAt { get; set; }
 }
 

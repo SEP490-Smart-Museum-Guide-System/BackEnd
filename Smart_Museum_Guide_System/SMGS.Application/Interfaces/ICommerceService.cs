@@ -25,7 +25,6 @@ public interface ICommerceService
     Task<IReadOnlyList<PassResponse>> Passes(Guid user, int page, int pageSize);
     Task<IReadOnlyList<OrderResponse>> MuseumOrders(int museumId, Guid staff, bool admin, int page, int pageSize);
     Task<ManagedOrderResponse> ManageOrder(Guid orderId, Guid staff, bool admin);
-    Task RevokePass(Guid passId, Guid staff, bool admin);
     Task<PurchaseInvoice> Invoice(Guid orderId, Guid buyer);
     Task<IReadOnlyList<RevenueResponse>> Revenue(int museumId, DateTime from, DateTime to, Guid staff, bool admin);
     Task<VisitReportResponse> VisitReport(int museumId, DateTime from, DateTime to, Guid staff, bool admin);

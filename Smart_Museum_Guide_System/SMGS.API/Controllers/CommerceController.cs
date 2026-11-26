@@ -109,12 +109,6 @@ public class CommerceController(ICommerceService service) : ControllerBase
     [HttpGet("passes/me")]
     public async Task<IActionResult> Passes(int page = 1, int pageSize = 20) => Result(await service.Passes(UserId, page, pageSize));
 
-    [Authorize(Roles = Managers), HttpPost("passes/{passId:guid}/revoke")]
-    public async Task<IActionResult> Revoke(Guid passId)
-    {
-        await service.RevokePass(passId, UserId, Admin); return Result(new { Revoked = true });
-    }
-
     [HttpGet("orders/{orderId:guid}/invoice")]
     public async Task<IActionResult> Invoice(Guid orderId) => Result(await service.Invoice(orderId, UserId));
 

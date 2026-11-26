@@ -137,12 +137,11 @@ internal static class GuideAndDashboardDbChecks
             MuseumId = museum1.Id,
             ProductId = 1,
             ProductName = "Combo Tham quan & Hướng dẫn số",
-            ProductKind = "combo",
+            ProductKind = "digital",
             Amount = 150000m,
             Currency = "VND",
             Seats = 2,
             ValidityHours = 24,
-            ValidityStartsAt = "visit_date",
             VisitDate = DateOnly.FromDateTime(DateTime.UtcNow),
             Status = "paid",
             CreatedAt = DateTime.UtcNow.AddHours(-2),
@@ -155,7 +154,8 @@ internal static class GuideAndDashboardDbChecks
             Id = Guid.NewGuid(),
             OrderId = order1.Id,
             UserId = visitorId,
-            ClaimedAt = DateTime.UtcNow.AddHours(-2)
+            ClaimedAt = DateTime.UtcNow.AddHours(-2),
+            RevokedAt = DateTime.UtcNow.AddHours(22)
         });
         db.PaymentAttempts.Add(new PaymentAttempt
         {

@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace SMGS.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class Min : Migration
+    public partial class kjl : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -24,6 +24,20 @@ namespace SMGS.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_cities", x => x.Code);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RewardSettings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false),
+                    ScanPoints = table.Column<int>(type: "integer", nullable: false),
+                    CorrectAnswerPoints = table.Column<int>(type: "integer", nullable: false),
+                    TourPoints = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RewardSettings", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -47,6 +61,7 @@ namespace SMGS.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     FullName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    PreferredLanguage = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: false, defaultValue: "vi"),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -328,6 +343,65 @@ namespace SMGS.Infrastructure.Migrations
                         principalTable: "museums",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "museum_translations",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityAlwaysColumn),
+                    MuseumId = table.Column<int>(type: "integer", nullable: false),
+                    LanguageCode = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: true),
+                    Address = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    OpeningHours = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_museum_translations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_museum_translations_museums_MuseumId",
+                        column: x => x.MuseumId,
+                        principalTable: "museums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "notifications",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityAlwaysColumn),
+                    RecipientId = table.Column<Guid>(type: "uuid", nullable: false),
+                    MuseumId = table.Column<int>(type: "integer", nullable: true),
+                    Type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Title = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
+                    Body = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
+                    ReferenceType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    ReferenceId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    ActionUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    IsRead = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    ReadAt = table.Column<DateTime>(type: "timestamptz", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamptz", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_notifications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_notifications_Users_RecipientId",
+                        column: x => x.RecipientId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_notifications_museums_MuseumId",
+                        column: x => x.MuseumId,
+                        principalTable: "museums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1013,6 +1087,25 @@ namespace SMGS.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "artifact_detail_views",
+                columns: table => new
+                {
+                    RequestId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ArtifactId = table.Column<int>(type: "integer", nullable: false),
+                    ViewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_artifact_detail_views", x => x.RequestId);
+                    table.ForeignKey(
+                        name: "FK_artifact_detail_views_artifacts_ArtifactId",
+                        column: x => x.ArtifactId,
+                        principalTable: "artifacts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "artifact_medias",
                 columns: table => new
                 {
@@ -1067,6 +1160,27 @@ namespace SMGS.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "artifact_translations",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityAlwaysColumn),
+                    ArtifactId = table.Column<int>(type: "integer", nullable: false),
+                    LanguageCode = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: false),
+                    Name = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_artifact_translations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_artifact_translations_artifacts_ArtifactId",
+                        column: x => x.ArtifactId,
+                        principalTable: "artifacts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "commerce_resources",
                 columns: table => new
                 {
@@ -1094,6 +1208,47 @@ namespace SMGS.Infrastructure.Migrations
                         principalTable: "museums",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "guide_chat_messages",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityAlwaysColumn),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ArtifactId = table.Column<int>(type: "integer", nullable: false),
+                    MuseumId = table.Column<int>(type: "integer", nullable: false),
+                    Question = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
+                    Answer = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: false),
+                    Supported = table.Column<bool>(type: "boolean", nullable: false),
+                    ContentVersionId = table.Column<int>(type: "integer", nullable: true),
+                    ContentVersionNo = table.Column<int>(type: "integer", nullable: true),
+                    ContentTitle = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
+                    LanguageCode = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false, defaultValue: "vi"),
+                    CreatedAt = table.Column<DateTime>(type: "timestamptz", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_guide_chat_messages", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_guide_chat_messages_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_guide_chat_messages_artifacts_ArtifactId",
+                        column: x => x.ArtifactId,
+                        principalTable: "artifacts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_guide_chat_messages_museums_MuseumId",
+                        column: x => x.MuseumId,
+                        principalTable: "museums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1176,6 +1331,7 @@ namespace SMGS.Infrastructure.Migrations
                     VisitId = table.Column<int>(type: "integer", nullable: true),
                     ArtifactId = table.Column<int>(type: "integer", nullable: true),
                     Method = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    ConfirmedQrScan = table.Column<bool>(type: "boolean", nullable: false),
                     IsSuccess = table.Column<bool>(type: "boolean", nullable: false),
                     RecognizedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     RequestId = table.Column<Guid>(type: "uuid", nullable: false)
@@ -1756,6 +1912,11 @@ namespace SMGS.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_artifact_detail_views_ArtifactId",
+                table: "artifact_detail_views",
+                column: "ArtifactId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_artifact_medias_ArtifactId",
                 table: "artifact_medias",
                 column: "ArtifactId");
@@ -1764,6 +1925,12 @@ namespace SMGS.Infrastructure.Migrations
                 name: "IX_artifact_topics_TopicId",
                 table: "artifact_topics",
                 column: "TopicId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_artifact_translations_ArtifactId_LanguageCode",
+                table: "artifact_translations",
+                columns: new[] { "ArtifactId", "LanguageCode" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_artifacts_GalleryId",
@@ -1867,6 +2034,21 @@ namespace SMGS.Infrastructure.Migrations
                 column: "FloorId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_guide_chat_messages_ArtifactId",
+                table: "guide_chat_messages",
+                column: "ArtifactId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_guide_chat_messages_MuseumId_Supported_CreatedAt",
+                table: "guide_chat_messages",
+                columns: new[] { "MuseumId", "Supported", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_guide_chat_messages_UserId_ArtifactId_CreatedAt",
+                table: "guide_chat_messages",
+                columns: new[] { "UserId", "ArtifactId", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_indoor_maps_FloorId",
                 table: "indoor_maps",
                 column: "FloorId",
@@ -1944,9 +2126,30 @@ namespace SMGS.Infrastructure.Migrations
                 column: "VisitId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_museum_translations_MuseumId_LanguageCode",
+                table: "museum_translations",
+                columns: new[] { "MuseumId", "LanguageCode" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_museums_CityCode",
                 table: "museums",
                 column: "CityCode");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_notifications_MuseumId",
+                table: "notifications",
+                column: "MuseumId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_notifications_RecipientId_CreatedAt",
+                table: "notifications",
+                columns: new[] { "RecipientId", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_notifications_RecipientId_IsRead_CreatedAt",
+                table: "notifications",
+                columns: new[] { "RecipientId", "IsRead", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_payment_attempts_ConfirmedBy",
@@ -2358,16 +2561,25 @@ namespace SMGS.Infrastructure.Migrations
                 name: "artifact_content_versions");
 
             migrationBuilder.DropTable(
+                name: "artifact_detail_views");
+
+            migrationBuilder.DropTable(
                 name: "artifact_medias");
 
             migrationBuilder.DropTable(
                 name: "artifact_topics");
 
             migrationBuilder.DropTable(
+                name: "artifact_translations");
+
+            migrationBuilder.DropTable(
                 name: "commerce_resources");
 
             migrationBuilder.DropTable(
                 name: "complaints");
+
+            migrationBuilder.DropTable(
+                name: "guide_chat_messages");
 
             migrationBuilder.DropTable(
                 name: "map_edges");
@@ -2380,6 +2592,12 @@ namespace SMGS.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "museum_presence");
+
+            migrationBuilder.DropTable(
+                name: "museum_translations");
+
+            migrationBuilder.DropTable(
+                name: "notifications");
 
             migrationBuilder.DropTable(
                 name: "payment_attempts");
@@ -2395,6 +2613,9 @@ namespace SMGS.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "quiz_questions");
+
+            migrationBuilder.DropTable(
+                name: "RewardSettings");
 
             migrationBuilder.DropTable(
                 name: "RoleClaims");

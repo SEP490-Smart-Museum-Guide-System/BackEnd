@@ -97,13 +97,11 @@ try
     setup.StaffAssignments.Add(new StaffAssignment { MuseumId = museum.Id, UserId = staff });
     var artifact = new Artifact { MuseumId = museum.Id, Name = "Premium artifact", AccessLevel = "premium" };
     setup.Artifacts.Add(artifact); await setup.SaveChangesAsync();
-    var admission = await Run(s => s.ConfigureResource(museum.Id, null, new() { Name = "Entry", Kind = "admission", AccessLevel = "premium" }, staff, false));
     var digital = await Run(s => s.ConfigureResource(museum.Id, null, new() { Name = "Content", ArtifactId = artifact.Id, AccessLevel = "premium" }, staff, false));
     await Fails(async () => await Run(s => s.ConfigureResource(museum.Id, null, new() { Name = "No access" }, stranger, false)), 403);
     await Fails(async () => await Run(s => s.ConfigureProduct(museum.Id, null, new() { Name = "Unconfirmed", Price = 100, ResourceIds = [digital.Id], IsActive = true }, staff, false)), 400);
-    await Fails(async () => await Run(s => s.ConfigureProduct(museum.Id, null, new() { Name = "Bad combo", Kind = "combo", Price = 100, ValidityHours = 24, ValidityStartsAt = "payment", ResourceIds = [digital.Id], IsActive = true }, staff, false)), 400);
-    var product = await Run(s => s.ConfigureProduct(museum.Id, null, new() { Name = "Group combo", Kind = "combo", Price = 100,
-        Seats = 3, ValidityHours = 24, ValidityStartsAt = "payment", ResourceIds = [admission.Id, digital.Id], IsActive = true }, staff, false));
+    var product = await Run(s => s.ConfigureProduct(museum.Id, null, new() { Name = "Group digital service", Price = 100,
+        Seats = 3, ValidityHours = 24, ResourceIds = [digital.Id], IsActive = true }, staff, false));
     var order = await Run(s => s.CreateOrder(new() { ProductId = product.Id, BuyerName = "Buyer", BuyerDetails = new() { ["email"] = "buyer@example.test" } }, owner));
     Check(!await Run(s => s.CanReadArtifact(artifact.Id, owner)), "Unpaid order grants no access.");
     var first = await Run(s => s.StartPayment(order.Id, owner));
@@ -112,8 +110,8 @@ try
     await Run(s => s.ConfirmPayment(first.Id, new() { FailureReason = "Declined" }, staff, false));
     var second = await Run(s => s.StartPayment(order.Id, owner));
     Check(second.Id != first.Id, "Retry must be a new transaction.");
-    await Run(s => s.ConfigureProduct(museum.Id, product.Id, new() { Name = "Changed", Kind = "combo", Price = 999,
-        Seats = 6, ValidityHours = 48, ValidityStartsAt = "payment", ResourceIds = [admission.Id, digital.Id], IsActive = true }, staff, false));
+    await Run(s => s.ConfigureProduct(museum.Id, product.Id, new() { Name = "Changed", Price = 999,
+        Seats = 6, ValidityHours = 48, ResourceIds = [digital.Id], IsActive = true }, staff, false));
     var confirm = new ConfirmPaymentRequest { Succeeded = true, Reference = "manual-test-" + Guid.NewGuid() };
     await using (var guarded = Open())
         await Fails(async () => await new CommerceService(guarded).ConfirmPayment(second.Id, confirm, staff, false), 403);
@@ -123,7 +121,7 @@ try
     await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => Run(s => s.ConfirmPayment(second.Id, confirm, staff, false))));
     Check((await Run(s => s.Transactions(order.Id, owner))).Count == 2, "Preserve failed and succeeded attempts.");
     var invoice = await Run(s => s.Invoice(order.Id, owner));
-    Check(invoice.Amount == 100 && invoice.ProductName == "Group combo" && invoice.Seats == 3, "Invoice uses purchase snapshot.");
+    Check(invoice.Amount == 100 && invoice.ProductName == "Group digital service" && invoice.Seats == 3, "Invoice uses purchase snapshot.");
     Check(await setup.PurchaseInvoices.CountAsync(i => i.OrderId == order.Id) == 1, "Concurrent confirmations create one invoice.");
     await Fails(async () => await Run(s => s.Invoice(order.Id, stranger)), 404);
     await Fails(async () => await Run(s => s.StartPayment(order.Id, owner)), 409);
@@ -141,9 +139,8 @@ try
     Check(await setup.MuseumPasses.CountAsync(p => p.OrderId == order.Id) == 3, "Repeated claim does not consume seats.");
     Check(await Run(s => s.CanReadArtifact(artifact.Id, member)), "Claimed pass opens purchased content.");
     Check(!await Run(s => s.CanReadArtifact(artifact.Id, stranger)), "Other accounts cannot use purchased content.");
-    await using (var db = Open()) { await new CommerceService(db).RevokePass(pass.Id, staff, false); }
-    Check(!await Run(s => s.CanReadArtifact(artifact.Id, member)), "Revoked pass cannot read content.");
-    await Fails(async () => await Run(s => s.Redeem(key.Key, member)), 403);
+    Check(pass.RevokedAt > DateTime.UtcNow, "Pass expiration is scheduled date plus package validity.");
+    Check((await Run(s => s.Redeem(key.Key, member))).Id == pass.Id, "Repeat claim returns the existing active pass.");
     var report = await Run(s => s.Revenue(museum.Id, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(1), staff, false));
     Check(report.Single() is { Revenue: 100, PaidOrders: 1, FailedAttempts: 1 }, "Revenue counts successful orders once and retains failures.");
     var otherMuseum = new Museum { Name = "Other museum" }; setup.Museums.Add(otherMuseum);

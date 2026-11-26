@@ -12,8 +12,8 @@ using SMGS.Infrastructure.Data;
 namespace SMGS.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261121092720_Min")]
-    partial class Min
+    [Migration("20261125133704_kjl")]
+    partial class kjl
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -438,6 +438,24 @@ namespace SMGS.Infrastructure.Migrations
                     b.ToTable("artifact_content_versions", (string)null);
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactDetailView", b =>
+                {
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ArtifactId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ViewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("RequestId");
+
+                    b.HasIndex("ArtifactId");
+
+                    b.ToTable("artifact_detail_views", (string)null);
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.ArtifactMedia", b =>
                 {
                     b.Property<int>("Id")
@@ -513,6 +531,35 @@ namespace SMGS.Infrastructure.Migrations
                     b.HasIndex("TopicId");
 
                     b.ToTable("artifact_topics", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactTranslation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ArtifactId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtifactId", "LanguageCode")
+                        .IsUnique();
+
+                    b.ToTable("artifact_translations", (string)null);
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.Badge", b =>
@@ -1018,6 +1065,67 @@ namespace SMGS.Infrastructure.Migrations
                     b.ToTable("galleries", (string)null);
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.GuideChatMessage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Answer")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int>("ArtifactId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ContentTitle")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int?>("ContentVersionId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ContentVersionNo")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("vi");
+
+                    b.Property<int>("MuseumId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Question")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("Supported")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtifactId");
+
+                    b.HasIndex("MuseumId", "Supported", "CreatedAt");
+
+                    b.HasIndex("UserId", "ArtifactId", "CreatedAt");
+
+                    b.ToTable("guide_chat_messages", (string)null);
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.IndoorMap", b =>
                 {
                     b.Property<int>("Id")
@@ -1321,6 +1429,109 @@ namespace SMGS.Infrastructure.Migrations
                     b.HasIndex("UserId", "MuseumId", "ObservedAt");
 
                     b.ToTable("museum_presence", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.MuseumTranslation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<int>("MuseumId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("OpeningHours")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MuseumId", "LanguageCode")
+                        .IsUnique();
+
+                    b.ToTable("museum_translations", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.Notification", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ActionUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<bool>("IsRead")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<int?>("MuseumId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid>("RecipientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReferenceId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ReferenceType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MuseumId");
+
+                    b.HasIndex("RecipientId", "CreatedAt");
+
+                    b.HasIndex("RecipientId", "IsRead", "CreatedAt");
+
+                    b.ToTable("notifications", (string)null);
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.PaymentAttempt", b =>
@@ -1833,6 +2044,9 @@ namespace SMGS.Infrastructure.Migrations
                     b.Property<int?>("ArtifactId")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("ConfirmedQrScan")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsSuccess")
                         .HasColumnType("boolean");
 
@@ -1865,6 +2079,25 @@ namespace SMGS.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("recognition_history", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.RewardSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CorrectAnswerPoints")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScanPoints")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TourPoints")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RewardSettings", (string)null);
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.SavedRoute", b =>
@@ -2477,6 +2710,13 @@ namespace SMGS.Infrastructure.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("PreferredLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasDefaultValue("vi");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
 
@@ -2613,6 +2853,15 @@ namespace SMGS.Infrastructure.Migrations
                     b.Navigation("Content");
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactDetailView", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Artifact", null)
+                        .WithMany()
+                        .HasForeignKey("ArtifactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.ArtifactMedia", b =>
                 {
                     b.HasOne("SMGS.Domain.Entities.Artifact", "Artifact")
@@ -2641,6 +2890,17 @@ namespace SMGS.Infrastructure.Migrations
                     b.Navigation("Artifact");
 
                     b.Navigation("Topic");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.ArtifactTranslation", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Artifact", "Artifact")
+                        .WithMany("Translations")
+                        .HasForeignKey("ArtifactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Artifact");
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.Badge", b =>
@@ -2747,6 +3007,27 @@ namespace SMGS.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Floor");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.GuideChatMessage", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Artifact", null)
+                        .WithMany()
+                        .HasForeignKey("ArtifactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Domain.Entities.Museum", null)
+                        .WithMany()
+                        .HasForeignKey("MuseumId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.IndoorMap", b =>
@@ -2867,6 +3148,31 @@ namespace SMGS.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("VisitId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.MuseumTranslation", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Museum", "Museum")
+                        .WithMany("Translations")
+                        .HasForeignKey("MuseumId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Museum");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Museum", null)
+                        .WithMany()
+                        .HasForeignKey("MuseumId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("RecipientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.PaymentAttempt", b =>
@@ -3310,6 +3616,8 @@ namespace SMGS.Infrastructure.Migrations
                     b.Navigation("MediaItems");
 
                     b.Navigation("Model3D");
+
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.ArtifactContent", b =>
@@ -3334,6 +3642,11 @@ namespace SMGS.Infrastructure.Migrations
                     b.Navigation("Markers");
 
                     b.Navigation("Nodes");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.Museum", b =>
+                {
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("SMGS.Domain.Entities.Question", b =>
