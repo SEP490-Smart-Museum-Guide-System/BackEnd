@@ -15,7 +15,8 @@ public class LocalStaffAiModel(HttpClient http, IOptionsMonitor<GuideModelOption
         if (!config.Enabled || string.IsNullOrWhiteSpace(config.ServiceKey) || !Uri.TryCreate(config.BaseUrl, UriKind.Absolute, out var uri)
             || uri.Scheme is not ("http" or "https") || uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0 || uri.AbsolutePath != "/")
             throw new GuideException("Model AI local chưa được kết nối. Chưa tạo bản nháp nào.");
-        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(uri, "api/v1/studio/drafts"));
+        var path = data.Mode == "quiz" && data.Count > 1 ? "api/v1/studio/quiz-sets" : "api/v1/studio/drafts";
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(uri, path));
         request.Headers.Add("X-Service-Key", config.ServiceKey);
         request.Content = JsonContent.Create(data);
         try

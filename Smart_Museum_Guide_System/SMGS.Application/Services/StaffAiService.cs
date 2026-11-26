@@ -13,6 +13,7 @@ public class StaffAiService(IStaffAiSource source, IStaffAiModel model) : IStaff
         if (artifactId <= 0 || r.LanguageCode is not ("vi" or "en") || r.Mode is not ("narration" or "quiz") || r.SourceText is null || r.SourceText.Length > 6000
             || r.Audience is not ("children" or "general" or "scholar") || r.Tone is not ("vivid" or "inspiring" or "academic")
             || r.Difficulty is not ("easy" or "medium" or "hard") || r.ExcludeQuestions is null || r.ExcludeQuestions.Length > 5
+            || (r.Mode == "quiz" ? r.Count is not (1 or 3 or 5) : r.Count != 1)
             || r.ExcludeQuestions.Any(q => string.IsNullOrWhiteSpace(q) || q.Length > 1000))
             return ResponseDto<StaffAiResult>.Fail("Cấu hình tạo bản nháp không hợp lệ.");
         cancellationToken.ThrowIfCancellationRequested();
@@ -25,8 +26,8 @@ public class StaffAiService(IStaffAiSource source, IStaffAiModel model) : IStaff
         var used = saved with { Text = text };
         try
         {
-            var draft = await model.GenerateAsync(new(artifactId, saved.ArtifactName, text, r.Mode, r.Audience, r.Tone, r.Difficulty, r.ExcludeQuestions, r.LanguageCode), cancellationToken);
-            ValidateDraft(draft, r.Mode);
+            var draft = await model.GenerateAsync(new(artifactId, saved.ArtifactName, text, r.Mode, r.Audience, r.Tone, r.Difficulty, r.ExcludeQuestions, r.LanguageCode, r.Count), cancellationToken);
+            ValidateDraft(draft, r.Mode, r.Count);
             return ResponseDto<StaffAiResult>.Success(new(artifactId, r.Mode, r.LanguageCode, true, used, draft), "Đã tạo bản nháp AI. Cần kiểm tra và thẩm định trước khi xuất bản.");
         }
         catch (GuideException e) { return ResponseDto<StaffAiResult>.Fail(e.Message, e.StatusCode); }
@@ -34,8 +35,13 @@ public class StaffAiService(IStaffAiSource source, IStaffAiModel model) : IStaff
         { return ResponseDto<StaffAiResult>.Fail("Bản nháp AI không hợp lệ. Hãy kiểm tra tư liệu và tạo lại.", 502); }
     }
 
-    public static void ValidateDraft(JsonElement draft, string mode)
+    public static void ValidateDraft(JsonElement draft, string mode, int count = 1)
     {
+        if (mode == "quiz" && count > 1)
+        {
+            ValidateQuizSet(draft, count);
+            return;
+        }
         var expected = mode == "narration" ? new[] { "title", "narrationText", "evidenceQuotes" }
             : new[] { "question", "options", "correctIndex", "explanation", "evidenceQuote" };
         var keys = draft.EnumerateObject().Select(p => p.Name).ToArray();
@@ -60,5 +66,28 @@ public class StaffAiService(IStaffAiSource source, IStaffAiModel model) : IStaff
             var values = options.EnumerateArray().Select(o => o.GetString()?.Trim()).ToArray();
             if (values.Any(o => string.IsNullOrWhiteSpace(o) || o.Length > 300) || values.Distinct(StringComparer.OrdinalIgnoreCase).Count() != values.Length) throw new JsonException();
         }
+    }
+
+    private static void ValidateQuizSet(JsonElement draft, int requestedCount)
+    {
+        var expected = new[] { "requestedCount", "generatedCount", "complete", "isDraft", "reviewRequired", "distinctEvidenceCount", "questions", "warnings" };
+        if (draft.ValueKind != JsonValueKind.Object || !draft.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal).SetEquals(expected))
+            throw new JsonException();
+        var requested = draft.GetProperty("requestedCount").GetInt32();
+        var generated = draft.GetProperty("generatedCount").GetInt32();
+        var complete = draft.GetProperty("complete").GetBoolean();
+        if (requested != requestedCount || generated < 1 || generated > requestedCount || complete != (generated == requestedCount)
+            || !draft.GetProperty("isDraft").GetBoolean() || !draft.GetProperty("reviewRequired").GetBoolean())
+            throw new JsonException();
+        var questions = draft.GetProperty("questions");
+        if (questions.ValueKind != JsonValueKind.Array || questions.GetArrayLength() != generated)
+            throw new JsonException();
+        var distinctEvidenceCount = draft.GetProperty("distinctEvidenceCount").GetInt32();
+        if (distinctEvidenceCount < 1 || distinctEvidenceCount > generated)
+            throw new JsonException();
+        foreach (var question in questions.EnumerateArray()) ValidateDraft(question, "quiz");
+        var warnings = draft.GetProperty("warnings");
+        if (warnings.ValueKind != JsonValueKind.Array || warnings.EnumerateArray().Any(w => w.ValueKind != JsonValueKind.String || w.GetString()!.Length > 1000))
+            throw new JsonException();
     }
 }
