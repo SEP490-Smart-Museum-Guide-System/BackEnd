@@ -22,7 +22,7 @@ public class StaffAiService(IStaffAiSource source, IStaffAiModel model) : IStaff
         if (saved.ArtifactId != artifactId) return ResponseDto<StaffAiResult>.Fail("Không tìm thấy hiện vật.", 404);
         var text = string.Join("\n\n", new[] { saved.Text, r.SourceText.Trim() }.Where(s => !string.IsNullOrWhiteSpace(s)));
         if (text.Length < 20) return ResponseDto<StaffAiResult>.Fail("Cần nội dung đã xuất bản hoặc tư liệu nguồn ít nhất 20 ký tự. Ảnh và tên hiện vật chưa đủ để viết lịch sử.", 422);
-        if (text.Length > 12000) return ResponseDto<StaffAiResult>.Fail("Tư liệu quá dài. Hãy chọn đoạn nguồn ngắn hơn để tạo bản nháp.", 422);
+        if (text.Length > 12000) return ResponseDto<StaffAiResult>.Fail("Tổng tư liệu đã xuất bản và tư liệu bổ sung vượt 12.000 ký tự. Hãy rút gọn phần tư liệu bổ sung hoặc cập nhật bản đã xuất bản.", 422);
         var used = saved with { Text = text };
         try
         {

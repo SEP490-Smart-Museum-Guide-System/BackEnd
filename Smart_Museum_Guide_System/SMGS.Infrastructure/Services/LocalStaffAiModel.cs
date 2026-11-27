@@ -23,7 +23,11 @@ public class LocalStaffAiModel(HttpClient http, IOptionsMonitor<GuideModelOption
         {
             using var response = await http.SendAsync(request, cancellationToken);
             if (response.StatusCode == HttpStatusCode.TooManyRequests) throw new GuideException("AI đang bận. Hãy thử lại sau.", 429);
-            if ((int)response.StatusCode == 422) throw new GuideException("Tư liệu hoặc câu hỏi đã có vượt giới hạn AI cho phép. Hãy rút gọn tư liệu rồi thử lại.", 422);
+            if ((int)response.StatusCode == 422)
+            {
+                var detail = await ReadSafeDetail(response, cancellationToken);
+                throw new GuideException(detail ?? "Dịch vụ AI không chấp nhận dữ liệu yêu cầu. Nếu lỗi lặp lại, hãy báo quản trị viên kiểm tra kết nối AI.", 422);
+            }
             if (response.StatusCode == HttpStatusCode.BadGateway) throw new GuideException("AI chưa tạo được bản nháp đủ căn cứ. Hãy bổ sung tư liệu và tạo lại.", 502);
             if (response.StatusCode == HttpStatusCode.GatewayTimeout) throw new GuideException("Model phản hồi chậm. Vui lòng thử lại.", 504);
             if (!response.IsSuccessStatusCode) throw new GuideException("Model local chưa sẵn sàng. Vui lòng thử lại.");
@@ -33,5 +37,21 @@ public class LocalStaffAiModel(HttpClient http, IOptionsMonitor<GuideModelOption
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { throw new GuideException("Model phản hồi chậm. Vui lòng thử lại.", 504); }
         catch (HttpRequestException) { throw new GuideException("Chưa thể kết nối model AI local."); }
         catch (JsonException) { throw new GuideException("Phản hồi model không hợp lệ.", 502); }
+    }
+
+    private static async Task<string?> ReadSafeDetail(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+            if (document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("detail", out var value) && value.ValueKind == JsonValueKind.String)
+            {
+                var detail = value.GetString()?.Trim();
+                if (!string.IsNullOrEmpty(detail) && detail.Length <= 500) return detail;
+            }
+        }
+        catch (JsonException) { }
+        return null;
     }
 }
