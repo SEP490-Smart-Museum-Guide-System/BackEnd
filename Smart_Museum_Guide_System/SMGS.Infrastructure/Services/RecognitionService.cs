@@ -56,7 +56,7 @@ public class RecognitionService(ApplicationDbContext db, IVisitProgressService p
             ?? throw new ExperienceException("QR không hợp lệ hoặc hiện vật không khả dụng.", 404);
         var now = clock.GetUtcNow().UtcDateTime;
         var effectiveVisitId = request.VisitId ?? await db.Visits
-            .Where(v => v.VisitorId == user && v.MuseumId == artifact.MuseumId && v.Status == SMGS.Domain.Constants.VisitStatus.InProgress)
+            .Where(v => v.VisitorId == user && v.MuseumId == artifact.MuseumId && v.Status == VisitStatus.InProgress)
             .OrderByDescending(v => v.StartedAt)
             .Select(v => (int?)v.Id)
             .FirstOrDefaultAsync();
@@ -76,9 +76,9 @@ public class RecognitionService(ApplicationDbContext db, IVisitProgressService p
                 {
                     isTourStop = await db.Set<TourItem>().AnyAsync(x => x.TourId == tId && x.ArtifactId == artifact.Id);
                 }
-                else if (activeVisit.PersonalizedTourId is Guid pId)
+                else if (activeVisit.PersonalizedTourId is not null)
                 {
-                    isTourStop = await db.Set<PersonalizedTourStop>().AnyAsync(x => x.PersonalizedTourId == pId && x.ArtifactId == artifact.Id);
+                    isTourStop = true;
                 }
             }
         }
