@@ -22,6 +22,9 @@ public interface IArtifactAssetService
     Task<ResponseDto<(Stream Content, string ContentType, string DownloadName)>> GetMediaFileAsync(
         int artifactId, int mediaId, Guid? userId = null, CancellationToken cancellationToken = default);
 
+    Task<ResponseDto<string>> GetMediaPlaybackUrlAsync(
+        int artifactId, int mediaId, Guid? userId = null, CancellationToken cancellationToken = default);
+
     Task<ResponseDto<object>> DeleteMediaAsync(
         int artifactId, int mediaId, Guid userId, bool isAdmin);
 

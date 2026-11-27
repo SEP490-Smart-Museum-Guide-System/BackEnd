@@ -189,6 +189,31 @@ public class ArtifactAssetService(
         catch (FileNotFoundException) { return ResponseDto<(Stream, string, string)>.Fail("Không tìm thấy file.", 404); }
     }
 
+    public async Task<ResponseDto<string>> GetMediaPlaybackUrlAsync(
+        int artifactId, int mediaId, Guid? userId = null, CancellationToken cancellationToken = default)
+    {
+        var media = await db.ArtifactMedias.AsNoTracking()
+            .Include(m => m.Artifact)
+            .FirstOrDefaultAsync(m => m.Id == mediaId && m.ArtifactId == artifactId, cancellationToken);
+
+        if (media is null)
+            return ResponseDto<string>.Fail("Không tìm thấy media.", 404);
+        if (!string.Equals(media.MediaType, "audio", StringComparison.OrdinalIgnoreCase))
+            return ResponseDto<string>.Fail("Tệp này không phải audio.", 415);
+        if (!await CanReadArtifactAssetsAsync(media.Artifact, userId))
+            return ResponseDto<string>.Fail("Cần pass còn hiệu lực cho nội dung premium này.", 403);
+
+        try
+        {
+            var url = await store.GetDownloadUrlAsync(media.StorageKey, cancellationToken);
+            return ResponseDto<string>.Success(url, "Đã cấp URL phát audio tạm thời.");
+        }
+        catch (FileNotFoundException)
+        {
+            return ResponseDto<string>.Fail("Không tìm thấy file.", 404);
+        }
+    }
+
     public async Task<ResponseDto<object>> DeleteMediaAsync(
         int artifactId, int mediaId, Guid userId, bool isAdmin)
     {

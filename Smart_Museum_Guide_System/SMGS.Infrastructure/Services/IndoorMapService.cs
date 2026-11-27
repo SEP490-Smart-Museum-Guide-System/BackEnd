@@ -410,11 +410,28 @@ public class IndoorMapService(ApplicationDbContext db) : IIndoorMapService
         var result = Document(map); result.Warnings = IndoorGraph.Warnings(result); return result;
     }
 
-    public async Task<RouteResult> Route(int id, RouteRequest request, Guid user, bool admin)
+    public async Task<object> Route(int id, RouteRequest request, Guid user, bool admin)
     {
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead);
         var map = await Load(id, user, admin); CheckRevision(map, request.Revision);
         if (map.ImageKey is null) throw new IndoorMapException("Hãy tải sơ đồ trước khi thử đường đi.");
+        if (request.TargetMapId is int targetId && targetId != map.Id)
+        {
+            var building = db.Floors.Where(f => f.Id == map.FloorId).Select(f => f.BuildingId);
+            var mapIds = from draft in db.IndoorMaps
+                join floor in db.Floors on draft.FloorId equals (int?)floor.Id
+                where draft.MuseumId == map.MuseumId && draft.ImageKey != null && building.Contains(floor.BuildingId)
+                select draft.Id;
+            var drafts = await db.IndoorMaps.AsNoTracking().Where(m => mapIds.Contains(m.Id))
+                .Include(m => m.Nodes).Include(m => m.Edges).AsSplitQuery().ToListAsync();
+            var destination = drafts.SingleOrDefault(m => m.Id == targetId)
+                ?? throw new IndoorMapException("Hãy chọn sơ đồ đích có ảnh trong cùng tòa nhà.", 422);
+            if (request.TargetRevision is int revision) CheckRevision(destination, revision);
+            var segments = IndoorGraph.RouteAcrossFloors(drafts.Select(Document).ToArray(),
+                id, request.FromNodeId, targetId, request.ToNodeId, request.AccessibleOnly);
+            await tx.CommitAsync();
+            return new { Segments = segments };
+        }
         var route = IndoorGraph.Route(Document(map), map.ImageWidth, map.ImageHeight, request.FromNodeId, request.ToNodeId, request.AccessibleOnly);
         await tx.CommitAsync(); return route;
     }

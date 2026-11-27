@@ -11,10 +11,11 @@ public class StaffAiRequest
     [RegularExpression("^(children|general|scholar)$")] public string Audience { get; set; } = "general";
     [RegularExpression("^(vivid|inspiring|academic)$")] public string Tone { get; set; } = "vivid";
     [RegularExpression("^(easy|medium|hard)$")] public string Difficulty { get; set; } = "medium";
+    public int Count { get; set; } = 1;
     [MaxLength(5)] public string[] ExcludeQuestions { get; set; } = [];
 }
 
 public record StaffAiSource(int ArtifactId, string ArtifactName, int? ContentVersionId, int? VersionNo, string Text);
 public record StaffAiResult(int ArtifactId, string Mode, string LanguageCode, bool IsDraft, StaffAiSource Source, JsonElement Draft);
 public record StaffAiModelRequest(int ArtifactId, string ArtifactName, string SourceText, string Mode,
-    string Audience, string Tone, string Difficulty, string[] ExcludeQuestions, string LanguageCode = "vi");
+    string Audience, string Tone, string Difficulty, string[] ExcludeQuestions, string LanguageCode = "vi", int Count = 1);

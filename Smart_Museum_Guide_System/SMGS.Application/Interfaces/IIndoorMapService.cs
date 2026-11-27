@@ -26,7 +26,7 @@ public interface IIndoorMapService
     Task<MapDocument> Save(int id, MapDraft draft, Guid user, bool admin);
     Task<MapDocument> SetImage(int id, int revision, string key, int width, int height, bool confirm, Guid user, bool admin);
     Task<MapDocument> Publish(int id, int revision, bool publish, Guid user, bool admin);
-    Task<RouteResult> Route(int id, RouteRequest request, Guid user, bool admin);
+    Task<object> Route(int id, RouteRequest request, Guid user, bool admin);
     Task<MapDocument> Published(int id);
     Task<string> ImageKey(int id, Guid user, bool admin, bool published);
     Task<int> QrArtifactId(int id, Guid markerId, Guid user, bool admin);

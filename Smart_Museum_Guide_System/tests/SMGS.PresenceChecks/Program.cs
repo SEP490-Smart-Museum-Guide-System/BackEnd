@@ -121,6 +121,21 @@ try
     var upper = await Run(s => s.ScanAny(visitor, new(upperQr, Guid.NewGuid(), visit.Id)));
     Check(upper.MapId == map2.Id && upper.FloorName == floor2.Name, "new floor scan selects the correct published map/floor");
     await Denied(async () => await Run(s => s.Route(museum.Id, visitor, new(map.Id, null, artifact.Id, visit.Id))), 422);
+    document.Nodes[1].Type = "stair";
+    document.Nodes[1].ConnectorCode = "stairs-a";
+    map.PublishedJson = JsonSerializer.Serialize(document);
+    var upperDocument = JsonSerializer.Deserialize<MapDocument>(map2.PublishedJson!)!;
+    upperDocument.Nodes[0].Type = "stair";
+    upperDocument.Nodes[0].ConnectorCode = "stairs-a";
+    map2.PublishedJson = JsonSerializer.Serialize(upperDocument);
+    await setup.SaveChangesAsync();
+    var acrossFloors = JsonSerializer.SerializeToElement(await Run(s =>
+        s.Route(museum.Id, visitor, new(map.Id, null, artifact.Id, visit.Id))));
+    var segments = acrossFloors.GetProperty("Segments");
+    Check(segments.GetArrayLength() == 2 && segments[0].GetProperty("MapId").GetInt32() == map2.Id
+        && segments[1].GetProperty("MapId").GetInt32() == map.Id
+        && segments[0].GetProperty("ConnectorType").GetString() == "stair",
+        "server routes from a confirmed QR on another floor through the published stairs");
     clock.Advance(TimeSpan.FromSeconds(1));
     setup.Add(new RecognitionHistory { UserId = visitor, VisitId = null, ArtifactId = artifact.Id, IsSuccess = true,
         Method = "qr", ConfirmedQrScan = true, RequestId = Guid.NewGuid(), RecognizedAt = clock.GetUtcNow().UtcDateTime });

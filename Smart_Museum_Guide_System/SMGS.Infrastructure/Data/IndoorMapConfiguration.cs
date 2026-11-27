@@ -43,6 +43,7 @@ internal static class IndoorMapConfiguration
             e.ToTable("map_nodes", t => t.HasCheckConstraint("CK_map_nodes_xy", "\"X\" BETWEEN 0 AND 1 AND \"Y\" BETWEEN 0 AND 1"));
             e.Property(x => x.Id).ValueGeneratedNever();
             e.HasAlternateKey(x => new { x.IndoorMapId, x.Id });
+            e.Property(x => x.ConnectorCode).HasMaxLength(64);
             e.Property(x => x.Label).HasMaxLength(200); e.Property(x => x.Type).HasMaxLength(30);
         });
         builder.Entity<MapMarker>(e =>

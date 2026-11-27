@@ -40,6 +40,7 @@ public class MapNode
     public int IndoorMapId { get; set; }
     public string Label { get; set; } = "";
     public string Type { get; set; } = "corridor";
+    public string? ConnectorCode { get; set; }
     public double X { get; set; }
     public double Y { get; set; }
 }

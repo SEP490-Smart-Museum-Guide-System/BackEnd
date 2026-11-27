@@ -177,9 +177,8 @@ public sealed class MuseumPresenceService(ApplicationDbContext db, TimeProvider 
     {
         var current = await Current(museumId, user, r.VisitId, r.MapId);
         if (!current.IsFresh || current.NodeId == null) throw new ExperienceException("Vị trí chưa xác định hoặc đã cũ. Hãy quét QR tại vị trí đang đứng.", 409);
-        if (current.MapId != r.MapId) throw new ExperienceException("Bạn đã chuyển tầng/phòng. Hãy mở sơ đồ đúng vị trí vừa quét.", 422);
         var map = await Map(museumId, r.MapId);
-        if (map.Revision != current.MapRevision) throw new ExperienceException("Sơ đồ vừa thay đổi. Hãy tải lại và quét QR mới.", 409);
+        if (current.MapId == map.Id && map.Revision != current.MapRevision) throw new ExperienceException("Sơ đồ vừa thay đổi. Hãy tải lại và quét QR mới.", 409);
         var target = r.TargetNodeId;
         if (r.ArtifactId is int aid)
         {
@@ -189,6 +188,31 @@ public sealed class MuseumPresenceService(ApplicationDbContext db, TimeProvider 
             target = markers[0].NodeId;
         }
         if (target == null) throw new ExperienceException("Hãy chọn điểm đến.");
+        if (current.MapId is int fromMapId && fromMapId != map.Id)
+        {
+            var building = db.Floors.Where(f => f.Id == map.FloorId).Select(f => f.BuildingId);
+            var snapshots = await (from published in db.IndoorMaps.AsNoTracking()
+                join floor in db.Floors on published.FloorId equals (int?)floor.Id
+                where published.MuseumId == museumId && published.PublishedJson != null
+                    && building.Contains(floor.BuildingId)
+                select published.PublishedJson!).ToListAsync();
+            var maps = snapshots.Select(json => JsonSerializer.Deserialize<MapDocument>(json)!).ToArray();
+            var origin = maps.SingleOrDefault(m => m.Id == fromMapId);
+            if (origin == null || !maps.Any(m => m.Id == map.Id))
+                throw new ExperienceException("Chưa có đường dẫn giữa hai sơ đồ.", 422);
+            if (origin.Revision != current.MapRevision || maps.Single(m => m.Id == map.Id).Revision != map.Revision)
+                throw new ExperienceException("Sơ đồ vừa thay đổi. Hãy tải lại và quét QR mới.", 409);
+            try
+            {
+                var segments = IndoorGraph.RouteAcrossFloors(maps, origin.Id, current.NodeId.Value,
+                    map.Id, target.Value, r.AccessibleOnly);
+                return new { MapId = map.Id, map.Revision, FromNodeId = current.NodeId, Segments = segments };
+            }
+            catch (IndoorMapException e) when (e.StatusCode == 422)
+            {
+                throw new ExperienceException("Chưa có đường dẫn phù hợp giữa hai tầng.", 422);
+            }
+        }
         try { return new { MapId = map.Id, map.Revision, FromNodeId = current.NodeId, Route = IndoorGraph.Route(map, map.ImageWidth, map.ImageHeight, current.NodeId.Value, target.Value, r.AccessibleOnly) }; }
         catch (IndoorMapException e) { throw new ExperienceException(e.Message, e.StatusCode); }
     }

@@ -110,6 +110,16 @@ public class ArtifactAssetsController(IArtifactAssetService assetService) : Cont
         return File(content, contentType, enableRangeProcessing: true);
     }
 
+    [AllowAnonymous]
+    [HttpGet("media/{mediaId:int}/playback-url")]
+    public async Task<IActionResult> GetMediaPlaybackUrl(int artifactId, int mediaId)
+    {
+        var response = await assetService.GetMediaPlaybackUrlAsync(
+            artifactId, mediaId, CurrentUserId, HttpContext.RequestAborted);
+        Response.Headers.CacheControl = "no-store";
+        return StatusCode(response.StatusCode, response);
+    }
+
     [Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff)]
     [HttpDelete("media/{mediaId:int}")]
     public async Task<IActionResult> DeleteMedia(int artifactId, int mediaId)

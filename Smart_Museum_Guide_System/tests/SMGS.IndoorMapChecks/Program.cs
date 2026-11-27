@@ -12,6 +12,19 @@ if (args.Contains("--inspect")) { await SchemaInspection.Run(); return; }
 var a = new MapNode { Id = Guid.NewGuid(), Label = "A", X = 0, Y = 0 };
 var b = new MapNode { Id = Guid.NewGuid(), Label = "B", X = 1, Y = 0 };
 var c = new MapNode { Id = Guid.NewGuid(), Label = "C", X = 1, Y = 1 };
+var stair1 = new MapNode { Id = Guid.NewGuid(), Label = "Thang A", Type = "stair", ConnectorCode = "A", X = 1 };
+var stair2 = new MapNode { Id = Guid.NewGuid(), Label = "Thang A", Type = "stair", ConnectorCode = "A" };
+var floor1 = new MapDocument { Id = 1, FloorId = 1, Nodes = [a, stair1], Edges = [new() { Id = Guid.NewGuid(), FromNodeId = a.Id, ToNodeId = stair1.Id }] };
+var floor2 = new MapDocument { Id = 2, FloorId = 2, Nodes = [stair2, c], Edges = [new() { Id = Guid.NewGuid(), FromNodeId = stair2.Id, ToNodeId = c.Id }] };
+var levels = new[] { floor1, floor2 };
+var multi = IndoorGraph.RouteAcrossFloors(levels, 1, a.Id, 2, c.Id, false);
+Check(multi.Select(s => s.MapId).SequenceEqual(new[] { 1, 2 }) && multi[0].NodeIds.Last() == stair1.Id
+    && multi[1].NodeIds.First() == stair2.Id, "route must follow the configured stairs across floors");
+Reject(() => IndoorGraph.RouteAcrossFloors(levels, 1, a.Id, 2, c.Id, true), "stairs in accessible route");
+stair1.Type = stair2.Type = "elevator";
+Check(IndoorGraph.RouteAcrossFloors(levels, 1, a.Id, 2, c.Id, true).Count == 2, "accessible route can use elevator");
+stair2.ConnectorCode = null;
+Reject(() => IndoorGraph.RouteAcrossFloors(levels, 1, a.Id, 2, c.Id, false), "unpaired connector");
 var graph = new MapDraft { Nodes = [a, b, c], Edges = [new() { Id = Guid.NewGuid(), FromNodeId = a.Id, ToNodeId = b.Id, Bidirectional = false }, new() { Id = Guid.NewGuid(), FromNodeId = b.Id, ToNodeId = c.Id, IsAccessible = false }] };
 var route = IndoorGraph.Route(graph, 1000, 200, a.Id, c.Id, false);
 Check(route.NodeIds.SequenceEqual(new[] { a.Id, b.Id, c.Id }) && route.Cost == 1200, "Dijkstra must use aspect-correct image distances");

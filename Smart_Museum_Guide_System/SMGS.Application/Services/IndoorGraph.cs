@@ -8,6 +8,8 @@ public static class IndoorGraph
     private static readonly string[] NodeTypes = ["corridor", "intersection", "door", "entrance", "stair", "elevator", "qr"];
     private static readonly string[] MarkerTypes = ["artifact", "gallery", "entrance", "exit", "restroom", "information", "stair", "elevator"];
 
+    public sealed record RouteSegment(int MapId, int Revision, string MapName, IReadOnlyList<Guid> NodeIds, string? ConnectorLabel, string? ConnectorType);
+
     public static void Validate(MapDraft draft, bool publishing = false)
     {
         if (draft.Nodes is null || draft.Markers is null || draft.Edges is null ||
@@ -26,6 +28,13 @@ public static class IndoorGraph
             if (n is null) throw new IndoorMapException("Điểm dẫn đường không hợp lệ.");
             Check(n.Id, n.Label, n.X, n.Y);
             if (!NodeTypes.Contains(n.Type)) throw new IndoorMapException("Loại điểm dẫn đường không hợp lệ.");
+        }
+        var connectors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var node in draft.Nodes.Where(n => n.ConnectorCode != null))
+        {
+            if (node.Type is not ("stair" or "elevator") || string.IsNullOrWhiteSpace(node.ConnectorCode)
+                || node.ConnectorCode.Length > 64 || !connectors.Add(node.ConnectorCode.Trim()))
+                throw new IndoorMapException("Mã kết nối chỉ dùng cho cầu thang hoặc thang máy, tối đa 64 ký tự và không trùng trên cùng sơ đồ.");
         }
         var nodes = draft.Nodes.ToDictionary(n => n.Id);
         foreach (var m in draft.Markers)
@@ -67,14 +76,73 @@ public static class IndoorGraph
             adjacency[a.Id].Add((b.Id, cost));
             if (e.Bidirectional) adjacency[b.Id].Add((a.Id, cost));
         }
-        var distances = nodes.Keys.ToDictionary(id => id, _ => double.PositiveInfinity);
-        var previous = new Dictionary<Guid, Guid>();
-        var queue = new PriorityQueue<Guid, double>();
+        var (path, totalCost) = ShortestPath(adjacency, from, to);
+        return new RouteResult(path, totalCost);
+    }
+
+    public static IReadOnlyList<RouteSegment> RouteAcrossFloors(IReadOnlyList<MapDocument> maps,
+        int fromMapId, Guid from, int toMapId, Guid to, bool accessibleOnly)
+    {
+        var byId = maps.ToDictionary(m => m.Id);
+        var nodes = maps.SelectMany(m => m.Nodes.Select(n => (Key: (m.Id, n.Id), Node: n)))
+            .ToDictionary(n => n.Key, n => n.Node);
+        var adjacency = nodes.Keys.ToDictionary(k => k, _ => new List<((int, Guid) Id, double Cost)>());
+        if (!nodes.ContainsKey((fromMapId, from)) || !nodes.ContainsKey((toMapId, to)))
+            throw new IndoorMapException("Điểm đầu/cuối không thuộc sơ đồ.", 422);
+        foreach (var map in maps)
+        {
+            foreach (var edge in map.Edges.Where(e => !accessibleOnly || e.IsAccessible))
+            {
+                var start = (map.Id, edge.FromNodeId);
+                var end = (map.Id, edge.ToNodeId);
+                var a = nodes[start];
+                var b = nodes[end];
+                var cost = Math.Sqrt(Math.Pow((a.X - b.X) * map.ImageWidth, 2) + Math.Pow((a.Y - b.Y) * map.ImageHeight, 2));
+                adjacency[start].Add((end, cost));
+                if (edge.Bidirectional) adjacency[end].Add((start, cost));
+            }
+        }
+
+        var connectors = nodes.Where(n => byId[n.Key.Item1].FloorId != null &&
+            (n.Value.Type == "elevator" || (!accessibleOnly && n.Value.Type == "stair")) &&
+            !string.IsNullOrWhiteSpace(n.Value.ConnectorCode))
+            .GroupBy(n => (n.Value.Type, n.Value.ConnectorCode!.Trim().ToUpperInvariant()));
+        foreach (var group in connectors)
+        {
+            var stops = group.Select(n => n.Key).ToArray();
+            foreach (var start in stops)
+                foreach (var end in stops.Where(end => end.Item1 != start.Item1))
+                    adjacency[start].Add((end, 1));
+        }
+
+        var (path, _) = ShortestPath(adjacency, (fromMapId, from), (toMapId, to));
+        var segments = new List<RouteSegment>();
+        var ids = new List<Guid>();
+        for (var i = 0; i < path.Count; i++)
+        {
+            var (mapId, nodeId) = path[i];
+            ids.Add(nodeId);
+            var final = i == path.Count - 1;
+            if (!final && path[i + 1].Item1 == mapId) continue;
+            var map = byId[mapId];
+            var connector = final ? null : nodes[path[i]];
+            segments.Add(new(mapId, map.Revision, map.Name, ids, connector?.Label, connector?.Type));
+            ids = [];
+        }
+        return segments;
+    }
+
+    private static (IReadOnlyList<T> Path, double Cost) ShortestPath<T>(
+        Dictionary<T, List<(T Id, double Cost)>> adjacency, T from, T to) where T : notnull
+    {
+        var distances = adjacency.Keys.ToDictionary(id => id, _ => double.PositiveInfinity);
+        var previous = new Dictionary<T, T>();
+        var queue = new PriorityQueue<T, double>();
         distances[from] = 0; queue.Enqueue(from, 0);
         while (queue.TryDequeue(out var current, out var distance))
         {
             if (distance > distances[current]) continue;
-            if (current == to) break;
+            if (EqualityComparer<T>.Default.Equals(current, to)) break;
             foreach (var next in adjacency[current])
             {
                 var candidate = distance + next.Cost;
@@ -84,10 +152,10 @@ public static class IndoorGraph
             }
         }
         if (double.IsPositiveInfinity(distances[to])) throw new IndoorMapException("Không tìm được đường đi giữa hai điểm.", 422);
-        var path = new List<Guid> { to };
-        while (path[^1] != from) path.Add(previous[path[^1]]);
+        var path = new List<T> { to };
+        while (!EqualityComparer<T>.Default.Equals(path[^1], from)) path.Add(previous[path[^1]]);
         path.Reverse();
-        return new RouteResult(path, distances[to]);
+        return (path, distances[to]);
     }
 
     public static IReadOnlyList<string> Warnings(MapDraft draft)
