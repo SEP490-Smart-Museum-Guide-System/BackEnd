@@ -7,7 +7,7 @@ using SMGS.Infrastructure.Data;
 namespace SMGS.Infrastructure.Services;
 
 public class RecognitionService(ApplicationDbContext db, IVisitProgressService progress, IDailyQuizService daily,
-    IGamificationService rewards, TimeProvider clock) : IRecognitionService
+    IGamificationService rewards, TimeProvider clock, IPersonalizedTourService personalizedTours) : IRecognitionService
 {
     public async Task<ArtifactCollectionDto> GetCollectionAsync(Guid user, int? museumId, int page, int pageSize)
     {
@@ -49,14 +49,14 @@ public class RecognitionService(ApplicationDbContext db, IVisitProgressService p
         var old = await db.Set<RecognitionHistory>().SingleOrDefaultAsync(x => x.UserId == user && x.RequestId == request.RequestId);
         if (old is not null) {
             var oldCode = await db.Artifacts.Where(a => a.Id == old.ArtifactId).Select(a => a.QrCode).SingleOrDefaultAsync();
-            if (old.Method != (request.Method ?? "qr") || old.VisitId != request.VisitId || oldCode != request.QrCode.Trim()) throw new ExperienceException("RequestId đã được dùng cho lần quét khác.", 409);
+            if (old.Method != (request.Method ?? "qr") || (request.VisitId.HasValue && old.VisitId != request.VisitId) || oldCode != request.QrCode.Trim()) throw new ExperienceException("RequestId đã được dùng cho lần quét khác.", 409);
             return new(old.Id, old.ArtifactId!.Value, old.VisitId, old.RecognizedAt);
         }
         var artifact = await db.Artifacts.SingleOrDefaultAsync(a => a.QrCode == request.QrCode.Trim() && a.IsActive && a.Museum!.IsActive)
             ?? throw new ExperienceException("QR không hợp lệ hoặc hiện vật không khả dụng.", 404);
         var now = clock.GetUtcNow().UtcDateTime;
         var effectiveVisitId = request.VisitId ?? await db.Visits
-            .Where(v => v.VisitorId == user && v.MuseumId == artifact.MuseumId && v.Status == SMGS.Domain.Constants.VisitStatus.InProgress)
+            .Where(v => v.VisitorId == user && v.MuseumId == artifact.MuseumId && v.Status == VisitStatus.InProgress)
             .OrderByDescending(v => v.StartedAt)
             .Select(v => (int?)v.Id)
             .FirstOrDefaultAsync();
@@ -78,7 +78,8 @@ public class RecognitionService(ApplicationDbContext db, IVisitProgressService p
                 }
                 else if (activeVisit.PersonalizedTourId is Guid pId)
                 {
-                    isTourStop = await db.Set<PersonalizedTourStop>().AnyAsync(x => x.PersonalizedTourId == pId && x.ArtifactId == artifact.Id);
+                    var plan = await personalizedTours.Get(pId, user, default);
+                    isTourStop = plan.Stops.Any(x => x.ArtifactId == artifact.Id);
                 }
             }
         }
