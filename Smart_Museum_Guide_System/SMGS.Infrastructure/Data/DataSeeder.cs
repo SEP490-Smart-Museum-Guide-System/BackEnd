@@ -466,7 +466,7 @@ public static class DataSeeder
                 MuseumId = museum.Id,
                 CreatedBy = museumStaff.Id,
                 Title = "Tinh hoa Văn hóa Đông Sơn",
-                Description = "Khám phá các Bảo vật Quốc gia thời đại đồ đồng Đông Sơn.",
+                Description = "Chuyên đề Giỗ Tổ Hùng Vương: Hành trình ngược dòng 2.500 năm về buổi bình minh dựng nước Văn Lang – Âu Lạc, giải mã nghệ thuật đúc đồng và đời sống tâm linh cư dân Việt cổ qua bộ sưu tập Bảo vật Quốc gia Đông Sơn.",
                 EstimatedMinutes = 45,
                 Status = "published",
                 CreatedAt = now,
@@ -481,8 +481,8 @@ public static class DataSeeder
                     new TourVersion
                     {
                         VersionNo = 1,
-                        Title = "Tinh hoa Văn hóa Đông Sơn (v1)",
-                        Description = "Phiên bản v1 gồm 3 hiện vật tiêu biểu thời Đông Sơn.",
+                        Title = "Tinh hoa Văn hóa Đông Sơn",
+                        Description = "Chuyên đề Giỗ Tổ Hùng Vương: Hành trình ngược dòng 2.500 năm về buổi bình minh dựng nước Văn Lang – Âu Lạc, kết nối mạch chuyện từ Thạp đồng Đào Thịnh, Tượng người thổi khèn đến đỉnh cao Trống đồng Ngọc Lũ.",
                         EstimatedMinutes = 45,
                         Status = TourVersionStatuses.Approved,
                         PublicAt = now.AddHours(-1),
@@ -527,7 +527,7 @@ public static class DataSeeder
                 MuseumId = museum.Id,
                 CreatedBy = museumStaff.Id,
                 Title = "Gốm cổ & Kiến trúc Lý - Trần",
-                Description = "Hành trình ngắn thưởng lãm gốm hoa nâu và kiến trúc Hoàng thành.",
+                Description = "Chuyên đề Ngày Di sản Văn hóa Việt Nam (23/11): Dạo bước qua ký ức Hoàng thành Thăng Long, thưởng lãm uy quyền Đầu rồng đất nung thời Lý và nét phóng khoáng của Thạp gốm hoa nâu thời Trần.",
                 EstimatedMinutes = 30,
                 Status = "published",
                 CreatedAt = now,
@@ -541,8 +541,8 @@ public static class DataSeeder
                     new TourVersion
                     {
                         VersionNo = 1,
-                        Title = "Gốm cổ & Kiến trúc Lý - Trần (v1)",
-                        Description = "Hành trình 30 phút khám phá nghệ thuật đất nung và gốm hoa nâu.",
+                        Title = "Gốm cổ & Kiến trúc Lý - Trần",
+                        Description = "Chuyên đề Ngày Di sản Văn hóa Việt Nam (23/11): Hành trình 30 phút khám phá mỹ thuật cung đình và Phật giáo thời Lý – Trần qua nghệ thuật đất nung và gốm hoa nâu độc bản.",
                         EstimatedMinutes = 30,
                         Status = TourVersionStatuses.Approved,
                         PublicAt = now.AddHours(-1),

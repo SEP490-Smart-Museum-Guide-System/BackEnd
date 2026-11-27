@@ -9,6 +9,13 @@ public static class NotificationSchemaBootstrapper
         ALTER TABLE IF EXISTS "Users" ADD COLUMN IF NOT EXISTS "PreferredLanguage" character varying(2) NOT NULL DEFAULT 'vi';
         ALTER TABLE IF EXISTS "Users" ADD COLUMN IF NOT EXISTS "IsActive" boolean NOT NULL DEFAULT TRUE;
         ALTER TABLE IF EXISTS "recognition_history" ADD COLUMN IF NOT EXISTS "ConfirmedQrScan" boolean NOT NULL DEFAULT FALSE;
+        ALTER TABLE IF EXISTS "map_nodes" ADD COLUMN IF NOT EXISTS "ConnectorCode" character varying(64) NULL;
+        ALTER TABLE IF EXISTS "commerce_products" DROP COLUMN IF EXISTS "ValidityStartsAt";
+        ALTER TABLE IF EXISTS "purchase_orders" DROP COLUMN IF EXISTS "ValidityStartsAt";
+        INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+        VALUES ('20261126090000_DigitalOnlyScheduledPasses', '8.0.11'),
+               ('20261126120000_AddIndoorFloorConnectors', '8.0.11')
+        ON CONFLICT DO NOTHING;
 
         CREATE TABLE IF NOT EXISTS "artifact_detail_views" (
             "RequestId" uuid NOT NULL,
