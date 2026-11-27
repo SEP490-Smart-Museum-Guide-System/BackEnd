@@ -55,12 +55,40 @@ public class RecognitionService(ApplicationDbContext db, IVisitProgressService p
         var artifact = await db.Artifacts.SingleOrDefaultAsync(a => a.QrCode == request.QrCode.Trim() && a.IsActive && a.Museum!.IsActive)
             ?? throw new ExperienceException("QR không hợp lệ hoặc hiện vật không khả dụng.", 404);
         var now = clock.GetUtcNow().UtcDateTime;
-        if (request.VisitId is int vid) await progress.RecordQrVisitAsync(user, vid, artifact.Id, now);
-        var history = new RecognitionHistory { UserId = user, VisitId = request.VisitId, ArtifactId = artifact.Id, RecognizedAt = now,
+        var effectiveVisitId = request.VisitId ?? await db.Visits
+            .Where(v => v.VisitorId == user && v.MuseumId == artifact.MuseumId && v.Status == SMGS.Domain.Constants.VisitStatus.InProgress)
+            .OrderByDescending(v => v.StartedAt)
+            .Select(v => (int?)v.Id)
+            .FirstOrDefaultAsync();
+
+        var isTourStop = false;
+        if (effectiveVisitId is int vid)
+        {
+            await progress.RecordQrVisitAsync(user, vid, artifact.Id, now);
+            var activeVisit = await db.Visits.AsNoTracking().SingleOrDefaultAsync(v => v.Id == vid);
+            if (activeVisit is not null)
+            {
+                if (activeVisit.TourVersionId is int tvId)
+                {
+                    isTourStop = await db.Set<TourVersionItem>().AnyAsync(x => x.TourVersionId == tvId && x.ArtifactId == artifact.Id);
+                }
+                else if (activeVisit.TourId is int tId)
+                {
+                    isTourStop = await db.Set<TourItem>().AnyAsync(x => x.TourId == tId && x.ArtifactId == artifact.Id);
+                }
+                else if (activeVisit.PersonalizedTourId is Guid pId)
+                {
+                    isTourStop = await db.Set<PersonalizedTourStop>().AnyAsync(x => x.PersonalizedTourId == pId && x.ArtifactId == artifact.Id);
+                }
+            }
+        }
+
+        var history = new RecognitionHistory { UserId = user, VisitId = effectiveVisitId, ArtifactId = artifact.Id, RecognizedAt = now,
             Method = request.Method ?? "qr", ConfirmedQrScan = request.Method == "qr",
             IsSuccess = true, RequestId = request.RequestId };
         db.Add(history); await db.SaveChangesAsync();
-        await daily.UnlockAsync(history); var points = await rewards.AwardScanPointsAsync(user, artifact.Id);
+        await daily.UnlockAsync(history);
+        var points = isTourStop ? await rewards.AwardScanPointsAsync(user, artifact.Id) : 0;
         await db.SaveChangesAsync(); var badges = await rewards.EvaluateBadgesAsync(user); await db.SaveChangesAsync(); await tx.CommitAsync();
         return new(history.Id, artifact.Id, history.VisitId, now) { PointsAwarded = points, NewBadges = badges.Select(b => new EarnedBadge(b.Id, b.Name)).ToList() };
     }
