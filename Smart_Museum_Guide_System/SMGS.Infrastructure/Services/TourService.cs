@@ -173,6 +173,95 @@ public class TourService(
         return tour;
     }
 
+    public async Task DeleteAsync(int id, Guid user, bool admin, bool curator = false)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync();
+        var tour = await db.Set<Tour>()
+            .Include(t => t.Items)
+            .Include(t => t.Versions)
+                .ThenInclude(v => v.Items)
+            .SingleOrDefaultAsync(t => t.Id == id)
+            ?? throw new ExperienceException("Không tìm thấy tour.", 404);
+
+        await ExperienceAccess.Museum(db, tour.MuseumId, user, admin);
+
+        var hasApprovedVersion = tour.Status == "published" || tour.Versions.Any(v => v.Status == TourVersionStatuses.Approved);
+        if (hasApprovedVersion && !curator && !admin)
+        {
+            throw new ExperienceException("Hành trình này đã được Giám tuyển phê duyệt công bố. Chỉ Giám tuyển (Curator) mới có quyền gỡ bỏ hành trình đã xuất bản.", 403);
+        }
+
+        if (await db.Visits.AnyAsync(v => v.TourId == id && v.Status == VisitStatus.InProgress))
+        {
+            throw new ExperienceException("Không thể xóa hành trình đang có khách tham quan trực tiếp (Đang diễn ra).", 409);
+        }
+
+        var tourItemIds = tour.Items.Select(i => i.Id).ToArray();
+        var versionIds = tour.Versions.Select(v => v.Id).ToArray();
+        var versionItemIds = tour.Versions.SelectMany(v => v.Items.Select(i => i.Id)).ToArray();
+
+        if (tourItemIds.Length > 0)
+        {
+            await db.Set<VisitItem>()
+                .Where(vi => vi.TourItemId != null && tourItemIds.Contains(vi.TourItemId.Value))
+                .ExecuteUpdateAsync(s => s.SetProperty(vi => vi.TourItemId, (int?)null));
+        }
+
+        if (versionItemIds.Length > 0)
+        {
+            await db.Set<VisitItem>()
+                .Where(vi => vi.TourVersionItemId != null && versionItemIds.Contains(vi.TourVersionItemId.Value))
+                .ExecuteUpdateAsync(s => s.SetProperty(vi => vi.TourVersionItemId, (int?)null));
+        }
+
+        await db.Visits
+            .Where(v => v.TourId == id || (v.TourVersionId != null && versionIds.Contains(v.TourVersionId.Value)))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(v => v.TourId, (int?)null)
+                .SetProperty(v => v.TourVersionId, (int?)null));
+
+        var savedRoutes = await db.Set<SavedRoute>()
+            .Where(r => r.TourId == id || versionIds.Contains(r.TourVersionId))
+            .ToListAsync();
+        if (savedRoutes.Count > 0)
+        {
+            db.RemoveRange(savedRoutes);
+        }
+
+        db.Remove(tour);
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
+    }
+
+    public async Task DeleteVersionDraftAsync(int versionId, Guid user, bool admin)
+    {
+        var version = await db.Set<TourVersion>()
+            .Include(v => v.Items)
+            .SingleOrDefaultAsync(v => v.Id == versionId)
+            ?? throw new ExperienceException("Không tìm thấy phiên bản tour.", 404);
+
+        var tour = await db.Set<Tour>()
+            .Include(t => t.Versions)
+            .SingleOrDefaultAsync(t => t.Id == version.TourId)
+            ?? throw new ExperienceException("Không tìm thấy tour.", 404);
+
+        await ExperienceAccess.Museum(db, tour.MuseumId, user, admin);
+
+        if (version.Status != TourVersionStatuses.Draft)
+        {
+            throw new ExperienceException("Chỉ được phép xóa phiên bản ở trạng thái bản nháp (Draft).", 409);
+        }
+
+        if (tour.Versions.Count <= 1)
+        {
+            await DeleteAsync(tour.Id, user, admin);
+            return;
+        }
+
+        db.Remove(version);
+        await db.SaveChangesAsync();
+    }
+
     public async Task<Tour> PublishAsync(int id, int revision, Guid user, bool admin)
     {
         await using var tx = await db.Database.BeginTransactionAsync();

@@ -76,10 +76,10 @@ public class RecognitionService(ApplicationDbContext db, IVisitProgressService p
                 {
                     isTourStop = await db.Set<TourItem>().AnyAsync(x => x.TourId == tId && x.ArtifactId == artifact.Id);
                 }
-                else if (activeVisit.PersonalizedTourId is Guid pId)
+                else if (activeVisit.PersonalizedTourId is Guid personalId)
                 {
-                    var plan = await personalizedTours.Get(pId, user, default);
-                    isTourStop = plan.Stops.Any(x => x.ArtifactId == artifact.Id);
+                    var plan = await personalizedTours.Get(personalId, user, default);
+                    isTourStop = plan.Stops.Any(stop => stop.ArtifactId == artifact.Id);
                 }
             }
         }

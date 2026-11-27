@@ -304,6 +304,34 @@ public class VisitProgressService(ApplicationDbContext db, TimeProvider clock, I
         return result;
     }
 
+    public async Task<VisitResponseDto> AbandonTourAsync(Guid user, int visitId)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync();
+        await ExperienceAccess.LockUser(db, user);
+        var visit = await ExperienceAccess.Visit(db, visitId, user);
+
+        if (visit.Status != VisitStatus.InProgress)
+        {
+            throw new ExperienceException("Lượt tham quan không ở trạng thái đang diễn ra.");
+        }
+
+        int? versionNo = null;
+        if (visit.TourVersionId is int vid)
+        {
+            versionNo = await db.Set<TourVersion>()
+                .AsNoTracking()
+                .Where(v => v.Id == vid)
+                .Select(v => (int?)v.VersionNo)
+                .SingleOrDefaultAsync();
+        }
+
+        visit.Status = VisitStatus.Abandoned;
+        visit.CompletedAt = clock.GetUtcNow().UtcDateTime;
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
+        return Map(visit, versionNo);
+    }
+
     private async Task ValidateActiveArtifactsForVersionAsync(int museumId, int tourVersionId)
     {
         var ids = await db.Set<TourVersionItem>()

@@ -9,6 +9,8 @@ public interface ITourService
     Task<Tour> CreateAsync(int museumId, TourRequest request, Guid user, bool admin);
     Task<Tour> UpdateStopsAsync(int id, UpdateTourRequest request, Guid user, bool admin);
     Task<Tour> PublishAsync(int id, int revision, Guid user, bool admin);
+    Task DeleteAsync(int id, Guid user, bool admin, bool curator = false);
+    Task DeleteVersionDraftAsync(int versionId, Guid user, bool admin);
     Task<Tour> GetAsync(int id, Guid? user, bool admin);
     Task<IReadOnlyList<Tour>> ListAsync(int museumId, bool drafts, Guid? user, bool admin, int page, int pageSize);
 
@@ -49,6 +51,7 @@ public interface IVisitProgressService
     Task RecordQrVisitAsync(Guid user, int visitId, int artifactId, DateTime at);
     Task<VisitProgress> GetProgressAsync(Guid user, int visitId);
     Task<VisitResponseDto> CompleteTourAsync(Guid user, int visitId);
+    Task<VisitResponseDto> AbandonTourAsync(Guid user, int visitId);
 }
 public interface IQuestionBankService
 {
