@@ -23,7 +23,7 @@ public class LocalStaffAiModel(HttpClient http, IOptionsMonitor<GuideModelOption
         {
             using var response = await http.SendAsync(request, cancellationToken);
             if (response.StatusCode == HttpStatusCode.TooManyRequests) throw new GuideException("AI đang bận. Hãy thử lại sau.", 429);
-            if ((int)response.StatusCode == 422) throw new GuideException("Tư liệu vượt giới hạn model local hoặc cấu hình chưa phù hợp. Hãy rút gọn tư liệu.", 422);
+            if ((int)response.StatusCode == 422) throw new GuideException("Tư liệu hoặc câu hỏi đã có vượt giới hạn AI cho phép. Hãy rút gọn tư liệu rồi thử lại.", 422);
             if (response.StatusCode == HttpStatusCode.BadGateway) throw new GuideException("AI chưa tạo được bản nháp đủ căn cứ. Hãy bổ sung tư liệu và tạo lại.", 502);
             if (response.StatusCode == HttpStatusCode.GatewayTimeout) throw new GuideException("Model phản hồi chậm. Vui lòng thử lại.", 504);
             if (!response.IsSuccessStatusCode) throw new GuideException("Model local chưa sẵn sàng. Vui lòng thử lại.");
