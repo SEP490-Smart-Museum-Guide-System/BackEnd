@@ -12,7 +12,7 @@ public sealed class R2FileStorageService(IAmazonS3 client, IConfiguration config
     private string Bucket => configuration["CloudflareR2:BucketName"] ?? "smgs-media";
     public static void ValidateKey(string key)
     {
-        if (!Regex.IsMatch(key, @"^museums/[1-9]\d*/(?:images|artifacts/[1-9]\d*/(?:image|audio|video|models)|floor-maps/[1-9]\d*)/[a-f0-9]{32}\.[a-z0-9]+$"))
+        if (!Regex.IsMatch(key, @"\A(?:museums/[1-9]\d*/(?:images|artifacts/[1-9]\d*/(?:image|audio|video|models)|floor-maps/[1-9]\d*)/[a-f0-9]{32}\.[a-z0-9]+|visitor-home/images/[a-f0-9]{32}\.(?:png|jpe?g|webp))\z"))
             throw new ArgumentException("Storage key không hợp lệ.");
     }
 

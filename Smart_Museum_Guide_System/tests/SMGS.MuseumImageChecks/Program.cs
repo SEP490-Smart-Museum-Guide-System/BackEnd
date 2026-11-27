@@ -107,6 +107,58 @@ try {
     using var removed = await Send(HttpMethod.Delete, $"/api/museums/{id}/image", "Admin", null);
     Check(removed.IsSuccessStatusCode && (await inspection.Museums.AsNoTracking().SingleAsync(m => m.Id == id)).CoverImageUrl == null, "Remove cover");
     try { R2FileStorageService.ValidateKey("../outside.png"); throw new Exception("Unsafe path accepted"); } catch (ArgumentException) { }
+    inspection.Set<VisitorHome>().Add(new VisitorHome { Id = 1 });
+    await inspection.SaveChangesAsync();
+    const string homePath = "/api/visitor-home";
+    async Task<HttpResponseMessage> SaveHome(string role, Guid revision, object[] slides, params byte[][] images)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, homePath);
+        request.Headers.Add("X-Test-Role", role);
+        using var form = new MultipartFormDataContent();
+        form.Add(JsonContent.Create(new { revision, title = "Bảo tàng", slides }), "draft");
+        foreach (var image in images)
+            form.Add(new ByteArrayContent(image), "files", "cover.png");
+        request.Content = form;
+        return await client.SendAsync(request);
+    }
+
+    using var emptyHome = await client.GetAsync(homePath);
+    Check(emptyHome.IsSuccessStatusCode, "Visitor can read initial configuration");
+    object[] initialSlides =
+    [
+        new { fileIndex = 0, title = "Kiến trúc", caption = "Mặt tiền" },
+        new { fileIndex = 1, title = "Không gian", caption = "Sảnh chính" }
+    ];
+    using var forbiddenHome = await SaveHome("Visitor", Guid.Empty, initialSlides, png, png);
+    Check(forbiddenHome.StatusCode == HttpStatusCode.Forbidden, "Visitor cannot save homepage");
+    using var invalidHome = await SaveHome("Admin", Guid.Empty, initialSlides, png, [0]);
+    Check(invalidHome.StatusCode == HttpStatusCode.BadRequest &&
+        !storage.Files.Keys.Any(key => key.StartsWith("visitor-home/")), "Invalid batch must not publish either image");
+    using var publishedHome = await SaveHome("Admin", Guid.Empty, initialSlides, png, png);
+    Check(publishedHome.IsSuccessStatusCode, "Admin can publish a batch: " + await publishedHome.Content.ReadAsStringAsync());
+    using var homeJson = JsonDocument.Parse(await publishedHome.Content.ReadAsStringAsync());
+    var homeData = homeJson.RootElement.GetProperty("data");
+    var homeSlides = homeData.GetProperty("slides");
+    Check(homeSlides[0].GetProperty("title").GetString() == "Kiến trúc" &&
+        homeSlides[1].GetProperty("title").GetString() == "Không gian", "Each image has its own title");
+    var firstName = homeSlides[0].GetProperty("name").GetString();
+    var secondName = homeSlides[1].GetProperty("name").GetString();
+    using var firstImage = await client.GetAsync($"{homePath}/images/{firstName}");
+    Check(firstImage.IsSuccessStatusCode && (await firstImage.Content.ReadAsByteArrayAsync()).SequenceEqual(png),
+        "Visitor can load published image");
+    Check(firstImage.Headers.CacheControl?.MaxAge == TimeSpan.FromHours(1), "Published image can be reused by the browser");
+    using var staleHome = await SaveHome("Admin", Guid.Empty, []);
+    Check(staleHome.StatusCode == HttpStatusCode.Conflict, "Outdated revisions cannot overwrite the published images");
+    using var updatedHome = await SaveHome("Admin", homeData.GetProperty("revision").GetGuid(),
+        [new { name = secondName, caption = "Sảnh" }]);
+    Check(updatedHome.IsSuccessStatusCode, "Admin can keep an existing image and update its caption");
+    var finalHome = await client.GetFromJsonAsync<JsonElement>(homePath);
+    var finalSlides = finalHome.GetProperty("data").GetProperty("slides");
+    Check(finalSlides.GetArrayLength() == 1 && finalSlides[0].GetProperty("name").GetString() == secondName &&
+        finalSlides[0].GetProperty("caption").GetString() == "Sảnh", "Visitor reads the updated carousel");
+    using var removedImage = await client.GetAsync($"{homePath}/images/{firstName}");
+    Check(removedImage.StatusCode == HttpStatusCode.NotFound, "Removed image is no longer public");
+
     Console.WriteLine("PASS: HTTP multipart create/update, actual service/repository, scoped R2 keys, image retrieval, role denials, failure cleanup, safe storage errors, shared-image retention and removal. EF InMemory/storage fixtures; no live PostgreSQL/R2 or transaction rollback proof.");
 } finally {
     await app.StopAsync();

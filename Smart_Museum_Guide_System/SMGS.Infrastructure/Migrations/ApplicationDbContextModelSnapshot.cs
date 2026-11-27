@@ -1293,6 +1293,16 @@ namespace SMGS.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.VisitorHome", b =>
+                {
+                    b.Property<int>("Id").HasColumnType("integer");
+                    b.Property<Guid>("Revision").IsConcurrencyToken().HasColumnType("uuid");
+                    b.Property<string>("SlidesJson").IsRequired().HasColumnType("text");
+                    b.Property<string>("Title").IsRequired().HasColumnType("text");
+                    b.HasKey("Id");
+                    b.ToTable("visitor_home", (string)null);
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.Museum", b =>
                 {
                     b.Property<int>("Id")
