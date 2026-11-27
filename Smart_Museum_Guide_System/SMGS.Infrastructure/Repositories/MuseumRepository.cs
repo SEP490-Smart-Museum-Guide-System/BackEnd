@@ -10,7 +10,9 @@ public class MuseumRepository(ApplicationDbContext db) : IMuseumRepository
     public async Task<(IList<MuseumDiscoveryItem> Items, int TotalCount)> DiscoverAsync(
         MuseumDiscoveryQuery request, CancellationToken cancellationToken = default)
     {
-        var museums = db.Museums.AsNoTracking().Include(m => m.Translations).AsQueryable();
+        var museums = db.Museums.AsNoTracking().Include(m => m.Translations).Include(m => m.Categories).ThenInclude(x => x.Category).AsSplitQuery().AsQueryable();
+        if (request.CategoryId is int categoryId)
+            museums = museums.Where(m => m.Categories.Any(x => x.CategoryId == categoryId && x.Category.IsActive));
         if (request.IsActive.HasValue)
             museums = museums.Where(m => m.IsActive == request.IsActive.Value);
         if (request.CityCode is not null)
@@ -43,7 +45,13 @@ public class MuseumRepository(ApplicationDbContext db) : IMuseumRepository
         });
         query = request.SortBy == "distance"
             ? query.OrderBy(m => m.DistanceKm == null).ThenBy(m => m.DistanceKm).ThenBy(m => m.Museum.Id)
-            : query.OrderByDescending(m => m.Museum.CreatedAt).ThenBy(m => m.Museum.Id);
+            : request.SortBy == "name"
+                ? query.OrderBy(m => request.LanguageCode == "en"
+                    ? m.Museum.Translations.Where(t => t.LanguageCode == "en").Select(t => t.Name).FirstOrDefault() ?? m.Museum.Name
+                    : m.Museum.Name).ThenBy(m => m.Museum.Id)
+                : request.SortBy == "default"
+                    ? query.OrderBy(m => m.Museum.Id)
+                    : query.OrderByDescending(m => m.Museum.CreatedAt).ThenBy(m => m.Museum.Id);
         var items = await query.Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
             .ToListAsync(cancellationToken);
         return (items.Select(m => new MuseumDiscoveryItem(m.Museum, m.DistanceKm)).ToList(), total);
@@ -51,13 +59,13 @@ public class MuseumRepository(ApplicationDbContext db) : IMuseumRepository
 
     public async Task<Museum?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        return await db.Museums.Include(m => m.Translations).FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
+        return await db.Museums.Include(m => m.Translations).Include(m => m.Categories).ThenInclude(x => x.Category).AsSplitQuery().FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
     }
 
     public async Task<(IList<Museum> Items, int TotalCount)> GetPagedAsync(
         string? keyword, bool? isActive, int page, int pageSize)
     {
-        var query = db.Museums.Include(m => m.Translations).AsQueryable();
+        var query = db.Museums.Include(m => m.Translations).Include(m => m.Categories).ThenInclude(x => x.Category).AsSplitQuery().AsQueryable();
 
         if (isActive.HasValue)
             query = query.Where(m => m.IsActive == isActive.Value);
@@ -93,6 +101,11 @@ public class MuseumRepository(ApplicationDbContext db) : IMuseumRepository
         return await query.AnyAsync();
     }
 
+    public Task<T> WriteCategoriesAsync<T>(Func<Task<T>> write) => db.WriteMuseumCategoriesAsync(write);
+
+    public async Task<bool> CategoriesAreActiveAsync(int[] ids) =>
+        await db.Set<MuseumCategory>().CountAsync(x => x.IsActive && ids.Contains(x.Id)) == ids.Length;
+
     public async Task<Museum> CreateAsync(Museum museum)
     {
         // The multipart controller owns the transaction when saving a cover image.
@@ -112,7 +125,7 @@ public class MuseumRepository(ApplicationDbContext db) : IMuseumRepository
 
     public async Task UpdateAsync(Museum museum)
     {
-        db.Museums.Update(museum);
+        if (db.Entry(museum).State == EntityState.Detached) db.Museums.Update(museum);
         await db.SaveChangesAsync();
     }
 }

@@ -48,9 +48,38 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<GuideChatMessage> GuideChatMessages => Set<GuideChatMessage>();
 
+    public async Task<T> WriteMuseumCategoriesAsync<T>(Func<Task<T>> write, CancellationToken token = default)
+    {
+        if (!Database.IsNpgsql()) return await write();
+
+        await using var transaction = Database.CurrentTransaction is null
+            ? await Database.BeginTransactionAsync(token)
+            : null;
+        // Serialize assignment validation with changes to category availability.
+        await Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(713650284);", token);
+        var result = await write();
+        if (transaction is not null) await transaction.CommitAsync(token);
+        return result;
+    }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.Entity<MuseumCategory>(entity =>
+        {
+            entity.ToTable("museum_categories");
+            entity.Property(x => x.Code).HasMaxLength(80);
+            entity.Property(x => x.Name).HasMaxLength(120);
+            entity.Property(x => x.Description).HasMaxLength(1000);
+            entity.HasIndex(x => x.Code).IsUnique();
+        });
+        builder.Entity<MuseumCategoryAssignment>(entity =>
+        {
+            entity.ToTable("museum_category_assignments");
+            entity.HasKey(x => new { x.MuseumId, x.CategoryId });
+            entity.HasOne(x => x.Museum).WithMany(x => x.Categories).HasForeignKey(x => x.MuseumId);
+            entity.HasOne(x => x.Category).WithMany(x => x.Assignments).HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
+        });
         builder.Entity<RewardSettings>().ToTable("RewardSettings").Property(x => x.Id).ValueGeneratedNever();
         builder.Entity<VisitorHome>(entity =>
         {

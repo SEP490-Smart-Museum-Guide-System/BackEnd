@@ -40,6 +40,12 @@ void ConfigureDb(DbContextOptionsBuilder options) => options.UseInMemoryDatabase
     .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning)).AddInterceptors(failure);
 var inspectionOptions = new DbContextOptionsBuilder<ApplicationDbContext>(); ConfigureDb(inspectionOptions);
 using var inspection = new ApplicationDbContext(inspectionOptions.Options);
+inspection.Set<MuseumCategory>().AddRange(
+    new MuseumCategory { Id = 1, Code = "history", Name = "Lịch sử", DisplayOrder = 1 },
+    new MuseumCategory { Id = 2, Code = "culture", Name = "Văn hóa", DisplayOrder = 2 },
+    new MuseumCategory { Id = 3, Code = "inactive", Name = "Ẩn", DisplayOrder = 3, IsActive = false });
+await inspection.SaveChangesAsync();
+failure.Calls = 0;
 var builder = WebApplication.CreateBuilder();
 builder.Logging.ClearProviders(); builder.WebHost.UseUrls("http://127.0.0.1:0");
 builder.Services.AddScoped<IMuseumRepository, MuseumRepository>();
@@ -57,13 +63,14 @@ await app.StartAsync();
 try {
     var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
     using var client = new HttpClient { BaseAddress = new Uri(address) };
-    async Task<HttpResponseMessage> Send(HttpMethod method, string path, string? role, byte[]? image, string name = "Bảo tàng ảnh", string filename = "museum.png") {
+    async Task<HttpResponseMessage> Send(HttpMethod method, string path, string? role, byte[]? image, string name = "Bảo tàng ảnh", string filename = "museum.png", int[]? categoryIds = null) {
         using var request = new HttpRequestMessage(method, path);
         if (role is not null) request.Headers.Add("X-Test-Role", role);
         if (method != HttpMethod.Delete) {
             var body = new MultipartFormDataContent();
             body.Add(new StringContent(name), "name"); body.Add(new StringContent("79"), "cityCode");
             body.Add(new StringContent("Địa chỉ bảo tàng"), "address");
+            foreach (var categoryId in categoryIds ?? [1]) body.Add(new StringContent(categoryId.ToString()), "categoryIds");
             if (image is not null) body.Add(new ByteArrayContent(image), "file", filename);
             request.Content = body;
         }
@@ -75,10 +82,28 @@ try {
         using var denied = await Send(HttpMethod.Post, "/api/museums/with-image", role, png);
         Check(denied.StatusCode == HttpStatusCode.Forbidden, "Only Admin may create museum: " + role);
     }
-    using var created = await Send(HttpMethod.Post, "/api/museums/with-image", "Admin", png);
+    using var invalidCategories = await Send(HttpMethod.Post, "/api/museums/with-image", "Admin", png, categoryIds: [1, 1]);
+    Check(invalidCategories.StatusCode == HttpStatusCode.BadRequest, "Duplicate categories must be rejected");
+    using var inactiveCategory = await Send(HttpMethod.Post, "/api/museums/with-image", "Admin", png, categoryIds: [3]);
+    Check(inactiveCategory.StatusCode == HttpStatusCode.BadRequest, "Inactive categories must be rejected");
+    using var unknownCategory = await Send(HttpMethod.Post, "/api/museums/with-image", "Admin", png, categoryIds: [99]);
+    Check(unknownCategory.StatusCode == HttpStatusCode.BadRequest, "Unknown categories must be rejected");
+    using var missingCategory = await Send(HttpMethod.Post, "/api/museums/with-image", "Admin", png, categoryIds: []);
+    Check(missingCategory.StatusCode == HttpStatusCode.BadRequest, "New museums require a category");
+    using var created = await Send(HttpMethod.Post, "/api/museums/with-image", "Admin", png, categoryIds: [1, 2]);
     Check(created.StatusCode == HttpStatusCode.Created, "Multipart create failed: " + await created.Content.ReadAsStringAsync());
     using var result = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
     var id = result.RootElement.GetProperty("data").GetProperty("id").GetInt32();
+    var createdCategories = result.RootElement.GetProperty("data").GetProperty("categories");
+    Check(createdCategories.GetArrayLength() == 2, "Museum DTO should contain both categories");
+    foreach (var categoryId in new[] { 1, 2 })
+    {
+        var page = await client.GetFromJsonAsync<JsonElement>($"/api/museums?categoryId={categoryId}&sortBy=name&pageSize=1");
+        Check(page.GetProperty("data").GetProperty("totalCount").GetInt32() == 1,
+            "Each assigned category returns the museum once");
+    }
+    var categories = await client.GetFromJsonAsync<JsonElement>("/api/museum-categories");
+    Check(categories.GetProperty("data").GetArrayLength() == 2, "Public category listing excludes inactive rows");
     var url = result.RootElement.GetProperty("data").GetProperty("coverImageUrl").GetString()!;
     Check(await inspection.Museums.CountAsync() == 1, "One create must produce one museum");
     using var fetched = await client.GetAsync(url);
@@ -95,6 +120,19 @@ try {
     var saved = await inspection.Museums.AsNoTracking().SingleAsync(m => m.Id == id);
     Check(updated.IsSuccessStatusCode && saved.Name == "Bảo tàng đã cập nhật" && saved.CoverImageUrl != url, "Update must save image and metadata together");
     Check(storage.Files.ContainsKey($"museums/{id}/images/{Path.GetFileName(new Uri(url).AbsolutePath)}"), "Old image is retained for potentially shared references");
+    async Task<HttpResponseMessage> ChangeCategory(int categoryId, string role)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/museum-categories/{categoryId}");
+        request.Headers.Add("X-Test-Role", role);
+        request.Content = JsonContent.Create(new { name = "Danh mục", displayOrder = 4, isActive = false });
+        return await client.SendAsync(request);
+    }
+    using var staffCategoryChange = await ChangeCategory(2, "Museum Staff");
+    Check(staffCategoryChange.StatusCode == HttpStatusCode.Forbidden, "Only admins can manage categories");
+    using var protectLastCategory = await ChangeCategory(1, "Admin");
+    Check(protectLastCategory.StatusCode == HttpStatusCode.BadRequest, "An active museum must retain one active category");
+    using var deactivateUnusedCategory = await ChangeCategory(2, "Admin");
+    Check(deactivateUnusedCategory.IsSuccessStatusCode, "An unused category can be deactivated");
     before = storage.Files.Count;
     failure.FailAt = failure.Calls + 2;
     using var failedSave = await Send(HttpMethod.Put, $"/api/museums/{id}/with-image", "Admin", png, "Lỗi lưu metadata");

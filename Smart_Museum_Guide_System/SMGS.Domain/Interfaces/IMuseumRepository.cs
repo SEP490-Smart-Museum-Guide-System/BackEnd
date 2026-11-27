@@ -8,6 +8,8 @@ public interface IMuseumRepository
     Task<Museum?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<(IList<Museum> Items, int TotalCount)> GetPagedAsync(string? keyword, bool? isActive, int page, int pageSize);
     Task<bool> ExistsByNameAsync(string name, int? excludeId = null);
+    Task<T> WriteCategoriesAsync<T>(Func<Task<T>> write) => write();
+    Task<bool> CategoriesAreActiveAsync(int[] ids) => Task.FromResult(false);
     Task<Museum> CreateAsync(Museum museum);
     Task UpdateAsync(Museum museum);
 }

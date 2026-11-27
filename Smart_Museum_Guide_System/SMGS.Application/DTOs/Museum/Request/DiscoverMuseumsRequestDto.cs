@@ -10,6 +10,7 @@ public class DiscoverMuseumsRequestDto
     public bool? IsActive { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
+    public int? CategoryId { get; set; }
     public string? SortBy { get; set; }
     [Range(1, 1000000)] public int Page { get; set; } = 1;
     [Range(1, 50)] public int PageSize { get; set; } = 20;

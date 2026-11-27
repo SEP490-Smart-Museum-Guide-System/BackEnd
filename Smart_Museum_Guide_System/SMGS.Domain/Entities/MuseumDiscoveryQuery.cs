@@ -7,6 +7,8 @@ public class MuseumDiscoveryQuery
     public bool? IsActive { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
+    public int? CategoryId { get; set; }
+    public string LanguageCode { get; set; } = "vi";
     public string? SortBy { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;

@@ -1303,6 +1303,31 @@ namespace SMGS.Infrastructure.Migrations
                     b.ToTable("visitor_home", (string)null);
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.MuseumCategory", b =>
+                {
+                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("integer");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<string>("Code").IsRequired().HasMaxLength(80).HasColumnType("character varying(80)");
+                    b.Property<string>("Name").IsRequired().HasMaxLength(120).HasColumnType("character varying(120)");
+                    b.Property<string>("Description").HasMaxLength(1000).HasColumnType("character varying(1000)");
+                    b.Property<int>("DisplayOrder").HasColumnType("integer");
+                    b.Property<bool>("IsActive").HasColumnType("boolean");
+                    b.Property<DateTime>("CreatedAt").HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("UpdatedAt").HasColumnType("timestamp with time zone");
+                    b.HasKey("Id");
+                    b.HasIndex("Code").IsUnique();
+                    b.ToTable("museum_categories", (string)null);
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.MuseumCategoryAssignment", b =>
+                {
+                    b.Property<int>("MuseumId").HasColumnType("integer");
+                    b.Property<int>("CategoryId").HasColumnType("integer");
+                    b.HasKey("MuseumId", "CategoryId");
+                    b.HasIndex("CategoryId");
+                    b.ToTable("museum_category_assignments", (string)null);
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.Museum", b =>
                 {
                     b.Property<int>("Id")
@@ -3648,8 +3673,24 @@ namespace SMGS.Infrastructure.Migrations
                     b.Navigation("Nodes");
                 });
 
+            modelBuilder.Entity("SMGS.Domain.Entities.MuseumCategoryAssignment", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.Museum", "Museum")
+                        .WithMany("Categories").HasForeignKey("MuseumId").OnDelete(DeleteBehavior.Cascade).IsRequired();
+                    b.HasOne("SMGS.Domain.Entities.MuseumCategory", "Category")
+                        .WithMany("Assignments").HasForeignKey("CategoryId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.Navigation("Museum");
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.MuseumCategory", b =>
+                {
+                    b.Navigation("Assignments");
+                });
+
             modelBuilder.Entity("SMGS.Domain.Entities.Museum", b =>
                 {
+                    b.Navigation("Categories");
                     b.Navigation("Translations");
                 });
 

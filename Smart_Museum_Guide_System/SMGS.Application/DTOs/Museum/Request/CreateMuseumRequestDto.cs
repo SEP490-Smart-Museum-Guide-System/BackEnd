@@ -28,4 +28,5 @@ public class CreateMuseumRequestDto
 
     [StringLength(1000)]
     public string? CoverImageUrl { get; set; }
+    public int[]? CategoryIds { get; set; }
 }

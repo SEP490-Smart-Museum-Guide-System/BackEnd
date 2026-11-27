@@ -44,6 +44,22 @@ internal static class DatabaseChecks
                 new() { Name = "Antipode", CityCode = "01", Latitude = 0, Longitude = 180 });
             await db.SaveChangesAsync();
             var repo = new MuseumRepository(db);
+            var categories = await db.Set<MuseumCategory>().OrderBy(x => x.DisplayOrder).ToListAsync();
+            Check(categories.Count == 12 && categories[0].Code == "history", "Categories must seed once in display order.");
+            near.Categories.Add(new MuseumCategoryAssignment { CategoryId = categories[0].Id });
+            near.Categories.Add(new MuseumCategoryAssignment { CategoryId = categories[1].Id });
+            await db.SaveChangesAsync();
+            foreach (var category in categories.Take(2))
+            {
+                var filtered = await repo.DiscoverAsync(new MuseumDiscoveryQuery
+                {
+                    CategoryId = category.Id, Keyword = "near", SortBy = "name", LanguageCode = "en",
+                    IsActive = true, Page = 1, PageSize = 1
+                });
+                Check(filtered.TotalCount == 1 && filtered.Items.Single().Museum.Categories.Count == 2,
+                    "Category and keyword filter must run before paging without duplicate rows.");
+            }
+
             var query = new MuseumDiscoveryQuery { Keyword = "test", CityCode = "79", IsActive = true,
                 Latitude = 0, Longitude = 0, SortBy = "distance", Page = 1, PageSize = 1 };
             var first = await repo.DiscoverAsync(query);
