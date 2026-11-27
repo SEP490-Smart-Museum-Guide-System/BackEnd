@@ -52,6 +52,10 @@ public class TourController(ITourService service) : ExperienceControllerBase
     public async Task<IActionResult> Update(int id, UpdateTourRequest request) => Result(await service.UpdateStopsAsync(id, request, UserId, Admin));
     [HttpPost("{id:int}/publish"), Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff)]
     public async Task<IActionResult> Publish(int id, RevisionRequest request) => Result(await service.PublishAsync(id, request.Revision, UserId, Admin));
+    [HttpDelete("{id:int}"), Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff + "," + RoleNames.Curator)]
+    public async Task<IActionResult> Delete(int id) { await service.DeleteAsync(id, UserId, Admin, User.IsInRole(RoleNames.Curator)); return Result(new { deleted = true, id }); }
+    [HttpDelete("versions/{versionId:int}"), Authorize(Roles = RoleNames.Admin + "," + RoleNames.MuseumStaff)]
+    public async Task<IActionResult> DeleteVersionDraft(int versionId) { await service.DeleteVersionDraftAsync(versionId, UserId, Admin); return Result(new { deleted = true, versionId }); }
 
     // WF-02 (F04): Phiên bản TourVersion (Draft -> Submitted -> Approved/Rejected + PublicAt)
     [HttpGet("{tourId:int}/public-version"), AllowAnonymous]
@@ -117,6 +121,9 @@ public class VisitProgressController(IVisitProgressService service) : Experience
 {
     [HttpGet("progress")]
     public async Task<IActionResult> Get(int visitId) => Result(await service.GetProgressAsync(UserId, visitId));
+
+    [HttpPost("abandon")]
+    public async Task<IActionResult> Abandon(int visitId) => Result(await service.AbandonTourAsync(UserId, visitId));
 }
 [Route("api/visitor-navigation"), Authorize(Roles = RoleNames.Visitor)]
 public class VisitorNavigationController(IVisitorNavigationService service) : ExperienceControllerBase
