@@ -52,6 +52,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
         builder.Entity<RewardSettings>().ToTable("RewardSettings").Property(x => x.Id).ValueGeneratedNever();
+        builder.Entity<VisitorHome>(entity =>
+        {
+            entity.ToTable("visitor_home");
+            entity.Property(x => x.Id).ValueGeneratedNever();
+            entity.Property(x => x.Revision).IsConcurrencyToken();
+        });
         IndoorMapConfiguration.Configure(builder);
         CommerceConfiguration.Configure(builder);
         VisitorExperienceConfiguration.Configure(builder);
