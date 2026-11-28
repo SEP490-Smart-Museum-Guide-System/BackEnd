@@ -11,6 +11,10 @@ public class Tour
     public string Status { get; set; } = "draft";
     public int Revision { get; set; } = 1;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public int ActiveVisitorCount { get; set; }
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public int CompletedVisitCount { get; set; }
     public ICollection<TourItem> Items { get; set; } = new List<TourItem>();
     public ICollection<TourVersion> Versions { get; set; } = new List<TourVersion>();
 }

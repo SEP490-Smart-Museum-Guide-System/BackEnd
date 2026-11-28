@@ -30,6 +30,12 @@ public class TourVersion
     public DateTime? ReviewedAt { get; set; }
     public string? ReviewNote { get; set; }
 
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public int ActiveVisitorCount { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public int CompletedVisitCount { get; set; }
+
     public ICollection<TourVersionItem> Items { get; set; } = new List<TourVersionItem>();
 
     /// <summary>

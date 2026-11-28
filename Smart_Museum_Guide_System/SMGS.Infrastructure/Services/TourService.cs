@@ -365,7 +365,7 @@ public class TourService(
 
         if (drafts)
         {
-            return await db.Set<Tour>()
+            var managedList = await db.Set<Tour>()
                 .AsNoTracking()
                 .Where(x => x.MuseumId == museumId)
                 .OrderBy(x => x.Id)
@@ -375,6 +375,39 @@ public class TourService(
                 .Include(x => x.Versions.OrderByDescending(v => v.VersionNo))
                     .ThenInclude(v => v.Items.OrderBy(i => i.OrderNo))
                 .ToListAsync();
+
+            if (managedList.Count > 0)
+            {
+                var tourIds = managedList.Select(t => t.Id).ToArray();
+                var visitStats = await db.Visits
+                    .AsNoTracking()
+                    .Where(v => v.TourId != null && tourIds.Contains(v.TourId.Value))
+                    .GroupBy(v => new { v.TourId, v.TourVersionId, v.Status })
+                    .Select(g => new { g.Key.TourId, g.Key.TourVersionId, g.Key.Status, Count = g.Count() })
+                    .ToListAsync();
+
+                foreach (var t in managedList)
+                {
+                    t.ActiveVisitorCount = visitStats
+                        .Where(s => s.TourId == t.Id && s.Status == VisitStatus.InProgress)
+                        .Sum(s => s.Count);
+                    t.CompletedVisitCount = visitStats
+                        .Where(s => s.TourId == t.Id && s.Status == VisitStatus.Completed)
+                        .Sum(s => s.Count);
+
+                    foreach (var ver in t.Versions)
+                    {
+                        ver.ActiveVisitorCount = visitStats
+                            .Where(s => (s.TourVersionId == ver.Id || (s.TourVersionId == null && s.TourId == t.Id)) && s.Status == VisitStatus.InProgress)
+                            .Sum(s => s.Count);
+                        ver.CompletedVisitCount = visitStats
+                            .Where(s => (s.TourVersionId == ver.Id || (s.TourVersionId == null && s.TourId == t.Id)) && s.Status == VisitStatus.Completed)
+                            .Sum(s => s.Count);
+                    }
+                }
+            }
+
+            return managedList;
         }
 
         var tours = await db.Set<Tour>()
@@ -1374,12 +1407,29 @@ public class TourService(
                 .Where(a => allArtifactIds.Contains(a.Id))
                 .ToDictionaryAsync(a => a.Id);
 
+        var tourIds = versions.Select(v => v.TourId).Distinct().ToArray();
+        var visitStats = tourIds.Length == 0
+            ? []
+            : await db.Visits
+                .AsNoTracking()
+                .Where(v => v.TourId != null && tourIds.Contains(v.TourId.Value))
+                .GroupBy(v => new { v.TourId, v.Status })
+                .Select(g => new { TourId = g.Key.TourId!.Value, g.Key.Status, Count = g.Count() })
+                .ToListAsync();
+
         return versions
             .Select(v =>
             {
                 var (museumId, museumName) = tourMeta.TryGetValue(v.TourId, out var meta)
                     ? meta
                     : (0, string.Empty);
+
+                var activeCount = visitStats
+                    .Where(s => s.TourId == v.TourId && s.Status == VisitStatus.InProgress)
+                    .Sum(s => s.Count);
+                var completedCount = visitStats
+                    .Where(s => s.TourId == v.TourId && s.Status == VisitStatus.Completed)
+                    .Sum(s => s.Count);
 
                 var stops = v.Items
                     .OrderBy(i => i.OrderNo)
@@ -1435,7 +1485,9 @@ public class TourService(
                     ReviewedAt: v.ReviewedAt,
                     ReviewNote: v.ReviewNote,
                     StopCount: stops.Count,
-                    Stops: stops);
+                    Stops: stops,
+                    ActiveVisitorCount: activeCount,
+                    CompletedVisitCount: completedCount);
             })
             .ToList();
     }

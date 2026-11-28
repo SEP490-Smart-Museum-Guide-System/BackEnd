@@ -37,7 +37,9 @@ public record TourVersionReviewItemDto(
     DateTime? ReviewedAt,
     string? ReviewNote,
     int StopCount,
-    IReadOnlyList<TourVersionStopDetailDto> Stops);
+    IReadOnlyList<TourVersionStopDetailDto> Stops,
+    int ActiveVisitorCount = 0,
+    int CompletedVisitCount = 0);
 public record TourVersionStatusSummaryDto(
     int MuseumId,
     int TotalTours,
