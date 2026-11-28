@@ -90,7 +90,7 @@ public class DashboardService(
 
         var activePassesCount = await (from p in db.MuseumPasses.AsNoTracking()
                                        join o in db.PurchaseOrders.AsNoTracking() on p.OrderId equals o.Id
-                                       where p.RevokedAt > now && o.Status == "paid" && o.CancelledAt == null && o.ExpiresAt > now
+                                       where p.RevokedAt > now && o.Status == "paid" && o.CancelledAt == null && o.DigitalCancelledAt == null && o.ExpiresAt > now
                                        select p.Id).CountAsync(cancellationToken);
 
         var attemptsQuery = from a in db.PaymentAttempts.AsNoTracking()
@@ -653,7 +653,7 @@ public class DashboardService(
 
         var activePassesCount = await (from p in db.MuseumPasses.AsNoTracking()
                                        join o in db.PurchaseOrders.AsNoTracking() on p.OrderId equals o.Id
-                                       where o.MuseumId == museumId && p.RevokedAt > now && o.Status == "paid" && o.CancelledAt == null && o.ExpiresAt > now
+                                       where o.MuseumId == museumId && p.RevokedAt > now && o.Status == "paid" && o.CancelledAt == null && o.DigitalCancelledAt == null && o.ExpiresAt > now
                                        select p.Id).CountAsync(cancellationToken);
 
         var commerce = new MuseumCommerceStatsDto(

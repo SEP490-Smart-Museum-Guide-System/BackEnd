@@ -22,6 +22,31 @@ namespace SMGS.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("SMGS.Domain.Entities.AdmissionTicket", b =>
+                {
+                    b.Property<Guid>("OrderId").HasColumnType("uuid");
+                    b.Property<string>("Code").IsRequired().HasMaxLength(64).HasColumnType("character varying(64)");
+                    b.Property<int>("Quantity").HasColumnType("integer");
+                    b.Property<decimal>("Amount").HasPrecision(18, 2).HasColumnType("numeric(18,2)");
+                    b.Property<DateTime?>("CancelledAt").HasColumnType("timestamp with time zone");
+                    b.Property<decimal>("RefundedAmount").HasPrecision(18, 2).HasColumnType("numeric(18,2)");
+                    b.HasKey("OrderId");
+                    b.HasIndex("Code").IsUnique();
+                    b.ToTable("admission_tickets");
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.AdmissionCheckIn", b =>
+                {
+                    b.Property<Guid>("OrderId").HasColumnType("uuid");
+                    b.Property<Guid>("OperationId").HasColumnType("uuid");
+                    b.Property<Guid>("StaffId").HasColumnType("uuid");
+                    b.Property<int>("Quantity").HasColumnType("integer");
+                    b.Property<DateTime>("CheckedInAt").HasColumnType("timestamp with time zone");
+                    b.HasKey("OrderId", "OperationId");
+                    b.HasIndex("StaffId");
+                    b.ToTable("admission_check_ins");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1736,6 +1761,7 @@ namespace SMGS.Infrastructure.Migrations
 
             modelBuilder.Entity("SMGS.Domain.Entities.PurchaseOrder", b =>
                 {
+                    b.Property<DateTime?>("DigitalCancelledAt").HasColumnType("timestamp with time zone");
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3734,6 +3760,19 @@ namespace SMGS.Infrastructure.Migrations
             modelBuilder.Entity("SMGS.Domain.Entities.VisitFeedback", b =>
                 {
                     b.Navigation("StaffResponse");
+                });
+            modelBuilder.Entity("SMGS.Domain.Entities.AdmissionTicket", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.PurchaseOrder", null).WithOne()
+                        .HasForeignKey("SMGS.Domain.Entities.AdmissionTicket", "OrderId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                });
+
+            modelBuilder.Entity("SMGS.Domain.Entities.AdmissionCheckIn", b =>
+                {
+                    b.HasOne("SMGS.Domain.Entities.AdmissionTicket", null).WithMany()
+                        .HasForeignKey("OrderId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("SMGS.Infrastructure.Identity.ApplicationUser", null).WithMany()
+                        .HasForeignKey("StaffId").OnDelete(DeleteBehavior.Restrict).IsRequired();
                 });
 #pragma warning restore 612, 618
         }

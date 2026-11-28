@@ -27,7 +27,7 @@ public partial class CommerceService
         }
         if (order.Status != "pending") throw new CommerceException("Đơn hàng đã đóng hoặc đã hủy.", 409);
         if (order.VisitDate < LocalToday()) throw new CommerceException("Ngày tham quan đã qua; không thể thanh toán đơn này.", 409);
-        EnsureBookingUsable(order.VisitDate, order.ValidityHours);
+        EnsureBookingUsable(order.VisitDate, PaymentValidityHours(order));
 
         var alreadyPaidByWallet = -(await db.WalletTransactions.Where(t => t.OrderId == order.Id && t.Type == "payment")
             .SumAsync(t => (decimal?)t.Amount) ?? 0m);
@@ -140,6 +140,8 @@ public partial class CommerceService
             return new(true, true, "Giao dịch đã được xử lý.");
         if (attempt.Status != "pending" || order.Status != "pending")
             return new(true, false, "Đơn hàng hoặc giao dịch đã đóng; cần đối soát.");
+        if (ScheduledExpiry(order.VisitDate, PaymentValidityHours(order)) <= now.UtcDateTime)
+            return new(true, false, "Đơn đã hết hạn sử dụng; khoản tiền cần được đối soát.");
         if (await db.PaymentAttempts.AnyAsync(a => a.Reference == reference))
             throw new CommerceException("Giao dịch SePay đã được sử dụng.", 409);
         attempt.Status = "succeeded"; attempt.Reference = reference; attempt.CompletedAt = now.UtcDateTime;

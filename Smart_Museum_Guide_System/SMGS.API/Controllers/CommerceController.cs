@@ -40,6 +40,42 @@ public class CommerceController(ICommerceService service) : ControllerBase
     private bool Admin => User.IsInRole(RoleNames.Admin);
     private IActionResult Result<T>(T data, int status = 200) => StatusCode(status, ResponseDto<T>.Success(data, statusCode: status));
 
+    [AllowAnonymous, HttpGet("museums/{museumId:int}/admission-offers")]
+    public async Task<IActionResult> AdmissionOffers(int museumId) => Result(await service.AdmissionOffers(museumId, null, false));
+
+    [Authorize(Roles = Managers), HttpGet("museums/{museumId:int}/admission-offers/manage")]
+    public async Task<IActionResult> ManageAdmissionOffers(int museumId) => Result(await service.AdmissionOffers(museumId, UserId, Admin));
+
+    [Authorize(Roles = Managers), HttpPost("museums/{museumId:int}/admission-offers")]
+    public async Task<IActionResult> CreateAdmissionOffer(int museumId, AdmissionOfferRequest request) =>
+        Result(await service.SaveAdmissionOffer(museumId, null, request, UserId, Admin), 201);
+
+    [Authorize(Roles = Managers), HttpPut("museums/{museumId:int}/admission-offers/{id:int}")]
+    public async Task<IActionResult> UpdateAdmissionOffer(int museumId, int id, AdmissionOfferRequest request) =>
+        Result(await service.SaveAdmissionOffer(museumId, id, request, UserId, Admin));
+
+    [HttpPost("museums/{museumId:int}/admission-orders")]
+    public async Task<IActionResult> CreateAdmissionOrder(int museumId, AdmissionOrderRequest request) =>
+        Result(await service.CreateAdmissionOrder(museumId, request, UserId), 201);
+
+    [HttpGet("orders/{orderId:guid}/admission-ticket")]
+    public async Task<IActionResult> AdmissionTicket(Guid orderId) => Result(await service.AdmissionTicketForBuyer(orderId, UserId));
+
+    [HttpGet("orders/{orderId:guid}/items")]
+    public async Task<IActionResult> AdmissionDetails(Guid orderId) => Result(await service.AdmissionDetails(orderId, UserId));
+
+    [HttpPost("orders/{orderId:guid}/items/{item}/cancel")]
+    public async Task<IActionResult> CancelAdmissionItem(Guid orderId, string item) =>
+        Result(await service.CancelAdmissionItem(orderId, item, UserId));
+
+    [Authorize(Roles = Managers), HttpPost("museums/{museumId:int}/admission/inspect")]
+    public async Task<IActionResult> InspectAdmission(int museumId, AdmissionScanRequest request) =>
+        Result(await service.InspectAdmission(museumId, request.Code, UserId, Admin));
+
+    [Authorize(Roles = Managers), HttpPost("museums/{museumId:int}/admission/check-in")]
+    public async Task<IActionResult> CheckInAdmission(int museumId, AdmissionCheckInRequest request) =>
+        Result(await service.CheckInAdmission(museumId, request, UserId, Admin));
+
     [AllowAnonymous, HttpGet("museums/{museumId:int}/resources")]
     public async Task<IActionResult> Resources(int museumId) => Result(await service.Resources(museumId));
 

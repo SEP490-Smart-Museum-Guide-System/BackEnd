@@ -49,6 +49,7 @@ public class PurchaseOrder
     public string? GroupKeyHash { get; set; }
     public decimal RefundedAmount { get; set; }
     public DateTime? CancelledAt { get; set; }
+    public DateTime? DigitalCancelledAt { get; set; }
 }
 
 public class WalletTransaction

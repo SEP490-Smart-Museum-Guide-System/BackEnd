@@ -5,6 +5,14 @@ namespace SMGS.Application.Interfaces;
 
 public interface ICommerceService
 {
+    Task<IReadOnlyList<AdmissionOffer>> AdmissionOffers(int museumId, Guid? staff, bool admin);
+    Task<AdmissionOffer> SaveAdmissionOffer(int museumId, int? id, AdmissionOfferRequest request, Guid staff, bool admin);
+    Task<OrderResponse> CreateAdmissionOrder(int museumId, AdmissionOrderRequest request, Guid buyer);
+    Task<AdmissionTicketResponse> AdmissionTicketForBuyer(Guid orderId, Guid buyer);
+    Task<CheckoutDetails> AdmissionDetails(Guid orderId, Guid buyer);
+    Task<AdmissionTicketResponse> InspectAdmission(int museumId, string code, Guid staff, bool admin);
+    Task<AdmissionCheckInResponse> CheckInAdmission(int museumId, AdmissionCheckInRequest request, Guid staff, bool admin);
+    Task<CancellationResponse> CancelAdmissionItem(Guid orderId, string item, Guid buyer);
     Task EnsureMuseumManagement(int museumId, Guid staff, bool admin);
     Task<IReadOnlyList<CommerceResource>> Resources(int museumId);
     Task<CommerceResource> ConfigureResource(int museumId, int? id, ResourceRequest request, Guid staff, bool admin);

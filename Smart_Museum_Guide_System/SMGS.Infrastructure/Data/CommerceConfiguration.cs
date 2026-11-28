@@ -8,6 +8,23 @@ public static class CommerceConfiguration
 {
     public static void Configure(ModelBuilder b)
     {
+        b.Entity<AdmissionTicket>(e =>
+        {
+            e.ToTable("admission_tickets");
+            e.HasKey(x => x.OrderId);
+            e.Property(x => x.Code).HasMaxLength(64);
+            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.RefundedAmount).HasPrecision(18, 2);
+            e.HasOne<PurchaseOrder>().WithOne().HasForeignKey<AdmissionTicket>(x => x.OrderId).OnDelete(DeleteBehavior.Restrict);
+        });
+        b.Entity<AdmissionCheckIn>(e =>
+        {
+            e.ToTable("admission_check_ins");
+            e.HasKey(x => new { x.OrderId, x.OperationId });
+            e.HasOne<AdmissionTicket>().WithMany().HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.StaffId).OnDelete(DeleteBehavior.Restrict);
+        });
         b.Entity<CommerceResource>(e =>
         {
             e.ToTable("commerce_resources");

@@ -42,6 +42,8 @@ public partial class CommerceService(ApplicationDbContext db,
             throw new CommerceException("Gói chưa thanh toán hoặc đã hết hạn.", 409);
     }
     private static DateTime ScheduledExpiry(DateOnly date, int validityHours) => VisitDateStartUtc(date).AddHours(validityHours);
+    private static int PaymentValidityHours(PurchaseOrder order) =>
+        order.ProductKind == CombinedKind ? Math.Min(24, order.ValidityHours) : order.ValidityHours;
     private static void EnsureBookingUsable(DateOnly date, int validityHours)
     {
         if (ScheduledExpiry(date, validityHours) <= DateTime.UtcNow)
@@ -76,7 +78,7 @@ public partial class CommerceService(ApplicationDbContext db,
     public async Task<IReadOnlyList<ProductResponse>> Products(int museumId, bool includeInactive, Guid? staff, bool admin)
     {
         if (includeInactive) await StaffAccess(museumId, staff ?? Guid.Empty, admin);
-        return (await db.CommerceProducts.AsNoTracking().Where(p => p.MuseumId == museumId && (includeInactive || p.IsActive))
+        return (await db.CommerceProducts.AsNoTracking().Where(p => p.MuseumId == museumId && p.Kind == "digital" && (includeInactive || p.IsActive))
             .OrderBy(p => p.Id).ToListAsync()).Select(Map).ToList();
     }
 
@@ -91,7 +93,7 @@ public partial class CommerceService(ApplicationDbContext db,
         if (r.Kind != "digital" || resources.Any(x => x.Kind != "digital"))
             throw new CommerceException("Gói chỉ được chứa dịch vụ số.");
         var p = id == null ? new CommerceProduct { MuseumId = museumId } :
-            await db.CommerceProducts.SingleOrDefaultAsync(x => x.Id == id && x.MuseumId == museumId)
+            await db.CommerceProducts.SingleOrDefaultAsync(x => x.Id == id && x.MuseumId == museumId && x.Kind == "digital")
                 ?? throw new CommerceException("Không tìm thấy sản phẩm.", 404);
         p.Name = r.Name.Trim(); p.Kind = r.Kind; p.Price = r.Price; p.Currency = r.Currency;
         p.Seats = r.Seats; p.ValidityHours = r.ValidityHours;
@@ -100,21 +102,39 @@ public partial class CommerceService(ApplicationDbContext db,
         await db.SaveChangesAsync(); return Map(p);
     }
 
-    public async Task<OrderResponse> CreateOrder(OrderRequest r, Guid buyer)
+    public Task<OrderResponse> CreateOrder(OrderRequest r, Guid buyer) => CreateOrderCore(r, buyer, null, null, null);
+
+    private async Task<OrderResponse> CreateOrderCore(OrderRequest r, Guid buyer, int? museumId, int? quantity, int? digitalProductId)
     {
         if (r.BuyerDetails == null || r.BuyerDetails.Count > 30 || r.BuyerDetails.Any(k => k.Key.Length > 100 || k.Value == null || k.Value.Length > 2000))
             throw new CommerceException("Thông tin người mua quá dài hoặc không hợp lệ.");
-        var p = await db.CommerceProducts.AsNoTracking().SingleOrDefaultAsync(p => p.Id == r.ProductId && p.IsActive)
+        var kind = quantity.HasValue ? AdmissionKind : "digital";
+        var p = await db.CommerceProducts.AsNoTracking().SingleOrDefaultAsync(p => p.Id == r.ProductId && p.IsActive
+            && p.Kind == kind && (!museumId.HasValue || p.MuseumId == museumId.Value))
             ?? throw new CommerceException("Sản phẩm không được mở bán.", 404);
+        var ticketAmount = quantity.HasValue ? p.Price * quantity.Value : 0m;
+        if (digitalProductId.HasValue)
+        {
+            var museum = p.MuseumId;
+            p = await db.CommerceProducts.AsNoTracking().SingleOrDefaultAsync(x => x.Id == digitalProductId.Value
+                && x.MuseumId == museum && x.Kind == "digital" && x.IsActive && x.Currency == "VND")
+                ?? throw new CommerceException("Gói số không được mở bán cùng vé này.", 404);
+        }
         if (p.ValidityHours == null) throw new CommerceException("Gói chưa được cấu hình thời hạn sử dụng.", 409);
         if (r.VisitDate < LocalToday() || r.VisitDate > LocalToday().AddYears(1)) throw new CommerceException("Ngày tham quan phải từ hôm nay đến tối đa 1 năm tới.");
-        EnsureBookingUsable(r.VisitDate, p.ValidityHours.Value);
+        EnsureBookingUsable(r.VisitDate, quantity.HasValue ? Math.Min(24, p.ValidityHours.Value) : p.ValidityHours.Value);
         if (!await db.Museums.AnyAsync(m => m.Id == p.MuseumId && m.IsActive)) throw new CommerceException("Bảo tàng ngừng hoạt động.", 409);
         var o = new PurchaseOrder { BuyerId = buyer, MuseumId = p.MuseumId, ProductId = p.Id, ProductName = p.Name,
-            ProductKind = p.Kind, Amount = p.Price, Currency = p.Currency, Seats = p.Seats, ValidityHours = p.ValidityHours.Value,
+            ProductKind = digitalProductId.HasValue ? CombinedKind : p.Kind,
+            Amount = ticketAmount + (p.Kind == "digital" ? p.Price : 0m), Currency = p.Currency,
+            Seats = p.Kind == "digital" ? p.Seats : quantity!.Value, ValidityHours = p.ValidityHours.Value,
             VisitDate = r.VisitDate, ResourceIdsJson = p.ResourceIdsJson,
             BuyerName = r.BuyerName.Trim(), BuyerDetailsJson = JsonSerializer.Serialize(r.BuyerDetails) };
-        db.PurchaseOrders.Add(o); await db.SaveChangesAsync(); return Map(o);
+        db.PurchaseOrders.Add(o);
+        if (quantity.HasValue)
+            db.Set<AdmissionTicket>().Add(new AdmissionTicket { OrderId = o.Id, Quantity = quantity.Value,
+                Amount = ticketAmount, Code = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)) });
+        await db.SaveChangesAsync(); return Map(o);
     }
 
     public async Task<IReadOnlyList<OrderResponse>> Orders(Guid buyer, int page, int pageSize) =>
@@ -140,7 +160,7 @@ public partial class CommerceService(ApplicationDbContext db,
             return await db.PaymentAttempts.SingleAsync(a => a.OrderId == order.Id && a.Status == "succeeded");
         if (order.Status != "pending") throw new CommerceException("Đơn hàng đã đóng hoặc đã hủy.", 409);
         if (order.VisitDate < LocalToday()) throw new CommerceException("Ngày tham quan đã qua; không thể thanh toán đơn này.", 409);
-        EnsureBookingUsable(order.VisitDate, order.ValidityHours);
+        EnsureBookingUsable(order.VisitDate, PaymentValidityHours(order));
         var alreadyPaidByWallet = -(await db.WalletTransactions.Where(t => t.OrderId == order.Id && t.Type == "payment")
             .SumAsync(t => (decimal?)t.Amount) ?? 0m);
         var remaining = Math.Max(0, order.Amount - alreadyPaidByWallet);
@@ -179,6 +199,10 @@ public partial class CommerceService(ApplicationDbContext db,
         decimal refund = 0;
         if (order.Status == "paid")
         {
+            if (order.ProductKind == CombinedKind)
+                throw new CommerceException("Hãy chọn món cần hủy trong đơn mua chung.", 409);
+            if (order.ProductKind == AdmissionKind && await db.Set<AdmissionCheckIn>().AnyAsync(c => c.OrderId == order.Id))
+                throw new CommerceException("Vé đã được sử dụng và không thể hủy.", 409);
             var daysBefore = order.VisitDate.DayNumber - LocalToday().DayNumber;
             var rate = daysBefore >= 3 ? 1m : daysBefore == 2 ? 0.5m : 0m;
             refund = decimal.Round(order.Amount * rate, 2, MidpointRounding.AwayFromZero);
@@ -210,7 +234,7 @@ public partial class CommerceService(ApplicationDbContext db,
         var o = await LockOrder(orderId); Owner(o, buyer);
         if (o.Status != "pending") throw new CommerceException("Đơn hàng đã thanh toán.", 409);
         if (o.VisitDate < LocalToday()) throw new CommerceException("Ngày tham quan đã qua; không thể thanh toán đơn này.", 409);
-        EnsureBookingUsable(o.VisitDate, o.ValidityHours);
+        EnsureBookingUsable(o.VisitDate, PaymentValidityHours(o));
         // Repeating a request returns the same pending attempt. Retry after failure creates a new record.
         var attempt = await db.PaymentAttempts.SingleOrDefaultAsync(a => a.OrderId == orderId && a.Status == "pending");
         if (attempt == null) { attempt = new PaymentAttempt { OrderId = orderId }; db.PaymentAttempts.Add(attempt); }
@@ -242,7 +266,7 @@ public partial class CommerceService(ApplicationDbContext db,
             return a;
         }
         if (o.Status != "pending") throw new CommerceException("Đơn hàng đã thanh toán.", 409);
-        if (r.Succeeded) EnsureBookingUsable(o.VisitDate, o.ValidityHours);
+        if (r.Succeeded) EnsureBookingUsable(o.VisitDate, PaymentValidityHours(o));
         if (r.Succeeded && reference == null) throw new CommerceException("Cần mã tham chiếu xác nhận thanh toán.");
         if (!r.Succeeded && string.IsNullOrWhiteSpace(r.FailureReason)) throw new CommerceException("Cần lý do giao dịch thất bại.");
         if (reference != null && await db.PaymentAttempts.AnyAsync(x => x.Id != a.Id && x.Reference == reference))
@@ -279,9 +303,11 @@ public partial class CommerceService(ApplicationDbContext db,
     {
         var scheduledAt = VisitDateStartUtc(o.VisitDate);
         var validUntil = ScheduledExpiry(o.VisitDate, o.ValidityHours);
-        if (validUntil <= paidAt) throw new CommerceException("Thời hạn sử dụng của gói đã hết.", 409);
+        if (ScheduledExpiry(o.VisitDate, PaymentValidityHours(o)) <= paidAt)
+            throw new CommerceException("Thời hạn sử dụng của gói đã hết.", 409);
         o.Status = "paid"; o.PaidAt = paidAt; o.ExpiresAt = validUntil;
-        db.MuseumPasses.Add(new MuseumPass { OrderId = o.Id, UserId = o.BuyerId, ClaimedAt = scheduledAt, RevokedAt = validUntil });
+        if (o.ProductKind != AdmissionKind)
+            db.MuseumPasses.Add(new MuseumPass { OrderId = o.Id, UserId = o.BuyerId, ClaimedAt = scheduledAt, RevokedAt = validUntil });
         db.PurchaseInvoices.Add(new PurchaseInvoice { OrderId = o.Id, Number = $"SMGS-{o.Id:N}", BuyerName = o.BuyerName,
             BuyerDetailsJson = o.BuyerDetailsJson, ProductName = o.ProductName, ProductKind = o.ProductKind, Seats = o.Seats,
             Amount = o.Amount, Currency = o.Currency });
@@ -298,6 +324,8 @@ public partial class CommerceService(ApplicationDbContext db,
     {
         await using var tx = await db.Database.BeginTransactionAsync();
         var o = await LockOrder(orderId); Owner(o, buyer); Paid(o);
+        if (o.ProductKind == AdmissionKind || o.DigitalCancelledAt.HasValue)
+            throw new CommerceException("Đơn không có gói số còn hiệu lực.", 409);
         if (o.Seats <= 1) throw new CommerceException("Chỉ gói nhiều người có key.");
         var remaining = o.Seats - await db.MuseumPasses.CountAsync(p => p.OrderId == orderId);
         if (remaining <= 0) throw new CommerceException("Gói đã đủ người nhận.", 409);
@@ -312,6 +340,7 @@ public partial class CommerceService(ApplicationDbContext db,
             ?? throw new CommerceException("Key không hợp lệ.", 404);
         await using var tx = await db.Database.BeginTransactionAsync();
         var o = await LockOrder(id);
+        if (o.DigitalCancelledAt.HasValue) throw new CommerceException("Gói số đã hủy.", 409);
         if (o.GroupKeyHash != hash) throw new CommerceException("Key đã được thay đổi.", 409);
         if (o.Status != "paid" || o.ExpiresAt == null || LocalToday() > o.VisitDate || o.CancelledAt != null)
             throw new CommerceException("Gói chưa thanh toán, đã hủy hoặc đã hết hạn.", 409);
@@ -338,7 +367,7 @@ public partial class CommerceService(ApplicationDbContext db,
         return items.Select(x => new PassResponse(x.Pass.Id, x.Order.Id, x.Order.MuseumId, x.Order.ProductName,
             ResourceIds(x.Order.ResourceIdsJson), x.Pass.ClaimedAt, x.Pass.RevokedAt,
             x.Pass.RevokedAt.HasValue && x.Pass.RevokedAt.Value > DateTime.UtcNow
-                && x.Order.Status == "paid" && x.Order.CancelledAt == null)).ToList();
+                && x.Order.Status == "paid" && x.Order.CancelledAt == null && x.Order.DigitalCancelledAt == null)).ToList();
     }
 
     public async Task<IReadOnlyList<OrderResponse>> MuseumOrders(int museumId, Guid staff, bool admin, int page, int pageSize)
@@ -425,7 +454,7 @@ public partial class CommerceService(ApplicationDbContext db,
         var today = LocalToday();
         var scopes = await (from p in db.MuseumPasses join o in db.PurchaseOrders on p.OrderId equals o.Id
             where p.UserId == user && p.RevokedAt > DateTime.UtcNow && o.MuseumId == museumId && o.Status == "paid"
-                && o.CancelledAt == null && o.VisitDate <= today && o.ExpiresAt > DateTime.UtcNow
+                && o.CancelledAt == null && o.DigitalCancelledAt == null && o.VisitDate <= today && o.ExpiresAt > DateTime.UtcNow
             select o.ResourceIdsJson).ToListAsync();
         return scopes.SelectMany(ResourceIds).Distinct().ToArray();
     }
